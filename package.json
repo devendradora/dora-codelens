@@ -1,0 +1,268 @@
+{
+  "name": "codemindmap",
+  "displayName": "CodeMindMap",
+  "description": "Visual analysis and navigation for Python projects with interactive graphs and complexity indicators",
+  "version": "0.1.0",
+  "publisher": "codemindmap",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "python",
+    "visualization",
+    "graph",
+    "complexity",
+    "analysis",
+    "django",
+    "flask",
+    "fastapi"
+  ],
+  "activationEvents": [
+    "onLanguage:python",
+    "workspaceContains:**/*.py",
+    "workspaceContains:requirements.txt",
+    "workspaceContains:pyproject.toml",
+    "workspaceContains:Pipfile"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codemindmap.analyzeProject",
+        "title": "Analyze Python Project",
+        "category": "CodeMindMap",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "codemindmap.showModuleGraph",
+        "title": "Show Module Graph",
+        "category": "CodeMindMap",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "codemindmap.showCallHierarchy",
+        "title": "Show Call Hierarchy",
+        "category": "CodeMindMap",
+        "icon": "$(call-hierarchy)"
+      },
+      {
+        "command": "codemindmap.refreshSidebar",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "codemindmap.openSettings",
+        "title": "Open Settings",
+        "category": "CodeMindMap",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "codemindmap.clearCache",
+        "title": "Clear Cache",
+        "category": "CodeMindMap",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "codemindmap.showOutput",
+        "title": "Show Output",
+        "category": "CodeMindMap",
+        "icon": "$(output)"
+      },
+      {
+        "command": "codemindmap.cancelAnalysis",
+        "title": "Cancel Analysis",
+        "category": "CodeMindMap",
+        "icon": "$(stop)"
+      },
+      {
+        "command": "codemindmap.navigateToItem",
+        "title": "Navigate to Item",
+        "category": "CodeMindMap"
+      },
+      {
+        "command": "codemindmap.filterSidebar",
+        "title": "Filter",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "codemindmap.selectModule",
+        "title": "Select Module",
+        "category": "CodeMindMap"
+      },
+      {
+        "command": "codemindmap.clearSelection",
+        "title": "Clear Selection",
+        "category": "CodeMindMap",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "codemindmap.showDependencies",
+        "title": "Show Dependencies",
+        "category": "CodeMindMap",
+        "icon": "$(references)"
+      },
+      {
+        "command": "codemindmap.showFunctionComplexityDetails",
+        "title": "Show Function Complexity Details",
+        "category": "CodeMindMap"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "codemindmapSidebar",
+          "name": "CodeMindMap",
+          "when": "workspaceContains:**/*.py"
+        }
+      ]
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "codemindmap.showCallHierarchy",
+          "when": "editorLangId == python",
+          "group": "navigation@1"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "codemindmap.refreshSidebar",
+          "when": "view == codemindmapSidebar",
+          "group": "navigation@1"
+        },
+        {
+          "command": "codemindmap.filterSidebar",
+          "when": "view == codemindmapSidebar",
+          "group": "navigation@2"
+        },
+        {
+          "command": "codemindmap.clearSelection",
+          "when": "view == codemindmapSidebar",
+          "group": "navigation@3"
+        },
+        {
+          "command": "codemindmap.clearCache",
+          "when": "view == codemindmapSidebar",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "codemindmap.navigateToItem",
+          "when": "view == codemindmapSidebar && viewItem == module",
+          "group": "navigation@1"
+        },
+        {
+          "command": "codemindmap.selectModule",
+          "when": "view == codemindmapSidebar && viewItem == module",
+          "group": "navigation@2"
+        },
+        {
+          "command": "codemindmap.showDependencies",
+          "when": "view == codemindmapSidebar && viewItem == module",
+          "group": "navigation@3"
+        },
+        {
+          "command": "codemindmap.navigateToItem",
+          "when": "view == codemindmapSidebar && viewItem == function",
+          "group": "navigation@1"
+        },
+        {
+          "command": "codemindmap.navigateToItem",
+          "when": "view == codemindmapSidebar && viewItem == class",
+          "group": "navigation@1"
+        },
+        {
+          "command": "codemindmap.navigateToItem",
+          "when": "view == codemindmapSidebar && viewItem == method",
+          "group": "navigation@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "codemindmap.analyzeProject",
+          "when": "workspaceContains:**/*.py"
+        },
+        {
+          "command": "codemindmap.showModuleGraph",
+          "when": "workspaceContains:**/*.py"
+        },
+        {
+          "command": "codemindmap.showCallHierarchy",
+          "when": "editorLangId == python"
+        },
+        {
+          "command": "codemindmap.openSettings",
+          "when": "workspaceContains:**/*.py"
+        },
+        {
+          "command": "codemindmap.clearCache",
+          "when": "workspaceContains:**/*.py"
+        },
+        {
+          "command": "codemindmap.showOutput",
+          "when": "workspaceContains:**/*.py"
+        },
+        {
+          "command": "codemindmap.cancelAnalysis",
+          "when": "workspaceContains:**/*.py"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CodeMindMap",
+      "properties": {
+        "codemindmap.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Path to Python executable"
+        },
+        "codemindmap.showComplexityCodeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show complexity scores as CodeLens annotations"
+        },
+        "codemindmap.complexityThresholds": {
+          "type": "object",
+          "default": {
+            "low": 5,
+            "medium": 10,
+            "high": 20
+          },
+          "description": "Complexity thresholds for color coding"
+        },
+        "codemindmap.enableCaching": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable caching of analysis results"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "@types/mocha": "^10.0.1",
+    "@types/glob": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "eslint": "^8.28.0",
+    "typescript": "^4.9.4",
+    "@vscode/test-electron": "^2.2.0",
+    "mocha": "^10.2.0",
+    "glob": "^8.0.3"
+  },
+  "dependencies": {}
+}
