@@ -218,17 +218,29 @@ export class AnalyzerRunner {
     private async validatePythonPath(pythonPath: string): Promise<boolean> {
         return new Promise((resolve) => {
             const process = spawn(pythonPath, ['--version'], { stdio: 'pipe' });
+            let stderr = '';
             
-            process.on('close', (code) => {
-                resolve(code === 0);
+            process.stderr?.on('data', (data) => {
+                stderr += data.toString();
             });
             
-            process.on('error', () => {
+            process.on('close', (code) => {
+                if (code === 0) {
+                    resolve(true);
+                } else {
+                    this.log(`Python validation failed for ${pythonPath}: exit code ${code}, stderr: ${stderr}`);
+                    resolve(false);
+                }
+            });
+            
+            process.on('error', (error) => {
+                this.log(`Python validation error for ${pythonPath}: ${error.message}`);
                 resolve(false);
             });
             
             // Timeout after 5 seconds
             setTimeout(() => {
+                this.log(`Python validation timeout for ${pythonPath}`);
                 process.kill();
                 resolve(false);
             }, 5000);
@@ -312,20 +324,18 @@ export class AnalyzerRunner {
                 
                 if (code === 0) {
                     try {
-                        // Parse JSON output
-                        const result = JSON.parse(stdout);
+                        // Validate and parse JSON output
+                        const result = this.parseAndValidateAnalyzerOutput(stdout);
                         progress?.report({ message: 'Analysis complete', increment: 100 });
-                        resolve({
-                            success: true,
-                            data: result.data,
-                            errors: result.errors,
-                            warnings: result.warnings
-                        });
+                        resolve(result);
                     } catch (parseError) {
-                        reject(new Error(`Failed to parse analyzer output: ${parseError}`));
+                        this.logError('Failed to parse analyzer output', parseError);
+                        reject(new Error(`Failed to parse analyzer output: ${parseError instanceof Error ? parseError.message : parseError}`));
                     }
                 } else {
-                    reject(new Error(`Analyzer process exited with code ${code}. Error: ${stderr}`));
+                    const errorMessage = `Analyzer process exited with code ${code}`;
+                    this.logError(errorMessage, new Error(stderr));
+                    reject(new Error(`${errorMessage}. Error: ${stderr}`));
                 }
             });
 
@@ -333,9 +343,134 @@ export class AnalyzerRunner {
             this.currentProcess.on('error', (error) => {
                 clearTimeout(timeoutId);
                 this.currentProcess = null;
-                reject(new Error(`Failed to start analyzer process: ${error.message}`));
+                
+                // Provide more specific error messages
+                let errorMessage = `Failed to start analyzer process: ${error.message}`;
+                
+                if (error.message.includes('ENOENT')) {
+                    errorMessage = `Python executable not found. Please check your Python installation and path configuration.`;
+                } else if (error.message.includes('EACCES')) {
+                    errorMessage = `Permission denied when trying to execute Python. Please check file permissions.`;
+                } else if (error.message.includes('spawn')) {
+                    errorMessage = `Failed to spawn Python process. This might be due to system resource limitations or Python installation issues.`;
+                }
+                
+                this.logError('Process spawn error', error);
+                reject(new Error(errorMessage));
             });
         });
+    }
+
+    /**
+     * Parse and validate analyzer JSON output
+     */
+    private parseAndValidateAnalyzerOutput(stdout: string): AnalysisResult {
+        // Clean up the output - remove any non-JSON content
+        const cleanOutput = this.cleanAnalyzerOutput(stdout);
+        
+        // Parse JSON
+        let parsedResult: any;
+        try {
+            parsedResult = JSON.parse(cleanOutput);
+        } catch (error) {
+            throw new Error(`Invalid JSON output from analyzer: ${error instanceof Error ? error.message : error}`);
+        }
+
+        // Validate the structure
+        const validationResult = this.validateAnalyzerOutput(parsedResult);
+        if (!validationResult.isValid) {
+            this.log(`Analyzer output validation warnings: ${validationResult.warnings.join(', ')}`);
+        }
+
+        // Convert to AnalysisResult format
+        return {
+            success: parsedResult.success !== false, // Default to true if not specified
+            data: parsedResult,
+            errors: parsedResult.errors || [],
+            warnings: parsedResult.warnings || [],
+            executionTime: 0 // Will be set by caller
+        };
+    }
+
+    /**
+     * Clean analyzer output to extract JSON
+     */
+    private cleanAnalyzerOutput(output: string): string {
+        // Find the JSON content - look for the first { and last }
+        const firstBrace = output.indexOf('{');
+        const lastBrace = output.lastIndexOf('}');
+        
+        if (firstBrace === -1 || lastBrace === -1 || firstBrace >= lastBrace) {
+            throw new Error('No valid JSON found in analyzer output');
+        }
+        
+        return output.substring(firstBrace, lastBrace + 1);
+    }
+
+    /**
+     * Validate analyzer output structure
+     */
+    private validateAnalyzerOutput(data: any): { isValid: boolean; warnings: string[] } {
+        const warnings: string[] = [];
+        let isValid = true;
+
+        // Check for required top-level properties
+        if (!data.tech_stack) {
+            warnings.push('Missing tech_stack data');
+        }
+
+        if (!data.modules) {
+            warnings.push('Missing modules data');
+        } else {
+            // Validate modules structure
+            if (!data.modules.nodes || !Array.isArray(data.modules.nodes)) {
+                warnings.push('Invalid modules.nodes structure');
+            }
+            if (!data.modules.edges || !Array.isArray(data.modules.edges)) {
+                warnings.push('Invalid modules.edges structure');
+            }
+        }
+
+        if (!data.functions) {
+            warnings.push('Missing functions data');
+        } else {
+            // Validate functions structure
+            if (!data.functions.nodes || !Array.isArray(data.functions.nodes)) {
+                warnings.push('Invalid functions.nodes structure');
+            }
+            if (!data.functions.edges || !Array.isArray(data.functions.edges)) {
+                warnings.push('Invalid functions.edges structure');
+            }
+        }
+
+        // Validate individual module nodes
+        if (data.modules && data.modules.nodes) {
+            data.modules.nodes.forEach((node: any, index: number) => {
+                if (!node.id && !node.name) {
+                    warnings.push(`Module node ${index} missing id/name`);
+                }
+                if (!node.path) {
+                    warnings.push(`Module node ${index} missing path`);
+                }
+            });
+        }
+
+        // Validate individual function nodes
+        if (data.functions && data.functions.nodes) {
+            data.functions.nodes.forEach((node: any, index: number) => {
+                if (!node.id) {
+                    warnings.push(`Function node ${index} missing id`);
+                }
+                if (!node.name) {
+                    warnings.push(`Function node ${index} missing name`);
+                }
+                if (!node.module) {
+                    warnings.push(`Function node ${index} missing module`);
+                }
+            });
+        }
+
+        return { isValid, warnings };
     }
 
     /**

@@ -465,23 +465,46 @@ class AnalysisResult:
 class ProjectAnalyzer:
     """Main analyzer class for Python projects."""
     
-    def __init__(self, project_path: Union[str, Path]):
+    def __init__(self, project_path: Union[str, Path], use_cache: bool = True, cache_dir: Optional[Path] = None,
+                 performance_config: Optional['PerformanceConfig'] = None):
         """Initialize the project analyzer.
         
         Args:
             project_path: Path to the Python project to analyze
+            use_cache: Whether to use caching for analysis results
+            cache_dir: Directory to store cache files (optional)
+            performance_config: Performance optimization configuration (optional)
         """
         self.project_path = Path(project_path).resolve()
         self.errors: List[Dict[str, Any]] = []
         self.warnings: List[Dict[str, Any]] = []
+        self.use_cache = use_cache
         
         if not self.project_path.exists():
             raise AnalysisError(f"Project path does not exist: {self.project_path}")
         
-        logger.info(f"Initialized analyzer for project: {self.project_path}")
+        # Initialize cache manager if caching is enabled
+        if self.use_cache:
+            from cache_manager import CacheManager, IncrementalAnalyzer
+            self.cache_manager = CacheManager(cache_dir)
+            self.incremental_analyzer = IncrementalAnalyzer(self.cache_manager)
+        else:
+            self.cache_manager = None
+            self.incremental_analyzer = None
+        
+        # Initialize performance optimizer
+        from performance_optimizer import PerformanceOptimizer, PerformanceConfig
+        if performance_config is None:
+            performance_config = PerformanceConfig()
+        self.performance_optimizer = PerformanceOptimizer(performance_config)
+        
+        logger.info(f"Initialized analyzer for project: {self.project_path} (cache: {use_cache})")
     
-    def analyze_project(self) -> AnalysisResult:
+    def analyze_project(self, force_refresh: bool = False) -> AnalysisResult:
         """Analyze the entire Python project.
+        
+        Args:
+            force_refresh: Force analysis even if cached result exists
         
         Returns:
             AnalysisResult containing all analysis data
@@ -494,37 +517,70 @@ class ProjectAnalyzer:
         
         logger.info("Starting project analysis...")
         
+        # Analyze project size and get performance recommendations
+        size_info, recommendations = self.performance_optimizer.optimize_for_project(self.project_path)
+        
+        # Start performance monitoring
+        self.performance_optimizer.start_monitoring()
+        
+        # Try to get cached result first
+        if self.use_cache and not force_refresh:
+            cached_result = self.cache_manager.get_cached_result(self.project_path)
+            if cached_result is not None:
+                logger.info("Using cached analysis result")
+                self.performance_optimizer.stop_monitoring()
+                # Convert cached dict back to AnalysisResult
+                return self._dict_to_analysis_result(cached_result)
+        
         try:
             # Find all Python files
             python_files = self._discover_python_files()
             logger.info(f"Found {len(python_files)} Python files")
             
-            # Parse modules using AST parser
+            # Filter files by size for performance
+            python_files = self.performance_optimizer.filter_files_by_size(python_files)
+            logger.info(f"Processing {len(python_files)} Python files after size filtering")
+            
+            # Parse modules using AST parser with progress reporting
             from ast_parser import ModuleDiscovery
             from complexity_analyzer import ComplexityAnalyzer
             
             module_discovery = ModuleDiscovery(self.project_path)
+            
+            # Set up progress reporting
+            self.performance_optimizer.progress_reporter.set_total_steps(len(python_files) + 5)  # +5 for other steps
+            self.performance_optimizer.progress_reporter.update_progress("Starting module discovery")
+            
             modules = module_discovery.discover_modules(python_files)
             
             # Enhance complexity analysis using radon
+            self.performance_optimizer.progress_reporter.update_progress("Analyzing complexity")
             complexity_analyzer = ComplexityAnalyzer()
             enhanced_modules = []
-            for module in modules:
+            for i, module in enumerate(modules):
                 enhanced_module = complexity_analyzer.enhance_module_complexity(module)
                 enhanced_modules.append(enhanced_module)
+                
+                # Periodic memory cleanup for large projects
+                if i % 100 == 0 and i > 0:
+                    self.performance_optimizer.cleanup_memory()
             
             # Resolve module dependencies
+            self.performance_optimizer.progress_reporter.update_progress("Resolving dependencies")
             dependencies = module_discovery.resolve_dependencies(enhanced_modules)
             
             # Build module graph
+            self.performance_optimizer.progress_reporter.update_progress("Building module graph")
             module_graph = self._build_module_graph(enhanced_modules, dependencies)
             
             # Parse dependencies and detect tech stack
+            self.performance_optimizer.progress_reporter.update_progress("Parsing dependencies")
             from dependency_parser import DependencyParser
             dependency_parser = DependencyParser(self.project_path)
             tech_stack = dependency_parser.parse_dependencies()
             
             # Detect framework patterns
+            self.performance_optimizer.progress_reporter.update_progress("Detecting frameworks")
             from framework_detector import FrameworkDetector
             framework_detector = FrameworkDetector(self.project_path, tech_stack.frameworks)
             framework_patterns = framework_detector.detect_patterns()
@@ -534,6 +590,7 @@ class ProjectAnalyzer:
             self.warnings.extend(framework_detector.warnings)
             
             # Build call graph
+            self.performance_optimizer.progress_reporter.update_progress("Building call graph")
             from call_graph import CallGraphBuilder
             call_graph_builder = CallGraphBuilder()
             call_graph = call_graph_builder.build_call_graph(enhanced_modules)
@@ -541,8 +598,13 @@ class ProjectAnalyzer:
             # Calculate complexity statistics
             complexity_stats = complexity_analyzer.calculate_project_complexity_stats(enhanced_modules)
             
-            # Create metadata
+            # Final memory cleanup
+            self.performance_optimizer.cleanup_memory()
+            
+            # Create metadata with performance stats
             analysis_time = time.time() - start_time
+            performance_stats = self.performance_optimizer.get_performance_stats()
+            
             metadata = AnalysisMetadata(
                 project_path=str(self.project_path),
                 analysis_time=analysis_time,
@@ -562,15 +624,32 @@ class ProjectAnalyzer:
                 success=len(self.errors) == 0
             )
             
+            # Stop performance monitoring
+            self.performance_optimizer.stop_monitoring()
+            self.performance_optimizer.progress_reporter.finish()
+            
             logger.info(f"Analysis completed in {analysis_time:.2f} seconds")
             logger.info(f"Analyzed {len(enhanced_modules)} modules with {len(module_graph.edges)} dependencies")
             logger.info(f"Complexity stats: {complexity_stats['total_functions']} functions, "
                        f"avg complexity: {complexity_stats['average_complexity']:.1f}")
+            logger.info(f"Performance stats: {performance_stats}")
+            
+            # Cache the result if caching is enabled
+            if self.use_cache:
+                try:
+                    result_dict = result._to_dict()
+                    self.cache_manager.cache_result(self.project_path, result_dict)
+                except Exception as e:
+                    logger.warning(f"Failed to cache analysis result: {e}")
+            
             return result
             
         except Exception as e:
             logger.error(f"Analysis failed: {e}")
             self._add_error("analysis_failure", str(e))
+            
+            # Stop performance monitoring on error
+            self.performance_optimizer.stop_monitoring()
             
             # Return failed result
             analysis_time = time.time() - start_time
@@ -700,19 +779,203 @@ class ProjectAnalyzer:
                 edges.append(edge)
         
         return ModuleGraph(nodes=nodes, edges=edges)
+    
+    def _dict_to_analysis_result(self, data: Dict[str, Any]) -> AnalysisResult:
+        """Convert dictionary back to AnalysisResult object.
+        
+        Args:
+            data: Dictionary representation of analysis result
+            
+        Returns:
+            AnalysisResult object
+        """
+        from dependency_parser import Library, TechStack
+        from framework_detector import FrameworkPatterns
+        
+        # Reconstruct tech stack
+        tech_stack_data = data.get("tech_stack", {})
+        libraries = [
+            Library(
+                name=lib["name"],
+                version=lib["version"],
+                source=lib["source"],
+                extras=lib.get("extras", [])
+            )
+            for lib in tech_stack_data.get("libraries", [])
+        ]
+        
+        tech_stack = TechStack(
+            libraries=libraries,
+            frameworks=tech_stack_data.get("frameworks", []),
+            python_version=tech_stack_data.get("python_version", ""),
+            package_manager=tech_stack_data.get("package_manager", "pip")
+        )
+        
+        # Reconstruct module graph
+        modules_data = data.get("modules", {})
+        module_nodes = [
+            ModuleNode(
+                id=node["id"],
+                name=node["name"],
+                path=node["path"],
+                complexity=ComplexityScore(
+                    cyclomatic=node["complexity"]["cyclomatic"],
+                    cognitive=node["complexity"]["cognitive"]
+                ),
+                size=node["size"],
+                functions=node["functions"]
+            )
+            for node in modules_data.get("nodes", [])
+        ]
+        
+        module_edges = [
+            ModuleEdge(
+                source=edge["source"],
+                target=edge["target"],
+                type=edge["type"],
+                weight=edge["weight"]
+            )
+            for edge in modules_data.get("edges", [])
+        ]
+        
+        module_graph = ModuleGraph(nodes=module_nodes, edges=module_edges)
+        
+        # Reconstruct call graph
+        functions_data = data.get("functions", {})
+        function_nodes = [
+            FunctionNode(
+                id=node["id"],
+                name=node["name"],
+                module=node["module"],
+                complexity=node["complexity"],
+                line_number=node["line_number"],
+                parameters=[
+                    Parameter(
+                        name=param["name"],
+                        type_hint=param.get("type_hint"),
+                        default_value=param.get("default_value"),
+                        is_vararg=param.get("is_vararg", False),
+                        is_kwarg=param.get("is_kwarg", False)
+                    )
+                    for param in node.get("parameters", [])
+                ]
+            )
+            for node in functions_data.get("nodes", [])
+        ]
+        
+        call_edges = [
+            CallEdge(
+                caller=edge["caller"],
+                callee=edge["callee"],
+                call_count=edge["call_count"],
+                line_numbers=edge.get("line_numbers", [])
+            )
+            for edge in functions_data.get("edges", [])
+        ]
+        
+        call_graph = CallGraph(nodes=function_nodes, edges=call_edges)
+        
+        # Reconstruct metadata
+        metadata_data = data.get("metadata", {})
+        metadata = AnalysisMetadata(
+            project_path=metadata_data.get("project_path", ""),
+            analysis_time=metadata_data.get("analysis_time", 0.0),
+            total_files=metadata_data.get("total_files", 0),
+            analyzed_files=metadata_data.get("analyzed_files", 0),
+            errors=data.get("errors", []),
+            warnings=data.get("warnings", [])
+        )
+        
+        # Create empty framework patterns (will be populated if needed)
+        framework_patterns = FrameworkPatterns()
+        
+        # Create empty modules list (cached version doesn't need full module info)
+        modules = []
+        
+        return AnalysisResult(
+            tech_stack=tech_stack,
+            modules=modules,
+            module_graph=module_graph,
+            call_graph=call_graph,
+            framework_patterns=framework_patterns,
+            metadata=metadata,
+            success=data.get("success", True)
+        )
+    
+    def clear_cache(self):
+        """Clear analysis cache."""
+        if self.cache_manager:
+            self.cache_manager.clear_cache()
+            logger.info("Analysis cache cleared")
+        else:
+            logger.warning("Cache not enabled")
+    
+    def invalidate_cache(self):
+        """Invalidate cache for this project."""
+        if self.cache_manager:
+            self.cache_manager.invalidate_project_cache(self.project_path)
+            logger.info(f"Cache invalidated for project: {self.project_path}")
+        else:
+            logger.warning("Cache not enabled")
+    
+    def get_cache_stats(self) -> Optional[Dict[str, Any]]:
+        """Get cache statistics.
+        
+        Returns:
+            Cache statistics or None if cache not enabled
+        """
+        if self.cache_manager:
+            return self.cache_manager.get_cache_stats()
+        return None
 
 
 def main():
     """Main entry point for command-line usage."""
-    if len(sys.argv) != 2:
-        print("Usage: python analyzer.py <project_path>", file=sys.stderr)
-        sys.exit(1)
+    import argparse
     
-    project_path = sys.argv[1]
+    parser = argparse.ArgumentParser(description="Analyze Python project structure and complexity")
+    parser.add_argument("project_path", help="Path to the Python project to analyze")
+    parser.add_argument("--no-cache", action="store_true", help="Disable caching")
+    parser.add_argument("--force-refresh", action="store_true", help="Force refresh even if cache exists")
+    parser.add_argument("--clear-cache", action="store_true", help="Clear cache and exit")
+    parser.add_argument("--cache-stats", action="store_true", help="Show cache statistics and exit")
+    parser.add_argument("--max-workers", type=int, help="Maximum number of parallel workers")
+    parser.add_argument("--max-memory", type=int, default=1024, help="Maximum memory usage in MB")
+    parser.add_argument("--max-file-size", type=int, default=10, help="Skip files larger than this (MB)")
+    parser.add_argument("--no-parallel", action="store_true", help="Disable parallel processing")
+    parser.add_argument("--no-monitoring", action="store_true", help="Disable memory monitoring")
+    
+    args = parser.parse_args()
     
     try:
-        analyzer = ProjectAnalyzer(project_path)
-        result = analyzer.analyze_project()
+        # Create performance configuration
+        from performance_optimizer import PerformanceConfig
+        perf_config = PerformanceConfig(
+            max_workers=args.max_workers,
+            max_memory_mb=args.max_memory,
+            max_file_size_mb=args.max_file_size,
+            enable_parallel=not args.no_parallel,
+            enable_memory_monitoring=not args.no_monitoring
+        )
+        
+        analyzer = ProjectAnalyzer(args.project_path, use_cache=not args.no_cache, performance_config=perf_config)
+        
+        # Handle cache-only operations
+        if args.clear_cache:
+            analyzer.clear_cache()
+            print("Cache cleared successfully")
+            sys.exit(0)
+        
+        if args.cache_stats:
+            stats = analyzer.get_cache_stats()
+            if stats:
+                print(json.dumps(stats, indent=2))
+            else:
+                print("Cache not enabled")
+            sys.exit(0)
+        
+        # Perform analysis
+        result = analyzer.analyze_project(force_refresh=args.force_refresh)
         
         # Output JSON result
         print(result.to_json())

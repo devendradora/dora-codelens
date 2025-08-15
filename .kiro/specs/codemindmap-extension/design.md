@@ -100,10 +100,11 @@ export class CodeMindMapExtension {
 ```
 
 **VS Code API Integration**:
-- `vscode.window.createWebviewPanel`: Graph visualization
-- `vscode.window.registerTreeDataProvider`: Sidebar panel
+- `vscode.window.createWebviewPanel`: Graph visualization with proper Cytoscape.js loading
+- `vscode.window.createTreeView`: Dedicated sidebar view with CodeMindMap icon
+- `vscode.window.registerTreeDataProvider`: Sidebar panel data provider
 - `vscode.languages.registerCodeLensProvider`: Complexity annotations
-- `vscode.commands.registerCommand`: Context menu commands
+- `vscode.commands.registerCommand`: Context menu commands organized under CodeMindMap submenu
 
 ### 3. Webview Visualization
 
@@ -120,6 +121,8 @@ export class CodeMindMapExtension {
 - Interactive call hierarchy trees
 - Color-coded complexity indicators
 - Search and filtering capabilities
+- Proper Cytoscape.js library loading and error handling
+- Organized context menu with CodeMindMap submenu structure
 
 ## Data Models
 
@@ -217,6 +220,63 @@ interface FastAPIPatterns {
     dependencies: DependencyMapping[];
 }
 ```
+
+## Sidebar Icon Integration
+
+### Dedicated Sidebar View
+
+The extension will provide a dedicated sidebar icon in VS Code's left navigation bar, similar to other extensions like the Explorer or Source Control views.
+
+**Implementation Details**:
+- **View Container**: Create a custom view container for CodeMindMap
+- **Icon**: Use a distinctive graph-related icon (e.g., `$(type-hierarchy)` or custom SVG)
+- **View Registration**: Register the view in the `views` contribution point
+- **Conditional Display**: Show only when Python projects are detected
+
+**Package.json Configuration**:
+```json
+{
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codemindmap",
+          "title": "CodeMindMap",
+          "icon": "$(type-hierarchy)"
+        }
+      ]
+    },
+    "views": {
+      "codemindmap": [
+        {
+          "id": "codemindmapSidebar",
+          "name": "Project Analysis",
+          "when": "workspaceContains:**/*.py"
+        }
+      ]
+    }
+  }
+}
+```
+
+### Context Menu Organization
+
+The context menu will be reorganized to group all CodeMindMap features under a single submenu:
+
+**Menu Structure**:
+```
+Right-click on Python code:
+├── CodeMindMap ►
+│   ├── Graph View
+│   ├── JSON View
+│   └── Show Call Hierarchy
+└── Other VS Code options...
+```
+
+**Implementation**:
+- Use `submenu` contribution point to create the CodeMindMap submenu
+- Move existing context menu items under the submenu
+- Add new "Graph View" and "JSON View" options
 
 ## Error Handling
 
@@ -354,6 +414,12 @@ interface FastAPIPatterns {
    - Compress JSON data transfer
    - Implement progressive loading
    - Use efficient serialization formats
+
+3. **Cytoscape.js Loading Fix**:
+   - Ensure proper script loading order in webview HTML
+   - Add error handling for library loading failures
+   - Implement fallback mechanisms if Cytoscape.js fails to load
+   - Use proper CSP (Content Security Policy) settings for webview
 
 ## Security Considerations
 

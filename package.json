@@ -30,6 +30,15 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codemindmap",
+          "title": "CodeMindMap",
+          "icon": "$(type-hierarchy)"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "codemindmap.analyzeProject",
@@ -109,23 +118,56 @@
         "command": "codemindmap.showFunctionComplexityDetails",
         "title": "Show Function Complexity Details",
         "category": "CodeMindMap"
+      },
+      {
+        "command": "codemindmap.showGraphView",
+        "title": "Graph View",
+        "category": "CodeMindMap",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "codemindmap.showJsonView",
+        "title": "JSON View",
+        "category": "CodeMindMap",
+        "icon": "$(json)"
       }
     ],
     "views": {
-      "explorer": [
+      "codemindmap": [
         {
           "id": "codemindmapSidebar",
-          "name": "CodeMindMap",
+          "name": "Project Analysis",
           "when": "workspaceContains:**/*.py"
         }
       ]
     },
+    "submenus": [
+      {
+        "id": "codemindmap.contextMenu",
+        "label": "CodeMindMap",
+        "icon": "$(type-hierarchy)"
+      }
+    ],
     "menus": {
       "editor/context": [
         {
-          "command": "codemindmap.showCallHierarchy",
+          "submenu": "codemindmap.contextMenu",
           "when": "editorLangId == python",
           "group": "navigation@1"
+        }
+      ],
+      "codemindmap.contextMenu": [
+        {
+          "command": "codemindmap.showGraphView",
+          "group": "codemindmap@1"
+        },
+        {
+          "command": "codemindmap.showJsonView",
+          "group": "codemindmap@2"
+        },
+        {
+          "command": "codemindmap.showCallHierarchy",
+          "group": "codemindmap@3"
         }
       ],
       "view/title": [
@@ -210,6 +252,14 @@
         {
           "command": "codemindmap.cancelAnalysis",
           "when": "workspaceContains:**/*.py"
+        },
+        {
+          "command": "codemindmap.showGraphView",
+          "when": "editorLangId == python"
+        },
+        {
+          "command": "codemindmap.showJsonView",
+          "when": "editorLangId == python"
         }
       ]
     },
@@ -249,20 +299,30 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "test:comprehensive": "npm run compile && node ./out/test/run-comprehensive-tests.js",
+    "test:unit": "npm run compile && node ./out/test/runTest.js",
+    "test:performance": "npm run compile && TEST_PATTERN='**/performance.test.js' node ./out/test/runTest.js",
+    "test:e2e": "npm run compile && TEST_PATTERN='**/e2e-workflow.test.js' node ./out/test/runTest.js",
+    "test:watch": "npm run compile && npm run watch & npm run test",
+    "test:coverage": "npm run test:comprehensive && echo 'Coverage report would be generated here'"
   },
   "devDependencies": {
-    "@types/vscode": "^1.74.0",
-    "@types/node": "16.x",
-    "@types/mocha": "^10.0.1",
     "@types/glob": "^8.0.0",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.74.0",
     "@typescript-eslint/eslint-plugin": "^5.45.0",
     "@typescript-eslint/parser": "^5.45.0",
-    "eslint": "^8.28.0",
-    "typescript": "^4.9.4",
     "@vscode/test-electron": "^2.2.0",
+    "eslint": "^8.28.0",
+    "glob": "^8.0.3",
     "mocha": "^10.2.0",
-    "glob": "^8.0.3"
+    "typescript": "^4.9.4"
   },
-  "dependencies": {}
+  "dependencies": {
+    "cytoscape": "^3.33.1",
+    "cytoscape-dagre": "^2.5.0",
+    "dagre": "^0.8.5"
+  }
 }

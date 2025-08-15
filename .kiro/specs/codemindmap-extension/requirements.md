@@ -32,18 +32,21 @@ CodeMindMap is a VS Code extension that provides visual analysis and navigation 
 5. WHEN a module is selected THEN the system SHALL highlight its direct dependencies and dependents
 6. IF a module has no dependencies THEN the system SHALL display it as an isolated node
 
-### Requirement 3: Function Call Hierarchy
+### Requirement 3: Function Call Hierarchy and Context Menu Organization
 
-**User Story:** As a developer debugging or refactoring code, I want to right-click on any function and see its complete call hierarchy, so that I can understand how functions are interconnected throughout the codebase.
+**User Story:** As a developer debugging or refactoring code, I want to right-click on any function and see organized CodeMindMap options including call hierarchy, so that I can understand how functions are interconnected throughout the codebase.
 
 #### Acceptance Criteria
 
-1. WHEN the user right-clicks on a function THEN the system SHALL display a "Show Call Hierarchy" context menu option
-2. WHEN "Show Call Hierarchy" is selected THEN the system SHALL display a full call graph showing all callers and callees
-3. WHEN the call graph is displayed THEN the system SHALL show both incoming and outgoing function calls
-4. WHEN a function in the call graph is clicked THEN the system SHALL navigate to that function's definition
-5. WHEN the call hierarchy is complex THEN the system SHALL provide filtering and search capabilities
-6. IF a function has no callers or callees THEN the system SHALL display an appropriate message
+1. WHEN the user right-clicks on code THEN the system SHALL display a "CodeMindMap" submenu in the context menu
+2. WHEN the CodeMindMap submenu is opened THEN the system SHALL show options including "Graph View", "JSON View", and "Show Call Hierarchy"
+3. WHEN "Show Call Hierarchy" is selected from the CodeMindMap submenu THEN the system SHALL display a full call graph showing all callers and callees
+4. WHEN the call graph is displayed THEN the system SHALL show both incoming and outgoing function calls
+5. WHEN a function in the call graph is clicked THEN the system SHALL navigate to that function's definition
+6. WHEN the call hierarchy is complex THEN the system SHALL provide filtering and search capabilities
+7. WHEN "Graph View" is selected THEN the system SHALL open the module graph visualization
+8. WHEN "JSON View" is selected THEN the system SHALL display the raw analysis data in JSON format
+9. IF a function has no callers or callees THEN the system SHALL display an appropriate message
 
 ### Requirement 4: Framework-Specific Pattern Detection
 
@@ -64,12 +67,13 @@ CodeMindMap is a VS Code extension that provides visual analysis and navigation 
 
 #### Acceptance Criteria
 
-1. WHEN the extension is activated THEN the system SHALL provide a sidebar panel for dependencies and modules
-2. WHEN analysis is complete THEN the system SHALL display interactive graphs in a webview panel
+1. WHEN the extension is activated THEN the system SHALL provide a dedicated CodeMindMap icon in the left sidebar navigation bar
+2. WHEN analysis is complete THEN the system SHALL display interactive graphs in a webview panel with properly loaded Cytoscape.js library
 3. WHEN viewing code THEN the system SHALL display CodeLens annotations above functions showing complexity scores
 4. WHEN the user requests analysis THEN the system SHALL run the Python analyzer script in the background
 5. WHEN analysis is running THEN the system SHALL display progress indicators to the user
 6. IF the Python analyzer fails THEN the system SHALL display helpful error messages and troubleshooting guidance
+7. WHEN the webview loads THEN the system SHALL ensure Cytoscape.js is properly defined and available for graph rendering
 
 ### Requirement 6: Performance and Scalability
 
@@ -96,3 +100,16 @@ CodeMindMap is a VS Code extension that provides visual analysis and navigation 
 4. WHEN errors occur during analysis THEN the system SHALL include error information in the JSON output
 5. WHEN the extension is extended THEN the system SHALL provide clear APIs for accessing analysis data
 6. IF the JSON structure changes THEN the system SHALL provide migration guidance for dependent tools
+
+### Requirement 8: Sidebar Navigation and Icon Integration
+
+**User Story:** As a VS Code user, I want CodeMindMap to have its own dedicated icon in the left sidebar navigation like other extensions, so that I can easily access the extension's features without cluttering the context menu.
+
+#### Acceptance Criteria
+
+1. WHEN VS Code starts with the extension installed THEN the system SHALL display a CodeMindMap icon in the left sidebar navigation bar
+2. WHEN the CodeMindMap sidebar icon is clicked THEN the system SHALL open the CodeMindMap panel showing project analysis and navigation options
+3. WHEN the CodeMindMap panel is active THEN the system SHALL provide easy access to graph view, JSON view, and analysis controls
+4. WHEN the sidebar panel is displayed THEN the system SHALL show the current project's module structure and dependencies
+5. WHEN the user interacts with items in the sidebar THEN the system SHALL provide appropriate actions like opening files or showing graphs
+6. IF no Python project is detected THEN the system SHALL display helpful guidance in the sidebar panel

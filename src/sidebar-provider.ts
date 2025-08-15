@@ -245,8 +245,122 @@ export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeI
      * Update the analysis data and refresh the tree
      */
     public updateAnalysisData(data: AnalysisData | null): void {
-        this.analysisData = data;
+        // Validate and normalize the data structure
+        if (data) {
+            this.analysisData = this.normalizeAnalysisData(data);
+        } else {
+            this.analysisData = null;
+        }
         this.refresh();
+    }
+
+    /**
+     * Normalize analysis data to handle different formats
+     */
+    private normalizeAnalysisData(data: any): AnalysisData {
+        // Handle the case where modules is an array vs object with nodes
+        let modules: ModuleInfo[] = [];
+        if (Array.isArray(data.modules)) {
+            modules = data.modules;
+        } else if (data.modules && Array.isArray(data.modules.nodes)) {
+            // Convert from the new format to the expected format
+            modules = data.modules.nodes.map((node: any) => ({
+                name: node.name || node.id,
+                path: node.path,
+                functions: [], // Will be populated from functions data
+                classes: [],
+                imports: [],
+                complexity: this.normalizeComplexity(node.complexity),
+                size_lines: node.size || 0,
+                docstring: node.docstring
+            }));
+        }
+
+        // Populate functions and classes from the functions data if available
+        if (data.functions && Array.isArray(data.functions.nodes)) {
+            const functionsByModule = new Map<string, FunctionInfo[]>();
+            
+            data.functions.nodes.forEach((func: any) => {
+                const functionInfo: FunctionInfo = {
+                    name: func.name,
+                    module: func.module,
+                    line_number: func.line_number || func.lineNumber || 0,
+                    complexity: this.normalizeComplexity(func.complexity),
+                    parameters: func.parameters || [],
+                    return_type: func.return_type,
+                    docstring: func.docstring,
+                    is_method: func.is_method || false,
+                    is_async: func.is_async || false
+                };
+
+                if (!functionsByModule.has(func.module)) {
+                    functionsByModule.set(func.module, []);
+                }
+                functionsByModule.get(func.module)!.push(functionInfo);
+            });
+
+            // Add functions to their respective modules
+            modules.forEach(module => {
+                const moduleFunctions = functionsByModule.get(module.name) || [];
+                module.functions = moduleFunctions.filter(f => !f.is_method);
+                
+                // Group methods by class (simplified approach)
+                const methodsByClass = new Map<string, FunctionInfo[]>();
+                moduleFunctions.filter(f => f.is_method).forEach(method => {
+                    // Extract class name from function ID if available
+                    const classMatch = method.name.match(/^(.+)\.(.+)$/);
+                    const className = classMatch ? classMatch[1] : 'UnknownClass';
+                    
+                    if (!methodsByClass.has(className)) {
+                        methodsByClass.set(className, []);
+                    }
+                    methodsByClass.get(className)!.push(method);
+                });
+
+                // Create class info objects
+                module.classes = Array.from(methodsByClass.entries()).map(([className, methods]) => ({
+                    name: className,
+                    module: module.name,
+                    line_number: methods[0]?.line_number || 0,
+                    methods: methods,
+                    base_classes: [],
+                    docstring: undefined
+                }));
+            });
+        }
+
+        return {
+            tech_stack: data.tech_stack || { libraries: [], pythonVersion: 'Unknown', frameworks: [], packageManager: 'pip' },
+            modules: modules,
+            framework_patterns: data.framework_patterns || {}
+        };
+    }
+
+    /**
+     * Normalize complexity data to handle different formats
+     */
+    private normalizeComplexity(complexity: any): ComplexityScore {
+        if (typeof complexity === 'number') {
+            return {
+                cyclomatic: complexity,
+                cognitive: 0,
+                level: complexity <= 5 ? 'low' : complexity <= 10 ? 'medium' : 'high'
+            };
+        }
+        
+        if (complexity && typeof complexity === 'object') {
+            return {
+                cyclomatic: complexity.cyclomatic || complexity.value || 0,
+                cognitive: complexity.cognitive || 0,
+                level: complexity.level || (complexity.cyclomatic <= 5 ? 'low' : complexity.cyclomatic <= 10 ? 'medium' : 'high')
+            };
+        }
+
+        return {
+            cyclomatic: 0,
+            cognitive: 0,
+            level: 'low'
+        };
     }
 
     /**
