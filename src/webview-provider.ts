@@ -9,6 +9,19 @@ export interface WebviewAnalysisData {
     functions?: CallGraphData;
     techStack?: TechStackData;
     frameworkPatterns?: FrameworkPatternsData;
+    gitAnalytics?: GitAnalyticsData;
+}
+
+/**
+ * Git analytics data structure
+ */
+export interface GitAnalyticsData {
+    repositoryInfo: any;
+    authorContributions: any[];
+    moduleStatistics: any;
+    commitTimeline: any;
+    contributionGraphs: any[];
+    analysisType: string;
 }
 
 /**
@@ -178,7 +191,7 @@ export class WebviewProvider {
     private context: vscode.ExtensionContext;
     private outputChannel: vscode.OutputChannel;
     private analysisData: WebviewAnalysisData | null = null;
-    private currentView: 'module-graph' | 'call-hierarchy' = 'module-graph';
+    private currentView: 'module-graph' | 'call-hierarchy' | 'current-file' | 'json-view' | 'git-analytics' = 'module-graph';
     private selectedFunction: string | null = null;
     private debugMode: boolean = false;
 
@@ -187,7 +200,7 @@ export class WebviewProvider {
         this.outputChannel = outputChannel;
         
         // Enable debug mode based on configuration or development environment
-        const config = vscode.workspace.getConfiguration('codemindmap');
+        const config = vscode.workspace.getConfiguration('doracodebird');
         this.debugMode = config.get('enableDebugMode', false) || 
                         context.extensionMode === vscode.ExtensionMode.Development;
         
@@ -225,6 +238,54 @@ export class WebviewProvider {
     }
 
     /**
+     * Show the tech stack visualization
+     */
+    public showTechStack(analysisData: WebviewAnalysisData): void {
+        this.analysisData = analysisData;
+        this.currentView = 'module-graph'; // For now, use module-graph view
+        this.selectedFunction = null;
+        
+        this.createOrShowWebview();
+        this.updateWebviewContent();
+        
+        this.log('Tech stack webview displayed');
+    }
+
+    /**
+     * Show current file analysis visualization
+     */
+    public showCurrentFileAnalysis(analysisData: any, view: 'graph' | 'json' = 'graph'): void {
+        // Convert current file analysis data to webview format
+        const webviewData = this.convertCurrentFileAnalysisData(analysisData);
+        
+        this.analysisData = webviewData;
+        this.currentView = view === 'json' ? 'json-view' : 'current-file';
+        this.selectedFunction = null;
+        
+        this.createOrShowWebview();
+        this.updateWebviewContent();
+        
+        this.log(`Current file analysis webview displayed in ${view} view`);
+    }
+
+    /**
+     * Show Git analytics visualization
+     */
+    public showGitAnalytics(analysisData: any, analysisType: string): void {
+        // Convert Git analytics data to webview format
+        const webviewData = this.convertGitAnalyticsData(analysisData, analysisType);
+        
+        this.analysisData = webviewData;
+        this.currentView = 'git-analytics';
+        this.selectedFunction = null;
+        
+        this.createOrShowWebview();
+        this.updateWebviewContent();
+        
+        this.log(`Git analytics webview displayed for ${analysisType}`);
+    }
+
+    /**
      * Update the webview with new analysis data
      */
     public updateAnalysisData(analysisData: WebviewAnalysisData | null): void {
@@ -255,8 +316,8 @@ export class WebviewProvider {
             
             // Create new webview panel
             this.panel = vscode.window.createWebviewPanel(
-                'codemindmapGraph',
-                'CodeMindMap - Graph Visualization',
+                'doracodebirdGraph',
+                'DoraCodeBirdView - Graph Visualization',
                 columnToShowIn || vscode.ViewColumn.One,
                 {
                     enableScripts: true,
@@ -387,7 +448,7 @@ export class WebviewProvider {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource} 'unsafe-eval'; img-src ${webview.cspSource} data:;">
     <link href="${styleUri}" rel="stylesheet">
-    <title>CodeMindMap - Graph Visualization</title>
+    <title>DoraCodeBirdView - Graph Visualization</title>
 </head>
 <body>
     <div id="toolbar">
@@ -547,7 +608,7 @@ export class WebviewProvider {
                 setupEventListeners();
                 showLoading();
                 
-                console.log('CodeMindMap webview initialized successfully');
+                console.log('DoraCodeBirdView webview initialized successfully');
                 
                 // Request initial data
                 vscode.postMessage({ command: 'ready' });
@@ -606,7 +667,7 @@ export class WebviewProvider {
                 debugMode = data.debugMode || false;
                 
                 if (!analysisData) {
-                    showError('No analysis data available');
+                    showError('Analysis data is being loaded...');
                     return;
                 }
                 
@@ -663,6 +724,12 @@ export class WebviewProvider {
                     renderModuleGraph();
                 } else if (currentView === 'call-hierarchy') {
                     renderCallHierarchy();
+                } else if (currentView === 'git-analytics') {
+                    renderGitAnalytics();
+                } else if (currentView === 'current-file') {
+                    renderCurrentFileAnalysis();
+                } else if (currentView === 'json-view') {
+                    renderJsonView();
                 } else {
                     throw new Error('Unknown view type: ' + currentView);
                 }
@@ -1296,6 +1363,195 @@ export class WebviewProvider {
     }
 
     /**
+     * Convert current file analysis data to webview format
+     */
+    private convertCurrentFileAnalysisData(analysisData: any): WebviewAnalysisData {
+        // Create a simplified webview data structure for current file analysis
+        const nodes: any[] = [];
+        const edges: any[] = [];
+        
+        // Add file as a node
+        if (analysisData.file_name) {
+            nodes.push({
+                id: analysisData.file_name,
+                name: analysisData.file_name,
+                path: analysisData.file_path,
+                complexity: analysisData.complexity_metrics?.overall_complexity?.cyclomatic || 0,
+                size: analysisData.complexity_metrics?.total_lines || 0,
+                functions: analysisData.complexity_metrics?.function_complexities?.map((f: any) => f.name) || []
+            });
+        }
+        
+        // Add functions as nodes
+        if (analysisData.complexity_metrics?.function_complexities) {
+            analysisData.complexity_metrics.function_complexities.forEach((func: any) => {
+                nodes.push({
+                    id: `${analysisData.file_name}::${func.name}`,
+                    name: func.name,
+                    module: analysisData.file_name,
+                    complexity: func.complexity?.cyclomatic || 0,
+                    line_number: func.line_number,
+                    parameters: func.parameters || []
+                });
+                
+                // Add edge from file to function
+                edges.push({
+                    source: analysisData.file_name,
+                    target: `${analysisData.file_name}::${func.name}`,
+                    type: 'contains'
+                });
+            });
+        }
+        
+        // Add classes as nodes
+        if (analysisData.complexity_metrics?.class_complexities) {
+            analysisData.complexity_metrics.class_complexities.forEach((cls: any) => {
+                nodes.push({
+                    id: `${analysisData.file_name}::${cls.name}`,
+                    name: cls.name,
+                    module: analysisData.file_name,
+                    complexity: 0, // Classes don't have direct complexity
+                    line_number: cls.line_number,
+                    type: 'class'
+                });
+                
+                // Add edge from file to class
+                edges.push({
+                    source: analysisData.file_name,
+                    target: `${analysisData.file_name}::${cls.name}`,
+                    type: 'contains'
+                });
+                
+                // Add methods as nodes
+                if (cls.methods) {
+                    cls.methods.forEach((method: any) => {
+                        const methodId = `${analysisData.file_name}::${cls.name}::${method.name}`;
+                        nodes.push({
+                            id: methodId,
+                            name: method.name,
+                            module: analysisData.file_name,
+                            complexity: method.complexity?.cyclomatic || 0,
+                            line_number: method.line_number || 0,
+                            parameters: method.parameters || [],
+                            is_method: true
+                        });
+                        
+                        // Add edge from class to method
+                        edges.push({
+                            source: `${analysisData.file_name}::${cls.name}`,
+                            target: methodId,
+                            type: 'contains'
+                        });
+                    });
+                }
+            });
+        }
+        
+        return {
+            modules: {
+                nodes: nodes,
+                edges: edges
+            },
+            functions: {
+                nodes: nodes.filter(n => n.name !== analysisData.file_name),
+                edges: edges
+            },
+            techStack: {
+                libraries: analysisData.tech_stack?.libraries || [],
+                frameworks: analysisData.tech_stack?.frameworks || [],
+                pythonVersion: analysisData.tech_stack?.python_version || 'unknown',
+                packageManager: analysisData.tech_stack?.package_manager || 'pip'
+            },
+            frameworkPatterns: analysisData.framework_patterns || {}
+        };
+    }
+
+    /**
+     * Convert Git analytics data to webview format
+     */
+    private convertGitAnalyticsData(analysisData: any, analysisType: string): WebviewAnalysisData {
+        // Create nodes and edges for Git analytics visualization
+        const nodes: any[] = [];
+        const edges: any[] = [];
+        
+        // For Git analytics, we'll create a different visualization structure
+        // This could show authors as nodes, modules as nodes, etc.
+        
+        if (analysisData.author_contributions) {
+            analysisData.author_contributions.forEach((author: any, index: number) => {
+                nodes.push({
+                    id: `author_${index}`,
+                    name: author.author_name,
+                    email: author.author_email,
+                    commits: author.total_commits,
+                    linesAdded: author.lines_added,
+                    linesRemoved: author.lines_removed,
+                    contributionPercentage: author.contribution_percentage,
+                    type: 'author'
+                });
+            });
+        }
+        
+        if (analysisData.module_statistics) {
+            Object.entries(analysisData.module_statistics).forEach(([modulePath, stats]: [string, any], index: number) => {
+                nodes.push({
+                    id: `module_${index}`,
+                    name: modulePath,
+                    path: modulePath,
+                    commits: stats.total_commits,
+                    authors: stats.unique_authors,
+                    linesAdded: stats.lines_added,
+                    linesRemoved: stats.lines_removed,
+                    type: 'module'
+                });
+                
+                // Create edges between authors and modules they contributed to
+                if (stats.author_breakdown) {
+                    stats.author_breakdown.forEach((authorContrib: any) => {
+                        const authorIndex = analysisData.author_contributions?.findIndex(
+                            (a: any) => a.author_name === authorContrib.author_name
+                        );
+                        if (authorIndex >= 0) {
+                            edges.push({
+                                source: `author_${authorIndex}`,
+                                target: `module_${index}`,
+                                commits: authorContrib.total_commits,
+                                type: 'contribution'
+                            });
+                        }
+                    });
+                }
+            });
+        }
+        
+        return {
+            modules: {
+                nodes: nodes,
+                edges: edges
+            },
+            functions: {
+                nodes: [],
+                edges: []
+            },
+            techStack: {
+                libraries: [],
+                frameworks: [],
+                pythonVersion: 'unknown',
+                packageManager: 'pip'
+            },
+            gitAnalytics: {
+                repositoryInfo: analysisData.repository_info || {},
+                authorContributions: analysisData.author_contributions || [],
+                moduleStatistics: analysisData.module_statistics || {},
+                commitTimeline: analysisData.commit_timeline || {},
+                contributionGraphs: analysisData.contribution_graphs || [],
+                analysisType: analysisType
+            },
+            frameworkPatterns: {}
+        };
+    }
+
+    /**
      * Log message to output channel
      */
     private log(message: string): void {
@@ -1305,7 +1561,7 @@ export class WebviewProvider {
         this.outputChannel.appendLine(logMessage);
         
         if (this.debugMode) {
-            console.log(`[CodeMindMap] ${logMessage}`);
+            console.log(`[DoraCodeBirdView] ${logMessage}`);
         }
     }
 
@@ -1321,7 +1577,7 @@ export class WebviewProvider {
         const logMessage = `[${timestamp}] ERROR: ${message}\n${errorMessage}`;
         this.outputChannel.appendLine(logMessage);
         
-        console.error(`[CodeMindMap] ${message}`, error);
+        console.error(`[DoraCodeBirdView] ${message}`, error);
     }
 
     /**

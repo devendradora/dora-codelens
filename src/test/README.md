@@ -1,6 +1,6 @@
-# CodeMindMap Extension Test Suite
+# DoraCodeBirdView Extension Test Suite
 
-This directory contains comprehensive tests for the CodeMindMap VS Code extension, covering unit tests, integration tests, end-to-end workflows, and performance testing.
+This directory contains comprehensive tests for the DoraCodeBirdView VS Code extension, covering unit tests, integration tests, end-to-end workflows, and performance testing.
 
 ## Test Structure
 

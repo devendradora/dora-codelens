@@ -1,14 +1,15 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { AnalyzerRunner, AnalysisResult, AnalyzerOptions } from './analyzer-runner';
-import { SidebarProvider, CodeMindMapTreeItem, TreeItemType, AnalysisData } from './sidebar-provider';
+import { SidebarProvider, DoraCodeBirdTreeItem, TreeItemType, AnalysisData } from './sidebar-provider';
 import { ComplexityCodeLensProvider, FunctionComplexityData } from './codelens-provider';
 import { WebviewProvider, WebviewAnalysisData } from './webview-provider';
+import { JsonUtilities } from './json-utilities';
 
 /**
- * Main CodeMindMap extension class that manages the extension lifecycle
+ * Main DoraCodeBirdView extension class that manages the extension lifecycle
  */
-export class CodeMindMapExtension {
+export class DoraCodeBirdExtension {
     private context: vscode.ExtensionContext;
     private outputChannel: vscode.OutputChannel;
     private statusBarItem: vscode.StatusBarItem;
@@ -16,19 +17,21 @@ export class CodeMindMapExtension {
     private sidebarProvider: SidebarProvider;
     private codeLensProvider: ComplexityCodeLensProvider;
     private webviewProvider: WebviewProvider;
+    private jsonUtilities: JsonUtilities;
     private isAnalyzing: boolean = false;
     private lastAnalysisResult: AnalysisResult | null = null;
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
-        this.outputChannel = vscode.window.createOutputChannel('CodeMindMap');
+        this.outputChannel = vscode.window.createOutputChannel('DoraCodeBirdView');
         this.analyzerRunner = new AnalyzerRunner(this.outputChannel, context.extensionPath);
         this.sidebarProvider = new SidebarProvider(context);
         this.codeLensProvider = new ComplexityCodeLensProvider(this.outputChannel);
         this.webviewProvider = new WebviewProvider(context, this.outputChannel);
+        this.jsonUtilities = new JsonUtilities(this.outputChannel);
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-        this.statusBarItem.command = 'codemindmap.analyzeProject';
-        this.statusBarItem.text = '$(graph) CodeMindMap';
+        this.statusBarItem.command = 'doracodebird.analyzeProject';
+        this.statusBarItem.text = '$(graph) DoraCodeBirdView';
         this.statusBarItem.tooltip = 'Click to analyze Python project';
         this.statusBarItem.show();
     }
@@ -37,7 +40,7 @@ export class CodeMindMapExtension {
      * Initialize the extension and register all commands
      */
     public initialize(): void {
-        this.log('CodeMindMap extension is initializing...');
+        this.log('DoraCodeBirdView extension is initializing...');
 
         // Check if we're in a Python project
         this.checkPythonProject();
@@ -54,14 +57,14 @@ export class CodeMindMapExtension {
         // Set up workspace listeners
         this.setupWorkspaceListeners();
 
-        this.log('CodeMindMap extension initialized successfully');
+        this.log('DoraCodeBirdView extension initialized successfully');
     }
 
     /**
      * Register the tree data provider for the sidebar
      */
     private registerTreeDataProvider(): void {
-        const treeView = vscode.window.createTreeView('codemindmapSidebar', {
+        const treeView = vscode.window.createTreeView('doracodebirdSidebar', {
             treeDataProvider: this.sidebarProvider,
             showCollapseAll: true
         });
@@ -93,88 +96,137 @@ export class CodeMindMapExtension {
     private registerCommands(): void {
         const commands = [
             // Main analysis command
-            vscode.commands.registerCommand('codemindmap.analyzeProject', () => {
+            vscode.commands.registerCommand('doracodebird.analyzeProject', () => {
                 this.analyzeProject();
             }),
 
             // Module graph visualization
-            vscode.commands.registerCommand('codemindmap.showModuleGraph', () => {
+            vscode.commands.registerCommand('doracodebird.showModuleGraph', () => {
                 this.showModuleGraph();
             }),
 
             // Call hierarchy visualization
-            vscode.commands.registerCommand('codemindmap.showCallHierarchy', (uri?: vscode.Uri, position?: vscode.Position) => {
+            vscode.commands.registerCommand('doracodebird.showCallHierarchy', (uri?: vscode.Uri, position?: vscode.Position) => {
                 this.showCallHierarchy(uri, position);
             }),
 
             // Sidebar refresh
-            vscode.commands.registerCommand('codemindmap.refreshSidebar', () => {
+            vscode.commands.registerCommand('doracodebird.refreshSidebar', () => {
                 this.refreshSidebar();
             }),
 
             // Open settings
-            vscode.commands.registerCommand('codemindmap.openSettings', () => {
+            vscode.commands.registerCommand('doracodebird.openSettings', () => {
                 this.openSettings();
             }),
 
             // Clear cache
-            vscode.commands.registerCommand('codemindmap.clearCache', () => {
+            vscode.commands.registerCommand('doracodebird.clearCache', () => {
                 this.clearCache();
             }),
 
             // Show output channel
-            vscode.commands.registerCommand('codemindmap.showOutput', () => {
+            vscode.commands.registerCommand('doracodebird.showOutput', () => {
                 this.outputChannel.show();
             }),
 
             // Cancel analysis
-            vscode.commands.registerCommand('codemindmap.cancelAnalysis', () => {
+            vscode.commands.registerCommand('doracodebird.cancelAnalysis', () => {
                 this.cancelAnalysis();
             }),
 
             // Navigate to item from sidebar
-            vscode.commands.registerCommand('codemindmap.navigateToItem', (item: CodeMindMapTreeItem) => {
+            vscode.commands.registerCommand('doracodebird.navigateToItem', (item: DoraCodeBirdTreeItem) => {
                 this.navigateToItem(item);
             }),
 
             // Filter sidebar
-            vscode.commands.registerCommand('codemindmap.filterSidebar', () => {
+            vscode.commands.registerCommand('doracodebird.filterSidebar', () => {
                 this.filterSidebar();
             }),
 
             // Select module in sidebar
-            vscode.commands.registerCommand('codemindmap.selectModule', (item: CodeMindMapTreeItem) => {
+            vscode.commands.registerCommand('doracodebird.selectModule', (item: DoraCodeBirdTreeItem) => {
                 this.selectModule(item);
             }),
 
             // Clear module selection
-            vscode.commands.registerCommand('codemindmap.clearSelection', () => {
+            vscode.commands.registerCommand('doracodebird.clearSelection', () => {
                 this.clearModuleSelection();
             }),
 
             // Show module dependencies
-            vscode.commands.registerCommand('codemindmap.showDependencies', (item: CodeMindMapTreeItem) => {
+            vscode.commands.registerCommand('doracodebird.showDependencies', (item: DoraCodeBirdTreeItem) => {
                 this.showModuleDependencies(item);
             }),
 
             // Show function complexity details
-            vscode.commands.registerCommand('codemindmap.showFunctionComplexityDetails', (func: FunctionComplexityData, uri: vscode.Uri, position: vscode.Position) => {
+            vscode.commands.registerCommand('doracodebird.showFunctionComplexityDetails', (func: FunctionComplexityData, uri: vscode.Uri, position: vscode.Position) => {
                 this.showFunctionComplexityDetails(func, uri, position);
             }),
 
             // Validate configuration
-            vscode.commands.registerCommand('codemindmap.validateConfiguration', () => {
+            vscode.commands.registerCommand('doracodebird.validateConfiguration', () => {
                 this.validateAndShowConfiguration();
             }),
 
             // Graph View command (context menu)
-            vscode.commands.registerCommand('codemindmap.showGraphView', (uri?: vscode.Uri, position?: vscode.Position) => {
+            vscode.commands.registerCommand('doracodebird.showGraphView', (uri?: vscode.Uri, position?: vscode.Position) => {
                 this.showGraphViewFromContext(uri, position);
             }),
 
             // JSON View command (context menu)
-            vscode.commands.registerCommand('codemindmap.showJsonView', (uri?: vscode.Uri, position?: vscode.Position) => {
+            vscode.commands.registerCommand('doracodebird.showJsonView', (uri?: vscode.Uri, position?: vscode.Position) => {
                 this.showJsonViewFromContext(uri, position);
+            }),
+
+            // Full Analysis submenu commands
+            vscode.commands.registerCommand('doracodebird.fullAnalysisTechStack', () => {
+                this.showFullAnalysisTechStack();
+            }),
+
+            vscode.commands.registerCommand('doracodebird.fullAnalysisGraphView', () => {
+                this.showFullAnalysisGraphView();
+            }),
+
+            vscode.commands.registerCommand('doracodebird.fullAnalysisJsonView', () => {
+                this.showFullAnalysisJsonView();
+            }),
+
+            // Current File Analysis command
+            vscode.commands.registerCommand('doracodebird.currentFileAnalysis', () => {
+                this.showCurrentFileAnalysis();
+            }),
+
+            // Git Commits submenu commands
+            vscode.commands.registerCommand('doracodebird.gitAuthorStatistics', () => {
+                this.showGitAuthorStatistics();
+            }),
+
+            vscode.commands.registerCommand('doracodebird.gitModuleContributions', () => {
+                this.showGitModuleContributions();
+            }),
+
+            vscode.commands.registerCommand('doracodebird.gitCommitTimeline', () => {
+                this.showGitCommitTimeline();
+            }),
+
+            // JSON Utils submenu commands
+            vscode.commands.registerCommand('doracodebird.jsonFormat', () => {
+                this.formatJsonInEditor();
+            }),
+
+            vscode.commands.registerCommand('doracodebird.jsonTreeView', () => {
+                this.showJsonTreeView();
+            }),
+
+            // DB Schema submenu commands
+            vscode.commands.registerCommand('doracodebird.dbSchemaGraphView', () => {
+                this.showDatabaseSchemaGraphView();
+            }),
+
+            vscode.commands.registerCommand('doracodebird.dbSchemaRawSQL', () => {
+                this.showDatabaseSchemaRawSQL();
             })
         ];
 
@@ -442,7 +494,7 @@ export class CodeMindMapExtension {
                 'Install Python Guide'
             ).then(action => {
                 if (action === 'Open Settings') {
-                    vscode.commands.executeCommand('workbench.action.openSettings', 'codemindmap.pythonPath');
+                    vscode.commands.executeCommand('workbench.action.openSettings', 'doracodebird.pythonPath');
                 } else if (action === 'Install Python Guide') {
                     vscode.env.openExternal(vscode.Uri.parse('https://www.python.org/downloads/'));
                 }
@@ -579,17 +631,13 @@ For more help, check the extension documentation or report an issue.`;
     /**
      * Show module graph visualization
      */
-    private showModuleGraph(): void {
+    private async showModuleGraph(): Promise<void> {
+        // Run analysis if not available
         if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
-            vscode.window.showWarningMessage(
-                'No analysis data available. Please run analysis first.',
-                'Run Analysis'
-            ).then(action => {
-                if (action === 'Run Analysis') {
-                    this.analyzeProject();
-                }
-            });
-            return;
+            await this.analyzeProject();
+            if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
+                return;
+            }
         }
 
         // Check if we have valid data for visualization
@@ -655,17 +703,13 @@ For more help, check the extension documentation or report an issue.`;
     /**
      * Show call hierarchy for function at cursor or selection
      */
-    private showCallHierarchy(uri?: vscode.Uri, position?: vscode.Position): void {
+    private async showCallHierarchy(uri?: vscode.Uri, position?: vscode.Position): Promise<void> {
+        // Run analysis if not available
         if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
-            vscode.window.showWarningMessage(
-                'No analysis data available. Please run analysis first.',
-                'Run Analysis'
-            ).then(action => {
-                if (action === 'Run Analysis') {
-                    this.analyzeProject();
-                }
-            });
-            return;
+            await this.analyzeProject();
+            if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
+                return;
+            }
         }
 
         const editor = vscode.window.activeTextEditor;
@@ -691,7 +735,7 @@ For more help, check the extension documentation or report an issue.`;
                 ).then(action => {
                     if (action === 'Help') {
                         vscode.window.showInformationMessage(
-                            'To show call hierarchy:\n1. Place cursor on a function name\n2. Right-click and select "Show Call Hierarchy"\n3. Or use the command palette: "CodeMindMap: Show Call Hierarchy"'
+                            'To show call hierarchy:\n1. Place cursor on a function name\n2. Right-click and select "Show Call Hierarchy"\n3. Or use the command palette: "DoraCodeBirdView: Show Call Hierarchy"'
                         );
                     }
                 });
@@ -928,7 +972,7 @@ For more help, check the extension documentation or report an issue.`;
      * Open extension settings
      */
     private openSettings(): void {
-        vscode.commands.executeCommand('workbench.action.openSettings', 'codemindmap');
+        vscode.commands.executeCommand('workbench.action.openSettings', 'doracodebird');
     }
 
     /**
@@ -1053,24 +1097,15 @@ Complexity Guidelines:
     /**
      * Show Graph View from context menu
      */
-    private showGraphViewFromContext(uri?: vscode.Uri, position?: vscode.Position): void {
+    private async showGraphViewFromContext(uri?: vscode.Uri, position?: vscode.Position): Promise<void> {
         this.log('Graph View requested from context menu');
 
+        // Run analysis if not available
         if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
-            vscode.window.showWarningMessage(
-                'No analysis data available. Please run analysis first.',
-                'Run Analysis'
-            ).then(action => {
-                if (action === 'Run Analysis') {
-                    this.analyzeProject().then(() => {
-                        // After analysis completes, show the graph view
-                        if (this.lastAnalysisResult && this.lastAnalysisResult.data) {
-                            this.showModuleGraph();
-                        }
-                    });
-                }
-            });
-            return;
+            await this.analyzeProject();
+            if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
+                return;
+            }
         }
 
         // Show the module graph
@@ -1080,24 +1115,15 @@ Complexity Guidelines:
     /**
      * Show JSON View from context menu
      */
-    private showJsonViewFromContext(uri?: vscode.Uri, position?: vscode.Position): void {
+    private async showJsonViewFromContext(uri?: vscode.Uri, position?: vscode.Position): Promise<void> {
         this.log('JSON View requested from context menu');
 
+        // Run analysis if not available
         if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
-            vscode.window.showWarningMessage(
-                'No analysis data available. Please run analysis first.',
-                'Run Analysis'
-            ).then(action => {
-                if (action === 'Run Analysis') {
-                    this.analyzeProject().then(() => {
-                        // After analysis completes, show the JSON view
-                        if (this.lastAnalysisResult && this.lastAnalysisResult.data) {
-                            this.showJsonView();
-                        }
-                    });
-                }
-            });
-            return;
+            await this.analyzeProject();
+            if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
+                return;
+            }
         }
 
         // Show the JSON view
@@ -1108,8 +1134,8 @@ Complexity Guidelines:
      * Show raw analysis data in JSON format
      */
     private async showJsonView(): Promise<void> {
+        // This method should only be called when analysis data is available
         if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
-            vscode.window.showErrorMessage('No analysis data available');
             return;
         }
 
@@ -1162,10 +1188,180 @@ Complexity Guidelines:
      */
     private performAnalysisCleanup(): void {
         this.isAnalyzing = false;
-        this.statusBarItem.text = '$(graph) CodeMindMap';
+        this.statusBarItem.text = '$(graph) DoraCodeBirdView';
 
         // Reset progress indicators
         // Note: VS Code progress dialogs are automatically cleaned up when the promise resolves/rejects
+    }
+
+    /**
+     * Handle Git analysis errors
+     */
+    private handleGitAnalysisError(result: any, analysisType: string): void {
+        const errors = result.errors || [];
+        
+        // Log all errors
+        errors.forEach((error: any) => {
+            this.logError(`${analysisType} error (${error.type || 'unknown'})`, new Error(error.message || 'Unknown error'));
+        });
+
+        // Check for specific error types
+        const hasGitError = errors.some((e: any) => 
+            e.message?.toLowerCase().includes('not a git repository') ||
+            e.message?.toLowerCase().includes('git') ||
+            e.type === 'git_error'
+        );
+
+        const hasPythonError = errors.some((e: any) => 
+            e.message?.toLowerCase().includes('python') ||
+            e.type === 'python_error'
+        );
+
+        if (hasGitError) {
+            vscode.window.showErrorMessage(
+                `${analysisType} failed: This workspace is not a Git repository or Git is not accessible.`,
+                'Check Git Installation',
+                'View Output'
+            ).then(action => {
+                if (action === 'Check Git Installation') {
+                    vscode.env.openExternal(vscode.Uri.parse('https://git-scm.com/downloads'));
+                } else if (action === 'View Output') {
+                    this.outputChannel.show();
+                }
+            });
+        } else if (hasPythonError) {
+            vscode.window.showErrorMessage(
+                `${analysisType} failed: Python or required dependencies are not available.`,
+                'Check Python Installation',
+                'View Output'
+            ).then(action => {
+                if (action === 'Check Python Installation') {
+                    this.openSettings();
+                } else if (action === 'View Output') {
+                    this.outputChannel.show();
+                }
+            });
+        } else {
+            vscode.window.showErrorMessage(
+                `${analysisType} failed. Check output for details.`,
+                'View Output',
+                'Retry'
+            ).then(action => {
+                if (action === 'View Output') {
+                    this.outputChannel.show();
+                } else if (action === 'Retry') {
+                    // Retry based on analysis type
+                    if (analysisType === 'Git Author Statistics') {
+                        this.showGitAuthorStatistics();
+                    } else if (analysisType === 'Git Module Contributions') {
+                        this.showGitModuleContributions();
+                    } else if (analysisType === 'Git Commit Timeline') {
+                        this.showGitCommitTimeline();
+                    }
+                }
+            });
+        }
+    }
+
+    /**
+     * Display Git Author Statistics (fallback method)
+     */
+    private displayGitAuthorStatistics(data: any): void {
+        const authors = data.author_contributions || [];
+        
+        if (authors.length === 0) {
+            vscode.window.showInformationMessage('No Git author statistics found in this repository.');
+            return;
+        }
+
+        // Create a simple text summary
+        const topAuthors = authors.slice(0, 10);
+        const summary = topAuthors.map((author: any, index: number) => 
+            `${index + 1}. ${author.author_name} - ${author.total_commits} commits (${author.contribution_percentage?.toFixed(1) || 0}%)`
+        ).join('\n');
+
+        const message = `Git Author Statistics:\n\n${summary}\n\nTotal Authors: ${authors.length}`;
+        
+        vscode.window.showInformationMessage(
+            'Git Author Statistics Analysis Complete',
+            { modal: true, detail: message },
+            'View Full Analysis'
+        ).then(action => {
+            if (action === 'View Full Analysis') {
+                // Try to show in webview or output
+                this.outputChannel.appendLine('\n=== Git Author Statistics ===');
+                this.outputChannel.appendLine(JSON.stringify(data, null, 2));
+                this.outputChannel.show();
+            }
+        });
+    }
+
+    /**
+     * Display Git Module Contributions (fallback method)
+     */
+    private displayGitModuleContributions(data: any): void {
+        const moduleStats = data.module_statistics || {};
+        const modules = Object.keys(moduleStats);
+        
+        if (modules.length === 0) {
+            vscode.window.showInformationMessage('No Git module contributions found in this repository.');
+            return;
+        }
+
+        // Create a simple text summary
+        const topModules = modules.slice(0, 10);
+        const summary = topModules.map((modulePath: string) => {
+            const stats = moduleStats[modulePath];
+            return `${modulePath}: ${stats.total_commits} commits, ${stats.unique_authors} authors`;
+        }).join('\n');
+
+        const message = `Git Module Contributions:\n\n${summary}\n\nTotal Modules: ${modules.length}`;
+        
+        vscode.window.showInformationMessage(
+            'Git Module Contributions Analysis Complete',
+            { modal: true, detail: message },
+            'View Full Analysis'
+        ).then(action => {
+            if (action === 'View Full Analysis') {
+                // Try to show in webview or output
+                this.outputChannel.appendLine('\n=== Git Module Contributions ===');
+                this.outputChannel.appendLine(JSON.stringify(data, null, 2));
+                this.outputChannel.show();
+            }
+        });
+    }
+
+    /**
+     * Display Git Commit Timeline (fallback method)
+     */
+    private displayGitCommitTimeline(data: any): void {
+        const timeline = data.commit_timeline || [];
+        const repoInfo = data.repository_info || {};
+        
+        if (timeline.length === 0) {
+            vscode.window.showInformationMessage('No Git commit timeline found in this repository.');
+            return;
+        }
+
+        // Create a simple text summary
+        const totalCommits = repoInfo.total_commits || 0;
+        const contributors = repoInfo.contributors || 0;
+        const dateRange = repoInfo.date_range || {};
+        
+        const message = `Git Commit Timeline:\n\nRepository: ${repoInfo.name || 'Unknown'}\nBranch: ${repoInfo.branch || 'Unknown'}\nTotal Commits: ${totalCommits}\nContributors: ${contributors}\nDate Range: ${dateRange.start || 'Unknown'} to ${dateRange.end || 'Unknown'}\nTimeline Entries: ${timeline.length}`;
+        
+        vscode.window.showInformationMessage(
+            'Git Commit Timeline Analysis Complete',
+            { modal: true, detail: message },
+            'View Full Analysis'
+        ).then(action => {
+            if (action === 'View Full Analysis') {
+                // Try to show in webview or output
+                this.outputChannel.appendLine('\n=== Git Commit Timeline ===');
+                this.outputChannel.appendLine(JSON.stringify(data, null, 2));
+                this.outputChannel.show();
+            }
+        });
     }
 
     /**
@@ -1314,6 +1510,135 @@ Complexity Guidelines:
     }
 
     /**
+     * Convert database schema analysis result to tabbed webview data format
+     */
+    private convertDatabaseSchemaForTabbedView(schemaData: any): any {
+        try {
+            const tabbedData: any = {
+                dbSchema: {
+                    tables: [],
+                    relationships: [],
+                    indexes: [],
+                    constraints: [],
+                    rawSQL: [],
+                    graphData: { nodes: [], edges: [] },
+                    metadata: {
+                        analysisDate: new Date().toISOString(),
+                        totalTables: 0,
+                        totalRelationships: 0
+                    }
+                }
+            };
+
+            if (schemaData) {
+                // Convert tables
+                if (schemaData.tables) {
+                    tabbedData.dbSchema.tables = schemaData.tables.map((table: any) => ({
+                        name: table.name || 'unknown',
+                        schema: table.schema || 'public',
+                        columns: (table.columns || []).map((col: any) => ({
+                            name: col.name || 'unknown',
+                            dataType: col.data_type || 'VARCHAR',
+                            nullable: col.nullable !== false,
+                            defaultValue: col.default_value,
+                            maxLength: col.max_length,
+                            isPrimaryKey: col.is_primary_key || false,
+                            isForeignKey: col.is_foreign_key || false
+                        })),
+                        primaryKeys: table.primary_keys || [],
+                        foreignKeys: (table.foreign_keys || []).map((fk: any) => ({
+                            columnName: fk.column || fk.column_name,
+                            referencedTable: fk.referenced_table,
+                            referencedColumn: fk.referenced_column || 'id'
+                        })),
+                        indexes: table.indexes || [],
+                        constraints: table.constraints || [],
+                        estimatedRows: table.estimated_rows
+                    }));
+                }
+
+                // Convert relationships
+                if (schemaData.relationships) {
+                    tabbedData.dbSchema.relationships = schemaData.relationships.map((rel: any) => ({
+                        fromTable: rel.from_table,
+                        toTable: rel.to_table,
+                        relationshipType: rel.relationship_type || 'one-to-many',
+                        foreignKeyColumn: rel.foreign_key_column,
+                        referencedColumn: rel.referenced_column || 'id'
+                    }));
+                }
+
+                // Convert raw SQL statements
+                if (schemaData.raw_sql) {
+                    tabbedData.dbSchema.rawSQL = schemaData.raw_sql.map((stmt: any) => ({
+                        statementType: stmt.statement_type || 'UNKNOWN',
+                        content: stmt.content || '',
+                        filePath: stmt.file_path || '',
+                        lineNumber: stmt.line_number || 0,
+                        tableReferences: stmt.table_references || []
+                    }));
+                }
+
+                // Convert graph data
+                if (schemaData.graph_data) {
+                    tabbedData.dbSchema.graphData = {
+                        nodes: (schemaData.graph_data.nodes || []).map((node: any) => ({
+                            id: node.id,
+                            label: node.label || node.table_name,
+                            table: tabbedData.dbSchema.tables.find((t: any) => t.name === node.table_name) || {
+                                name: node.table_name,
+                                columns: []
+                            },
+                            position: node.position
+                        })),
+                        edges: (schemaData.graph_data.edges || []).map((edge: any) => ({
+                            source: edge.source,
+                            target: edge.target,
+                            relationship: tabbedData.dbSchema.relationships.find((r: any) => 
+                                r.fromTable === edge.source && r.toTable === edge.target
+                            ) || {
+                                relationshipType: 'unknown',
+                                foreignKeyColumn: 'unknown',
+                                referencedColumn: 'id'
+                            }
+                        }))
+                    };
+                }
+
+                // Update metadata
+                tabbedData.dbSchema.metadata = {
+                    analysisDate: schemaData.metadata?.analysis_timestamp || new Date().toISOString(),
+                    totalTables: tabbedData.dbSchema.tables.length,
+                    totalRelationships: tabbedData.dbSchema.relationships.length,
+                    databaseType: schemaData.metadata?.frameworks_detected?.join(', ') || 'Unknown'
+                };
+            }
+
+            this.log(`Converted database schema data: ${tabbedData.dbSchema.tables.length} tables, ${tabbedData.dbSchema.relationships.length} relationships, ${tabbedData.dbSchema.rawSQL.length} SQL statements`);
+            
+            return tabbedData;
+
+        } catch (error) {
+            this.logError('Error converting database schema data for tabbed view', error);
+            return {
+                dbSchema: {
+                    tables: [],
+                    relationships: [],
+                    indexes: [],
+                    constraints: [],
+                    rawSQL: [],
+                    graphData: { nodes: [], edges: [] },
+                    metadata: {
+                        analysisDate: new Date().toISOString(),
+                        totalTables: 0,
+                        totalRelationships: 0
+                    }
+                }
+            };
+        }
+    }
+
+    /**
      * Convert absolute path to relative path from workspace root
      */
     private convertToRelativePath(absolutePath: string): string {
@@ -1456,7 +1781,7 @@ Complexity Guidelines:
     /**
      * Navigate to a code item from the sidebar
      */
-    private async navigateToItem(item: CodeMindMapTreeItem): Promise<void> {
+    private async navigateToItem(item: DoraCodeBirdTreeItem): Promise<void> {
         try {
             let filePath: string | undefined;
             let lineNumber: number | undefined;
@@ -1540,7 +1865,7 @@ Complexity Guidelines:
     /**
      * Select a module and highlight its dependencies
      */
-    private selectModule(item: CodeMindMapTreeItem): void {
+    private selectModule(item: DoraCodeBirdTreeItem): void {
         if (item.itemType === TreeItemType.MODULE) {
             const module = item.data;
             this.sidebarProvider.selectModule(module.name);
@@ -1569,7 +1894,7 @@ Complexity Guidelines:
     /**
      * Show module dependencies in a quick pick
      */
-    private async showModuleDependencies(item: CodeMindMapTreeItem): Promise<void> {
+    private async showModuleDependencies(item: DoraCodeBirdTreeItem): Promise<void> {
         if (item.itemType !== TreeItemType.MODULE) {
             return;
         }
@@ -1649,10 +1974,496 @@ Complexity Guidelines:
     }
 
     /**
+     * Show Full Analysis Tech Stack
+     */
+    private async showFullAnalysisTechStack(): Promise<void> {
+        this.log('Full Analysis Tech Stack requested');
+        
+        // Run analysis if not available
+        if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
+            await this.analyzeProject();
+            if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
+                return;
+            }
+        }
+
+        // Convert analysis result to webview format and show tech stack
+        const webviewData = this.convertAnalysisDataForWebview(this.lastAnalysisResult);
+        this.webviewProvider.showTechStack(webviewData);
+    }
+
+    /**
+     * Show Full Analysis Graph View
+     */
+    private async showFullAnalysisGraphView(): Promise<void> {
+        this.log('Full Analysis Graph View requested');
+        
+        // Run analysis if not available
+        if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
+            await this.analyzeProject();
+            if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
+                return;
+            }
+        }
+
+        this.showModuleGraph();
+    }
+
+    /**
+     * Show Full Analysis JSON View
+     */
+    private async showFullAnalysisJsonView(): Promise<void> {
+        this.log('Full Analysis JSON View requested');
+        
+        // Run analysis if not available
+        if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
+            await this.analyzeProject();
+            if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
+                return;
+            }
+        }
+
+        this.showJsonView();
+    }
+
+    /**
+     * Show Current File Analysis
+     */
+    private async showCurrentFileAnalysis(): Promise<void> {
+        this.log('Current File Analysis requested');
+        
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showErrorMessage('No active editor. Please open a Python file.');
+            return;
+        }
+
+        if (editor.document.languageId !== 'python') {
+            vscode.window.showErrorMessage('Current file analysis is only available for Python files.');
+            return;
+        }
+
+        const filePath = editor.document.uri.fsPath;
+        this.log(`Analyzing current file: ${filePath}`);
+
+        try {
+            // Show progress dialog
+            const result = await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: 'Analyzing Current File',
+                cancellable: true
+            }, async (progress, token) => {
+                progress.report({ message: 'Starting file analysis...' });
+
+                // Run current file analysis
+                return await this.analyzerRunner.runCurrentFileAnalysis(filePath, progress, token);
+            });
+
+            if (result.success && result.data) {
+                this.log('Current file analysis completed successfully');
+                
+                // Show results in webview
+                await this.webviewProvider.showCurrentFileAnalysis(result.data);
+
+                // Show success message with options
+                const action = await vscode.window.showInformationMessage(
+                    'Current file analysis completed successfully!',
+                    'Show Graph View',
+                    'Show JSON View',
+                    'View Output'
+                );
+
+                if (action === 'Show Graph View') {
+                    await this.webviewProvider.showCurrentFileAnalysis(result.data, 'graph');
+                } else if (action === 'Show JSON View') {
+                    await this.webviewProvider.showCurrentFileAnalysis(result.data, 'json');
+                } else if (action === 'View Output') {
+                    this.outputChannel.show();
+                }
+            } else {
+                this.log('Current file analysis failed or returned no data');
+                
+                // Show error message with details
+                const errors = result.errors || [];
+                const errorMessage = errors.length > 0 
+                    ? `Analysis failed: ${errors[0].message}`
+                    : 'Analysis failed with unknown error';
+                
+                vscode.window.showErrorMessage(errorMessage, 'View Output').then(action => {
+                    if (action === 'View Output') {
+                        this.outputChannel.show();
+                    }
+                });
+            }
+
+        } catch (error) {
+            this.logError('Current file analysis failed', error);
+
+            if (error instanceof Error && error.message.includes('cancelled')) {
+                vscode.window.showInformationMessage('Current file analysis was cancelled');
+            } else {
+                vscode.window.showErrorMessage('Current file analysis failed. Check output for details.');
+            }
+        }
+    }
+
+    /**
+     * Show Git Author Statistics
+     */
+    private async showGitAuthorStatistics(): Promise<void> {
+        this.log('Git Author Statistics requested');
+        
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            vscode.window.showErrorMessage('No workspace folder open');
+            return;
+        }
+
+        try {
+            // Show progress dialog
+            const result = await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: 'Analyzing Git Author Statistics',
+                cancellable: true
+            }, async (progress, token) => {
+                progress.report({ increment: 0, message: 'Initializing Git analysis...' });
+                
+                // Run Git analytics
+                const options = {
+                    projectPath: workspaceFolders[0].uri.fsPath,
+                    analysisType: 'git_author_statistics',
+                    timeout: 120000 // 2 minutes
+                };
+
+                progress.report({ increment: 50, message: 'Analyzing Git repository...' });
+                
+                return await this.analyzerRunner.runGitAnalysis(options, progress, token);
+            });
+
+            if (result.success && result.data) {
+                this.log('Git author statistics analysis completed successfully');
+                
+                // Show results in tabbed webview
+                if (this.webviewProvider.showGitAnalytics) {
+                    this.webviewProvider.showGitAnalytics(result.data, 'author_statistics');
+                } else {
+                    // Fallback to basic display
+                    this.displayGitAuthorStatistics(result.data);
+                }
+            } else {
+                this.handleGitAnalysisError(result, 'Git Author Statistics');
+            }
+
+        } catch (error) {
+            this.logError('Git Author Statistics analysis failed', error);
+            
+            if (error instanceof Error && error.message.includes('cancelled')) {
+                vscode.window.showInformationMessage('Git Author Statistics analysis was cancelled');
+            } else if (error instanceof Error && error.message.includes('not a git repository')) {
+                vscode.window.showErrorMessage('This workspace is not a Git repository. Git analytics require a Git repository.');
+            } else {
+                vscode.window.showErrorMessage('Git Author Statistics analysis failed. Check output for details.');
+            }
+        }
+    }
+
+    /**
+     * Show Git Module Contributions
+     */
+    private async showGitModuleContributions(): Promise<void> {
+        this.log('Git Module Contributions requested');
+        
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            vscode.window.showErrorMessage('No workspace folder open');
+            return;
+        }
+
+        try {
+            // Show progress dialog
+            const result = await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: 'Analyzing Git Module Contributions',
+                cancellable: true
+            }, async (progress, token) => {
+                progress.report({ increment: 0, message: 'Initializing module analysis...' });
+                
+                // Run Git module analytics
+                const options = {
+                    projectPath: workspaceFolders[0].uri.fsPath,
+                    analysisType: 'git_module_contributions',
+                    timeout: 180000 // 3 minutes
+                };
+
+                progress.report({ increment: 50, message: 'Analyzing module contributions...' });
+                
+                return await this.analyzerRunner.runGitAnalysis(options, progress, token);
+            });
+
+            if (result.success && result.data) {
+                this.log('Git module contributions analysis completed successfully');
+                
+                // Show results in tabbed webview
+                if (this.webviewProvider.showGitAnalytics) {
+                    this.webviewProvider.showGitAnalytics(result.data, 'module_contributions');
+                } else {
+                    // Fallback to basic display
+                    this.displayGitModuleContributions(result.data);
+                }
+            } else {
+                this.handleGitAnalysisError(result, 'Git Module Contributions');
+            }
+
+        } catch (error) {
+            this.logError('Git Module Contributions analysis failed', error);
+            
+            if (error instanceof Error && error.message.includes('cancelled')) {
+                vscode.window.showInformationMessage('Git Module Contributions analysis was cancelled');
+            } else if (error instanceof Error && error.message.includes('not a git repository')) {
+                vscode.window.showErrorMessage('This workspace is not a Git repository. Git analytics require a Git repository.');
+            } else {
+                vscode.window.showErrorMessage('Git Module Contributions analysis failed. Check output for details.');
+            }
+        }
+    }
+
+    /**
+     * Show Git Commit Timeline
+     */
+    private async showGitCommitTimeline(): Promise<void> {
+        this.log('Git Commit Timeline requested');
+        
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            vscode.window.showErrorMessage('No workspace folder open');
+            return;
+        }
+
+        try {
+            // Show progress dialog
+            const result = await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: 'Analyzing Git Commit Timeline',
+                cancellable: true
+            }, async (progress, token) => {
+                progress.report({ increment: 0, message: 'Initializing timeline analysis...' });
+                
+                // Run Git timeline analytics
+                const options = {
+                    projectPath: workspaceFolders[0].uri.fsPath,
+                    analysisType: 'git_commit_timeline',
+                    timeout: 120000 // 2 minutes
+                };
+
+                progress.report({ increment: 50, message: 'Analyzing commit timeline...' });
+                
+                return await this.analyzerRunner.runGitAnalysis(options, progress, token);
+            });
+
+            if (result.success && result.data) {
+                this.log('Git commit timeline analysis completed successfully');
+                
+                // Show results in tabbed webview
+                if (this.webviewProvider.showGitAnalytics) {
+                    this.webviewProvider.showGitAnalytics(result.data, 'commit_timeline');
+                } else {
+                    // Fallback to basic display
+                    this.displayGitCommitTimeline(result.data);
+                }
+            } else {
+                this.handleGitAnalysisError(result, 'Git Commit Timeline');
+            }
+
+        } catch (error) {
+            this.logError('Git Commit Timeline analysis failed', error);
+            
+            if (error instanceof Error && error.message.includes('cancelled')) {
+                vscode.window.showInformationMessage('Git Commit Timeline analysis was cancelled');
+            } else if (error instanceof Error && error.message.includes('not a git repository')) {
+                vscode.window.showErrorMessage('This workspace is not a Git repository. Git analytics require a Git repository.');
+            } else {
+                vscode.window.showErrorMessage('Git Commit Timeline analysis failed. Check output for details.');
+            }
+        }
+    }
+
+    /**
+     * Format JSON in the current editor
+     */
+    private async formatJsonInEditor(): Promise<void> {
+        this.log('JSON Format requested');
+        await this.jsonUtilities.formatJsonInEditor();
+    }
+
+    /**
+     * Show JSON Tree View
+     */
+    private async showJsonTreeView(): Promise<void> {
+        this.log('JSON Tree View requested');
+        await this.jsonUtilities.showJsonTreeView();
+    }
+
+    /**
+     * Show Database Schema Graph View
+     */
+    private async showDatabaseSchemaGraphView(): Promise<void> {
+        this.log('Database Schema Graph View requested');
+        
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            vscode.window.showErrorMessage('No workspace folder open');
+            return;
+        }
+
+        try {
+            // Show progress dialog
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: 'Analyzing Database Schema',
+                cancellable: true
+            }, async (progress, token) => {
+                progress.report({ increment: 0, message: 'Scanning for database models and SQL files...' });
+
+                // Run database schema analysis
+                const options = {
+                    projectPath: workspaceFolders[0].uri.fsPath,
+                    pythonPath: this.getConfiguration().get<string>('pythonPath'),
+                    timeout: 120000, // 2 minutes
+                    enableCaching: this.getConfiguration().get<boolean>('enableCaching', true)
+                };
+
+                progress.report({ increment: 30, message: 'Analyzing database models...' });
+
+                const result = await this.analyzerRunner.runDatabaseSchemaAnalysis(options, progress, token);
+
+                progress.report({ increment: 80, message: 'Generating schema graph...' });
+
+                if (result.success && result.data) {
+                    // Show database schema in tabbed webview with graph view active
+                    const tabbedData = this.convertDatabaseSchemaForTabbedView(result.data);
+                    
+                    // Import TabbedWebviewProvider if not already available
+                    const { TabbedWebviewProvider } = await import('./tabbed-webview-provider');
+                    const tabbedProvider = new TabbedWebviewProvider(this.context, this.outputChannel);
+                    
+                    tabbedProvider.showTab('dbschema', tabbedData);
+                    tabbedProvider.switchToTab('dbschema', 'graph');
+
+                    progress.report({ increment: 100, message: 'Database schema graph ready!' });
+                } else {
+                    const errorMessage = result.errors && result.errors.length > 0 
+                        ? result.errors[0].message 
+                        : 'Database schema analysis failed';
+                    throw new Error(errorMessage);
+                }
+            });
+
+        } catch (error) {
+            this.logError('Database schema graph view failed', error);
+            
+            if (error instanceof Error && error.message.includes('cancelled')) {
+                vscode.window.showInformationMessage('Database schema analysis was cancelled');
+            } else {
+                vscode.window.showErrorMessage(
+                    'Failed to analyze database schema. This could be due to:\n• No database models found (Django/SQLAlchemy)\n• No SQL files in the project\n• Python analysis dependencies missing',
+                    'Check Output',
+                    'View Requirements'
+                ).then(action => {
+                    if (action === 'Check Output') {
+                        this.outputChannel.show();
+                    } else if (action === 'View Requirements') {
+                        vscode.window.showInformationMessage(
+                            'Database schema analysis requires:\n• Django or SQLAlchemy models in your project\n• OR SQL files (.sql, migrations)\n• Python analyzer dependencies installed'
+                        );
+                    }
+                });
+            }
+        }
+    }
+
+    /**
+     * Show Database Schema Raw SQL View
+     */
+    private async showDatabaseSchemaRawSQL(): Promise<void> {
+        this.log('Database Schema Raw SQL View requested');
+        
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            vscode.window.showErrorMessage('No workspace folder open');
+            return;
+        }
+
+        try {
+            // Show progress dialog
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: 'Extracting SQL Statements',
+                cancellable: true
+            }, async (progress, token) => {
+                progress.report({ increment: 0, message: 'Scanning for SQL files and statements...' });
+
+                // Run database schema analysis
+                const options = {
+                    projectPath: workspaceFolders[0].uri.fsPath,
+                    pythonPath: this.getConfiguration().get<string>('pythonPath'),
+                    timeout: 120000, // 2 minutes
+                    enableCaching: this.getConfiguration().get<boolean>('enableCaching', true)
+                };
+
+                progress.report({ increment: 30, message: 'Parsing SQL files and migrations...' });
+
+                const result = await this.analyzerRunner.runDatabaseSchemaAnalysis(options, progress, token);
+
+                progress.report({ increment: 80, message: 'Organizing SQL statements...' });
+
+                if (result.success && result.data) {
+                    // Show database schema in tabbed webview with raw SQL view active
+                    const tabbedData = this.convertDatabaseSchemaForTabbedView(result.data);
+                    
+                    // Import TabbedWebviewProvider if not already available
+                    const { TabbedWebviewProvider } = await import('./tabbed-webview-provider');
+                    const tabbedProvider = new TabbedWebviewProvider(this.context, this.outputChannel);
+                    
+                    tabbedProvider.showTab('dbschema', tabbedData);
+                    tabbedProvider.switchToTab('dbschema', 'rawsql');
+
+                    progress.report({ increment: 100, message: 'Raw SQL view ready!' });
+                } else {
+                    const errorMessage = result.errors && result.errors.length > 0 
+                        ? result.errors[0].message 
+                        : 'Database schema analysis failed';
+                    throw new Error(errorMessage);
+                }
+            });
+
+        } catch (error) {
+            this.logError('Database schema raw SQL view failed', error);
+            
+            if (error instanceof Error && error.message.includes('cancelled')) {
+                vscode.window.showInformationMessage('SQL extraction was cancelled');
+            } else {
+                vscode.window.showErrorMessage(
+                    'Failed to extract SQL statements. This could be due to:\n• No SQL files found in the project\n• No database migrations or schema files\n• Python analysis dependencies missing',
+                    'Check Output',
+                    'View Help'
+                ).then(action => {
+                    if (action === 'Check Output') {
+                        this.outputChannel.show();
+                    } else if (action === 'View Help') {
+                        vscode.window.showInformationMessage(
+                            'Raw SQL extraction looks for:\n• .sql files in your project\n• Django migration files\n• SQLAlchemy schema definitions\n• Raw SQL statements in Python files'
+                        );
+                    }
+                });
+            }
+        }
+    }
+
+    /**
      * Get extension configuration
      */
     private getConfiguration(): vscode.WorkspaceConfiguration {
-        return vscode.workspace.getConfiguration('codemindmap');
+        return vscode.workspace.getConfiguration('doracodebird');
     }
 
     /**
@@ -1682,7 +2493,7 @@ Complexity Guidelines:
      */
     public dispose(): void {
         try {
-            this.log('CodeMindMap extension is being deactivated');
+            this.log('DoraCodeBirdView extension is being deactivated');
 
             // Dispose of webview provider
             if (this.webviewProvider) {
@@ -1719,7 +2530,7 @@ Complexity Guidelines:
 }
 
 // Global extension instance
-let extensionInstance: CodeMindMapExtension | undefined;
+let extensionInstance: DoraCodeBirdExtension | undefined;
 
 /**
  * Main extension activation function
@@ -1727,7 +2538,7 @@ let extensionInstance: CodeMindMapExtension | undefined;
  */
 export function activate(context: vscode.ExtensionContext) {
     try {
-        extensionInstance = new CodeMindMapExtension(context);
+        extensionInstance = new DoraCodeBirdExtension(context);
         extensionInstance.initialize();
 
         // Add extension instance to subscriptions for proper cleanup
@@ -1740,8 +2551,8 @@ export function activate(context: vscode.ExtensionContext) {
         });
 
     } catch (error) {
-        console.error('Failed to activate CodeMindMap extension:', error);
-        vscode.window.showErrorMessage('Failed to activate CodeMindMap extension');
+        console.error('Failed to activate DoraCodeBirdView extension:', error);
+        vscode.window.showErrorMessage('Failed to activate DoraCodeBirdView extension');
     }
 }
 

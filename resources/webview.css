@@ -658,6 +658,1172 @@ input:focus {
     }
 }
 
+/* Module Card Styles */
+.module-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #dee2e6;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+    padding: 16px;
+    min-width: 200px;
+    min-height: 120px;
+    max-width: 280px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: var(--vscode-font-family);
+    overflow: hidden;
+}
+
+.module-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15), 0 6px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--vscode-focusBorder);
+}
+
+.module-card:active {
+    transform: translateY(-2px) scale(1.01);
+    transition: all 0.1s ease;
+}
+
+/* Complexity-based color coding */
+.module-card.complexity-low {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border-color: #28a745;
+    color: #155724;
+}
+
+.module-card.complexity-low:hover {
+    background: linear-gradient(135deg, #c3e6cb 0%, #b1dfbb 100%);
+    border-color: #1e7e34;
+}
+
+.module-card.complexity-medium {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border-color: #ffc107;
+    color: #856404;
+}
+
+.module-card.complexity-medium:hover {
+    background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+    border-color: #e0a800;
+}
+
+.module-card.complexity-high {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    border-color: #dc3545;
+    color: #721c24;
+}
+
+.module-card.complexity-high:hover {
+    background: linear-gradient(135deg, #f5c6cb 0%, #f1b0b7 100%);
+    border-color: #c82333;
+}
+
+/* Dark theme support for module cards */
+body[data-vscode-theme-kind="vscode-dark"] .module-card,
+body[data-vscode-theme-name*="dark"] .module-card {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    border-color: #718096;
+    color: var(--vscode-foreground);
+}
+
+body[data-vscode-theme-kind="vscode-dark"] .module-card.complexity-low,
+body[data-vscode-theme-name*="dark"] .module-card.complexity-low {
+    background: linear-gradient(135deg, #22543d 0%, #2f855a 100%);
+    border-color: #38a169;
+    color: #c6f6d5;
+}
+
+body[data-vscode-theme-kind="vscode-dark"] .module-card.complexity-medium,
+body[data-vscode-theme-name*="dark"] .module-card.complexity-medium {
+    background: linear-gradient(135deg, #744210 0%, #b7791f 100%);
+    border-color: #d69e2e;
+    color: #faf089;
+}
+
+body[data-vscode-theme-kind="vscode-dark"] .module-card.complexity-high,
+body[data-vscode-theme-name*="dark"] .module-card.complexity-high {
+    background: linear-gradient(135deg, #742a2a 0%, #c53030 100%);
+    border-color: #e53e3e;
+    color: #fed7d7;
+}
+
+/* Module card header */
+.module-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.module-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: inherit;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.complexity-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.complexity-indicator.low {
+    background-color: #28a745;
+}
+
+.complexity-indicator.medium {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.complexity-indicator.high {
+    background-color: #dc3545;
+}
+
+/* Module card content */
+.module-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.module-card-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: inherit;
+    opacity: 0.8;
+}
+
+.module-card-stat-label {
+    font-weight: 500;
+}
+
+.module-card-stat-value {
+    font-weight: 600;
+    padding: 2px 6px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+/* Dark theme stat values */
+body[data-vscode-theme-kind="vscode-dark"] .module-card-stat-value,
+body[data-vscode-theme-name*="dark"] .module-card-stat-value {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Module card footer */
+.module-card-footer {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.module-card-path {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    flex: 1;
+    margin-right: 8px;
+}
+
+.module-card-dependencies {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.dependency-count {
+    background-color: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+/* Module card animations */
+@keyframes moduleCardPulse {
+    0% { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+    50% { box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); }
+    100% { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+}
+
+.module-card.selected {
+    animation: moduleCardPulse 2s ease-in-out infinite;
+    border-color: var(--vscode-focusBorder);
+    box-shadow: 0 0 0 2px var(--vscode-focusBorder);
+}
+
+.module-card.highlighted {
+    border-color: var(--vscode-textLink-foreground);
+    box-shadow: 0 0 0 2px var(--vscode-textLink-foreground);
+}
+
+.module-card.dimmed {
+    opacity: 0.4;
+    transform: scale(0.95);
+}
+
+/* Module grouping container */
+.module-group {
+    position: relative;
+    padding: 16px;
+    margin: 8px;
+    border: 2px dashed var(--vscode-widget-border);
+    border-radius: 16px;
+    background-color: rgba(var(--vscode-editor-background), 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.module-group-header {
+    position: absolute;
+    top: -12px;
+    left: 16px;
+    background-color: var(--vscode-editor-background);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    border: 1px solid var(--vscode-widget-border);
+}
+
+.module-group.app {
+    border-color: var(--vscode-charts-blue);
+}
+
+.module-group.package {
+    border-color: var(--vscode-charts-green);
+}
+
+.module-group.utility {
+    border-color: var(--vscode-charts-orange);
+}
+
+/* Responsive design for module cards */
+@media (max-width: 1200px) {
+    .module-card {
+        min-width: 180px;
+        max-width: 240px;
+    }
+}
+
+@media (max-width: 768px) {
+    .module-card {
+        min-width: 160px;
+        max-width: 200px;
+        padding: 12px;
+        min-height: 100px;
+    }
+    
+    .module-card-title {
+        font-size: 14px;
+    }
+    
+    .module-card-stat {
+        font-size: 12px;
+    }
+    
+    .complexity-indicator {
+        width: 20px;
+        height: 20px;
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .module-card {
+        min-width: 140px;
+        max-width: 180px;
+        padding: 10px;
+        min-height: 90px;
+    }
+    
+    .module-card-title {
+        font-size: 13px;
+    }
+    
+    .module-card-content {
+        gap: 6px;
+    }
+}
+
+/* High contrast mode support for module cards */
+@media (prefers-contrast: high) {
+    .module-card {
+        border-width: 3px;
+        box-shadow: none;
+    }
+    
+    .module-card:hover {
+        box-shadow: 0 0 0 3px var(--vscode-focusBorder);
+    }
+    
+    .complexity-indicator {
+        border: 2px solid var(--vscode-foreground);
+    }
+}
+
+/* Git Analytics Chart Styles */
+.git-analytics-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.git-analytics-header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--vscode-widget-border);
+}
+
+.repository-summary {
+    margin-top: 16px;
+    padding: 16px;
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
+    border-radius: 8px;
+}
+
+.repo-info h3 {
+    margin: 0 0 8px 0;
+    color: var(--vscode-foreground);
+    font-size: 18px;
+}
+
+.repo-stats {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.repo-stat {
+    color: var(--vscode-descriptionForeground);
+    font-size: 14px;
+}
+
+.repo-stat strong {
+    color: var(--vscode-foreground);
+    font-weight: 600;
+}
+
+.analytics-section {
+    margin-bottom: 32px;
+}
+
+.analytics-section h3 {
+    margin-bottom: 16px;
+    color: var(--vscode-foreground);
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Author contribution cards */
+.authors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.author-card {
+    padding: 16px;
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.author-card:hover {
+    border-color: var(--vscode-focusBorder);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.author-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.author-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.author-name {
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+
+.author-email {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+}
+
+.contribution-percentage {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--vscode-charts-blue);
+    padding: 4px 8px;
+    background-color: var(--vscode-badge-background);
+    border-radius: 4px;
+}
+
+.author-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.metric-label {
+    color: var(--vscode-descriptionForeground);
+    font-weight: 500;
+}
+
+.metric-value {
+    font-weight: 600;
+    color: var(--vscode-foreground);
+}
+
+.metric-value.positive {
+    color: var(--vscode-charts-green);
+}
+
+.metric-value.negative {
+    color: var(--vscode-charts-red);
+}
+
+.author-timeline {
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    padding-top: 8px;
+    border-top: 1px solid var(--vscode-widget-border);
+}
+
+.timeline-label {
+    font-weight: 500;
+}
+
+.timeline-range {
+    margin-left: 4px;
+}
+
+/* Chart containers */
+.charts-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.chart-container {
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.chart-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    margin: 0;
+}
+
+.chart-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.chart-control-btn {
+    padding: 4px 8px;
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: 1px solid var(--vscode-button-border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s ease;
+}
+
+.chart-control-btn:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.chart-control-btn.active {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+}
+
+.chart-canvas-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+.chart-canvas {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.chart-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+}
+
+.chart-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    color: var(--vscode-errorForeground);
+    background-color: var(--vscode-inputValidation-errorBackground);
+    border-radius: 4px;
+    margin: 8px 0;
+}
+
+/* Module statistics */
+.module-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.module-stats-card {
+    padding: 12px;
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: 6px;
+    transition: border-color 0.2s ease;
+}
+
+.module-stats-card:hover {
+    border-color: var(--vscode-focusBorder);
+}
+
+.module-stats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.module-path {
+    font-weight: 500;
+    color: var(--vscode-foreground);
+    font-size: 13px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    flex: 1;
+    margin-right: 8px;
+}
+
+.module-commits {
+    font-size: 12px;
+    color: var(--vscode-charts-blue);
+    font-weight: 600;
+    padding: 2px 6px;
+    background-color: var(--vscode-badge-background);
+    border-radius: 3px;
+}
+
+.module-stats-metrics {
+    display: flex;
+    gap: 12px;
+}
+
+.module-metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 11px;
+}
+
+.module-metric-label {
+    color: var(--vscode-descriptionForeground);
+    margin-bottom: 2px;
+}
+
+.module-metric-value {
+    font-weight: 600;
+    color: var(--vscode-foreground);
+}
+
+/* Timeline visualization */
+.timeline-container {
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.timeline-filters {
+    display: flex;
+    gap: 8px;
+}
+
+.timeline-filter {
+    padding: 4px 8px;
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.timeline-filter:hover {
+    border-color: var(--vscode-focusBorder);
+}
+
+.timeline-filter.active {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border-color: var(--vscode-button-background);
+}
+
+.timeline-chart-container {
+    position: relative;
+    height: 200px;
+    width: 100%;
+}
+
+/* Export functionality */
+.export-section {
+    margin-top: 24px;
+    padding: 16px;
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
+    border-radius: 8px;
+}
+
+.export-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.export-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    margin: 0;
+}
+
+.export-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.export-btn {
+    padding: 6px 12px;
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.2s ease;
+}
+
+.export-btn:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.export-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.export-description {
+    font-size: 13px;
+    color: var(--vscode-descriptionForeground);
+    margin-top: 8px;
+}
+
+/* Interactive features */
+.interactive-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 12px;
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
+    border-radius: 6px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.legend-item:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.legend-item.disabled {
+    opacity: 0.5;
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.legend-label {
+    font-size: 12px;
+    color: var(--vscode-foreground);
+}
+
+/* Responsive design for Git analytics */
+@media (max-width: 1200px) {
+    .charts-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .authors-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .git-analytics-container {
+        padding: 12px;
+    }
+    
+    .repo-stats {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .author-metrics {
+        grid-template-columns: 1fr;
+    }
+    
+    .charts-container {
+        gap: 16px;
+    }
+    
+    .chart-canvas-container {
+        height: 250px;
+    }
+    
+    .module-stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Database Schema Graph Styles */
+.schema-graph-container {
+    position: relative;
+    height: 600px;
+    width: 100%;
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.schema-graph-controls {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 100;
+    display: flex;
+    gap: 8px;
+    background-color: var(--vscode-editor-background);
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--vscode-widget-border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.schema-control-btn {
+    padding: 6px 12px;
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: 1px solid var(--vscode-button-border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.schema-control-btn:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.schema-control-btn.active {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+}
+
+.schema-legend {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    z-index: 100;
+    background-color: var(--vscode-editor-background);
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--vscode-widget-border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    font-size: 11px;
+}
+
+.schema-legend-title {
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    margin-bottom: 8px;
+}
+
+.schema-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    color: var(--vscode-foreground);
+}
+
+.schema-legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.schema-legend-color.table {
+    background-color: #3498db;
+}
+
+.schema-legend-color.primary-key {
+    background-color: #e74c3c;
+}
+
+.schema-legend-color.foreign-key {
+    background-color: #f39c12;
+}
+
+.schema-legend-color.relationship {
+    background-color: #2ecc71;
+}
+
+/* Table info panel for schema */
+.table-info-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 400px;
+    max-height: 80%;
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    overflow-y: auto;
+    display: none;
+}
+
+.table-info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
+    border-bottom: 1px solid var(--vscode-widget-border);
+}
+
+.table-info-header h3 {
+    margin: 0;
+    color: var(--vscode-foreground);
+    font-size: 16px;
+}
+
+.table-info-content {
+    padding: 16px;
+}
+
+.table-summary {
+    margin-bottom: 16px;
+    padding: 12px;
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
+    border-radius: 6px;
+}
+
+.summary-item {
+    margin-bottom: 8px;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.summary-label {
+    color: var(--vscode-descriptionForeground);
+    font-weight: 500;
+}
+
+.summary-value {
+    color: var(--vscode-foreground);
+    font-weight: 600;
+}
+
+.columns-section {
+    margin-bottom: 16px;
+}
+
+.columns-section h4 {
+    margin: 0 0 8px 0;
+    color: var(--vscode-foreground);
+    font-size: 14px;
+}
+
+.columns-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.columns-table th,
+.columns-table td {
+    padding: 6px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--vscode-widget-border);
+}
+
+.columns-table th {
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
+    font-weight: 600;
+    color: var(--vscode-foreground);
+}
+
+.column-name {
+    font-weight: 500;
+    color: var(--vscode-foreground);
+}
+
+.column-name.primary-key {
+    color: var(--vscode-charts-red);
+    font-weight: 600;
+}
+
+.column-name.foreign-key {
+    color: var(--vscode-charts-orange);
+    font-weight: 600;
+}
+
+.column-type {
+    color: var(--vscode-descriptionForeground);
+    font-family: var(--vscode-editor-font-family);
+}
+
+.column-nullable {
+    font-size: 10px;
+    padding: 1px 4px;
+    border-radius: 2px;
+    text-transform: uppercase;
+}
+
+.column-nullable.yes {
+    background-color: var(--vscode-charts-orange);
+    color: white;
+}
+
+.column-nullable.no {
+    background-color: var(--vscode-charts-green);
+    color: white;
+}
+
+.relationships-section {
+    margin-bottom: 16px;
+}
+
+.relationship-item {
+    padding: 8px;
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
+    border-radius: 4px;
+    margin-bottom: 6px;
+    font-size: 12px;
+}
+
+.relationship-type {
+    font-weight: 600;
+    color: var(--vscode-charts-blue);
+    text-transform: uppercase;
+    font-size: 10px;
+}
+
+.relationship-details {
+    color: var(--vscode-foreground);
+    margin-top: 2px;
+}
+
+.indexes-section {
+    margin-bottom: 16px;
+}
+
+.index-item {
+    padding: 6px 8px;
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
+    border-radius: 4px;
+    margin-bottom: 4px;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.index-name {
+    font-weight: 500;
+    color: var(--vscode-foreground);
+}
+
+.index-unique {
+    font-size: 10px;
+    padding: 1px 4px;
+    background-color: var(--vscode-charts-purple);
+    color: white;
+    border-radius: 2px;
+    text-transform: uppercase;
+}
+
+/* Schema graph cytoscape styling */
+.schema-cytoscape {
+    width: 100%;
+    height: 100%;
+    background-color: var(--vscode-editor-background);
+}
+
+/* Responsive design for schema visualization */
+@media (max-width: 1200px) {
+    .table-info-panel {
+        width: 350px;
+    }
+    
+    .schema-graph-container {
+        height: 500px;
+    }
+}
+
+@media (max-width: 768px) {
+    .table-info-panel {
+        width: calc(100% - 40px);
+        right: 20px;
+        left: 20px;
+        max-height: 60%;
+    }
+    
+    .schema-graph-container {
+        height: 400px;
+    }
+    
+    .schema-graph-controls {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .schema-legend {
+        position: relative;
+        margin-top: 16px;
+    }
+}
+
+/* Reduced motion support for module cards */
+@media (prefers-reduced-motion: reduce) {
+    .module-card {
+        transition: none;
+    }
+    
+    .module-card:hover {
+        transform: none;
+    }
+    
+    .module-card.selected {
+        animation: none;
+    }
+    
+    .author-card {
+        transition: none;
+    }
+    
+    .chart-control-btn {
+        transition: none;
+    }
+    
+    .schema-control-btn {
+        transition: none;
+    }
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
     .spinner {

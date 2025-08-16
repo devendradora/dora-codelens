@@ -1,9 +1,9 @@
 {
-  "name": "codemindmap",
-  "displayName": "CodeMindMap",
-  "description": "Visual analysis and navigation for Python projects with interactive graphs and complexity indicators",
+  "name": "doracodebird-view",
+  "displayName": "DoraCodeBirdView",
+  "description": "Advanced VS Code extension for comprehensive Python project analysis with Git analytics, enhanced visualizations, JSON utilities, and database schema analysis",
   "version": "0.1.0",
-  "publisher": "codemindmap",
+  "publisher": "doracodebird",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -17,6 +17,9 @@
     "graph",
     "complexity",
     "analysis",
+    "git-analytics",
+    "database-schema",
+    "json-utilities",
     "django",
     "flask",
     "fastapi"
@@ -33,109 +36,175 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "codemindmap",
-          "title": "CodeMindMap",
+          "id": "doracodebird",
+          "title": "DoraCodeBirdView",
           "icon": "$(type-hierarchy)"
         }
       ]
     },
     "commands": [
       {
-        "command": "codemindmap.analyzeProject",
+        "command": "doracodebird.analyzeProject",
         "title": "Analyze Python Project",
-        "category": "CodeMindMap",
+        "category": "DoraCodeBirdView",
         "icon": "$(graph)"
       },
       {
-        "command": "codemindmap.showModuleGraph",
+        "command": "doracodebird.showModuleGraph",
         "title": "Show Module Graph",
-        "category": "CodeMindMap",
+        "category": "DoraCodeBirdView",
         "icon": "$(type-hierarchy)"
       },
       {
-        "command": "codemindmap.showCallHierarchy",
+        "command": "doracodebird.showCallHierarchy",
         "title": "Show Call Hierarchy",
-        "category": "CodeMindMap",
+        "category": "DoraCodeBirdView",
         "icon": "$(call-hierarchy)"
       },
       {
-        "command": "codemindmap.refreshSidebar",
+        "command": "doracodebird.refreshSidebar",
         "title": "Refresh",
         "icon": "$(refresh)"
       },
       {
-        "command": "codemindmap.openSettings",
+        "command": "doracodebird.openSettings",
         "title": "Open Settings",
-        "category": "CodeMindMap",
+        "category": "DoraCodeBirdView",
         "icon": "$(settings-gear)"
       },
       {
-        "command": "codemindmap.clearCache",
+        "command": "doracodebird.clearCache",
         "title": "Clear Cache",
-        "category": "CodeMindMap",
+        "category": "DoraCodeBirdView",
         "icon": "$(clear-all)"
       },
       {
-        "command": "codemindmap.showOutput",
+        "command": "doracodebird.showOutput",
         "title": "Show Output",
-        "category": "CodeMindMap",
+        "category": "DoraCodeBirdView",
         "icon": "$(output)"
       },
       {
-        "command": "codemindmap.cancelAnalysis",
+        "command": "doracodebird.cancelAnalysis",
         "title": "Cancel Analysis",
-        "category": "CodeMindMap",
+        "category": "DoraCodeBirdView",
         "icon": "$(stop)"
       },
       {
-        "command": "codemindmap.navigateToItem",
+        "command": "doracodebird.navigateToItem",
         "title": "Navigate to Item",
-        "category": "CodeMindMap"
+        "category": "DoraCodeBirdView"
       },
       {
-        "command": "codemindmap.filterSidebar",
+        "command": "doracodebird.filterSidebar",
         "title": "Filter",
         "icon": "$(filter)"
       },
       {
-        "command": "codemindmap.selectModule",
+        "command": "doracodebird.selectModule",
         "title": "Select Module",
-        "category": "CodeMindMap"
+        "category": "DoraCodeBirdView"
       },
       {
-        "command": "codemindmap.clearSelection",
+        "command": "doracodebird.clearSelection",
         "title": "Clear Selection",
-        "category": "CodeMindMap",
+        "category": "DoraCodeBirdView",
         "icon": "$(clear-all)"
       },
       {
-        "command": "codemindmap.showDependencies",
+        "command": "doracodebird.showDependencies",
         "title": "Show Dependencies",
-        "category": "CodeMindMap",
+        "category": "DoraCodeBirdView",
         "icon": "$(references)"
       },
       {
-        "command": "codemindmap.showFunctionComplexityDetails",
+        "command": "doracodebird.showFunctionComplexityDetails",
         "title": "Show Function Complexity Details",
-        "category": "CodeMindMap"
+        "category": "DoraCodeBirdView"
       },
       {
-        "command": "codemindmap.showGraphView",
+        "command": "doracodebird.showGraphView",
         "title": "Graph View",
-        "category": "CodeMindMap",
+        "category": "DoraCodeBirdView",
         "icon": "$(type-hierarchy)"
       },
       {
-        "command": "codemindmap.showJsonView",
+        "command": "doracodebird.showJsonView",
         "title": "JSON View",
-        "category": "CodeMindMap",
+        "category": "DoraCodeBirdView",
         "icon": "$(json)"
+      },
+      {
+        "command": "doracodebird.fullAnalysisTechStack",
+        "title": "Tech Stack",
+        "category": "DoraCodeBirdView",
+        "icon": "$(library)"
+      },
+      {
+        "command": "doracodebird.fullAnalysisGraphView",
+        "title": "Graph View",
+        "category": "DoraCodeBirdView",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "doracodebird.fullAnalysisJsonView",
+        "title": "JSON View",
+        "category": "DoraCodeBirdView",
+        "icon": "$(json)"
+      },
+      {
+        "command": "doracodebird.currentFileAnalysis",
+        "title": "Current File Analysis",
+        "category": "DoraCodeBirdView",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "doracodebird.gitAuthorStatistics",
+        "title": "Author Statistics",
+        "category": "DoraCodeBirdView",
+        "icon": "$(person)"
+      },
+      {
+        "command": "doracodebird.gitModuleContributions",
+        "title": "Module Contributions",
+        "category": "DoraCodeBirdView",
+        "icon": "$(git-branch)"
+      },
+      {
+        "command": "doracodebird.gitCommitTimeline",
+        "title": "Commit Timeline",
+        "category": "DoraCodeBirdView",
+        "icon": "$(history)"
+      },
+      {
+        "command": "doracodebird.jsonFormat",
+        "title": "JSON Format",
+        "category": "DoraCodeBirdView",
+        "icon": "$(symbol-property)"
+      },
+      {
+        "command": "doracodebird.jsonTreeView",
+        "title": "JSON Tree View",
+        "category": "DoraCodeBirdView",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "doracodebird.dbSchemaGraphView",
+        "title": "Graph View",
+        "category": "DoraCodeBirdView",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "doracodebird.dbSchemaRawSQL",
+        "title": "Raw SQL",
+        "category": "DoraCodeBirdView",
+        "icon": "$(code)"
       }
     ],
     "views": {
-      "codemindmap": [
+      "doracodebird": [
         {
-          "id": "codemindmapSidebar",
+          "id": "doracodebirdSidebar",
           "name": "Project Analysis",
           "when": "workspaceContains:**/*.py"
         }
@@ -143,140 +212,220 @@
     },
     "submenus": [
       {
-        "id": "codemindmap.contextMenu",
-        "label": "CodeMindMap",
+        "id": "doracodebird.contextMenu",
+        "label": "DoraCodeBirdView",
         "icon": "$(type-hierarchy)"
+      },
+      {
+        "id": "doracodebird.fullAnalysis",
+        "label": "Full Code Analysis",
+        "icon": "$(graph)"
+      },
+      {
+        "id": "doracodebird.gitCommits",
+        "label": "Git Commits",
+        "icon": "$(git-commit)"
+      },
+      {
+        "id": "doracodebird.jsonUtils",
+        "label": "JSON Utils",
+        "icon": "$(json)"
+      },
+      {
+        "id": "doracodebird.dbSchema",
+        "label": "DB Schema",
+        "icon": "$(database)"
       }
     ],
     "menus": {
       "editor/context": [
         {
-          "submenu": "codemindmap.contextMenu",
+          "submenu": "doracodebird.contextMenu",
           "when": "editorLangId == python",
           "group": "navigation@1"
         }
       ],
-      "codemindmap.contextMenu": [
+      "doracodebird.contextMenu": [
         {
-          "command": "codemindmap.showGraphView",
-          "group": "codemindmap@1"
+          "submenu": "doracodebird.fullAnalysis",
+          "group": "doracodebird@1"
         },
         {
-          "command": "codemindmap.showJsonView",
-          "group": "codemindmap@2"
+          "command": "doracodebird.currentFileAnalysis",
+          "group": "doracodebird@2"
         },
         {
-          "command": "codemindmap.showCallHierarchy",
-          "group": "codemindmap@3"
+          "command": "doracodebird.showCallHierarchy",
+          "group": "doracodebird@3"
+        },
+        {
+          "submenu": "doracodebird.gitCommits",
+          "group": "doracodebird@4"
+        },
+        {
+          "submenu": "doracodebird.jsonUtils",
+          "group": "doracodebird@5"
+        },
+        {
+          "submenu": "doracodebird.dbSchema",
+          "group": "doracodebird@6"
+        }
+      ],
+      "doracodebird.fullAnalysis": [
+        {
+          "command": "doracodebird.fullAnalysisTechStack",
+          "group": "fullAnalysis@1"
+        },
+        {
+          "command": "doracodebird.fullAnalysisGraphView",
+          "group": "fullAnalysis@2"
+        },
+        {
+          "command": "doracodebird.fullAnalysisJsonView",
+          "group": "fullAnalysis@3"
+        }
+      ],
+      "doracodebird.gitCommits": [
+        {
+          "command": "doracodebird.gitAuthorStatistics",
+          "group": "gitCommits@1"
+        },
+        {
+          "command": "doracodebird.gitModuleContributions",
+          "group": "gitCommits@2"
+        },
+        {
+          "command": "doracodebird.gitCommitTimeline",
+          "group": "gitCommits@3"
+        }
+      ],
+      "doracodebird.jsonUtils": [
+        {
+          "command": "doracodebird.jsonFormat",
+          "group": "jsonUtils@1"
+        },
+        {
+          "command": "doracodebird.jsonTreeView",
+          "group": "jsonUtils@2"
+        }
+      ],
+      "doracodebird.dbSchema": [
+        {
+          "command": "doracodebird.dbSchemaGraphView",
+          "group": "dbSchema@1"
+        },
+        {
+          "command": "doracodebird.dbSchemaRawSQL",
+          "group": "dbSchema@2"
         }
       ],
       "view/title": [
         {
-          "command": "codemindmap.refreshSidebar",
-          "when": "view == codemindmapSidebar",
+          "command": "doracodebird.refreshSidebar",
+          "when": "view == doracodebirdSidebar",
           "group": "navigation@1"
         },
         {
-          "command": "codemindmap.filterSidebar",
-          "when": "view == codemindmapSidebar",
+          "command": "doracodebird.filterSidebar",
+          "when": "view == doracodebirdSidebar",
           "group": "navigation@2"
         },
         {
-          "command": "codemindmap.clearSelection",
-          "when": "view == codemindmapSidebar",
+          "command": "doracodebird.clearSelection",
+          "when": "view == doracodebirdSidebar",
           "group": "navigation@3"
         },
         {
-          "command": "codemindmap.clearCache",
-          "when": "view == codemindmapSidebar",
+          "command": "doracodebird.clearCache",
+          "when": "view == doracodebirdSidebar",
           "group": "navigation@4"
         }
       ],
       "view/item/context": [
         {
-          "command": "codemindmap.navigateToItem",
-          "when": "view == codemindmapSidebar && viewItem == module",
+          "command": "doracodebird.navigateToItem",
+          "when": "view == doracodebirdSidebar && viewItem == module",
           "group": "navigation@1"
         },
         {
-          "command": "codemindmap.selectModule",
-          "when": "view == codemindmapSidebar && viewItem == module",
+          "command": "doracodebird.selectModule",
+          "when": "view == doracodebirdSidebar && viewItem == module",
           "group": "navigation@2"
         },
         {
-          "command": "codemindmap.showDependencies",
-          "when": "view == codemindmapSidebar && viewItem == module",
+          "command": "doracodebird.showDependencies",
+          "when": "view == doracodebirdSidebar && viewItem == module",
           "group": "navigation@3"
         },
         {
-          "command": "codemindmap.navigateToItem",
-          "when": "view == codemindmapSidebar && viewItem == function",
+          "command": "doracodebird.navigateToItem",
+          "when": "view == doracodebirdSidebar && viewItem == function",
           "group": "navigation@1"
         },
         {
-          "command": "codemindmap.navigateToItem",
-          "when": "view == codemindmapSidebar && viewItem == class",
+          "command": "doracodebird.navigateToItem",
+          "when": "view == doracodebirdSidebar && viewItem == class",
           "group": "navigation@1"
         },
         {
-          "command": "codemindmap.navigateToItem",
-          "when": "view == codemindmapSidebar && viewItem == method",
+          "command": "doracodebird.navigateToItem",
+          "when": "view == doracodebirdSidebar && viewItem == method",
           "group": "navigation@1"
         }
       ],
       "commandPalette": [
         {
-          "command": "codemindmap.analyzeProject",
+          "command": "doracodebird.analyzeProject",
           "when": "workspaceContains:**/*.py"
         },
         {
-          "command": "codemindmap.showModuleGraph",
+          "command": "doracodebird.showModuleGraph",
           "when": "workspaceContains:**/*.py"
         },
         {
-          "command": "codemindmap.showCallHierarchy",
+          "command": "doracodebird.showCallHierarchy",
           "when": "editorLangId == python"
         },
         {
-          "command": "codemindmap.openSettings",
+          "command": "doracodebird.openSettings",
           "when": "workspaceContains:**/*.py"
         },
         {
-          "command": "codemindmap.clearCache",
+          "command": "doracodebird.clearCache",
           "when": "workspaceContains:**/*.py"
         },
         {
-          "command": "codemindmap.showOutput",
+          "command": "doracodebird.showOutput",
           "when": "workspaceContains:**/*.py"
         },
         {
-          "command": "codemindmap.cancelAnalysis",
+          "command": "doracodebird.cancelAnalysis",
           "when": "workspaceContains:**/*.py"
         },
         {
-          "command": "codemindmap.showGraphView",
+          "command": "doracodebird.showGraphView",
           "when": "editorLangId == python"
         },
         {
-          "command": "codemindmap.showJsonView",
+          "command": "doracodebird.showJsonView",
           "when": "editorLangId == python"
         }
       ]
     },
     "configuration": {
-      "title": "CodeMindMap",
+      "title": "DoraCodeBirdView",
       "properties": {
-        "codemindmap.pythonPath": {
+        "doracodebird.pythonPath": {
           "type": "string",
           "default": "python",
           "description": "Path to Python executable"
         },
-        "codemindmap.showComplexityCodeLens": {
+        "doracodebird.showComplexityCodeLens": {
           "type": "boolean",
           "default": true,
           "description": "Show complexity scores as CodeLens annotations"
         },
-        "codemindmap.complexityThresholds": {
+        "doracodebird.complexityThresholds": {
           "type": "object",
           "default": {
             "low": 5,
@@ -285,10 +434,35 @@
           },
           "description": "Complexity thresholds for color coding"
         },
-        "codemindmap.enableCaching": {
+        "doracodebird.enableCaching": {
           "type": "boolean",
           "default": true,
           "description": "Enable caching of analysis results"
+        },
+        "doracodebird.jsonFormatting.indent": {
+          "type": "number",
+          "default": 2,
+          "description": "Number of spaces for JSON indentation"
+        },
+        "doracodebird.jsonFormatting.sortKeys": {
+          "type": "boolean",
+          "default": false,
+          "description": "Sort object keys when formatting JSON"
+        },
+        "doracodebird.jsonFormatting.removeComments": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remove comments when formatting JSON"
+        },
+        "doracodebird.jsonFormatting.removeTrailingCommas": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remove trailing commas when formatting JSON"
+        },
+        "doracodebird.jsonFormatting.insertFinalNewline": {
+          "type": "boolean",
+          "default": true,
+          "description": "Insert final newline when formatting JSON"
         }
       }
     }

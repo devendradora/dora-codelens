@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Comprehensive test runner for CodeMindMap extension
+ * Comprehensive test runner for DoraCodeBirdView extension
  * This script runs all test suites and generates a detailed report
  */
 
@@ -35,7 +35,7 @@ class ComprehensiveTestRunner {
     private startTime: number = 0;
 
     async run(): Promise<void> {
-        console.log('🚀 Starting comprehensive test suite for CodeMindMap extension...\n');
+        console.log('🚀 Starting comprehensive test suite for DoraCodeBirdView extension...\n');
         
         this.startTime = Date.now();
         
@@ -173,7 +173,7 @@ class ComprehensiveTestRunner {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CodeMindMap Test Report</title>
+    <title>DoraCodeBirdView Test Report</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -292,7 +292,7 @@ class ComprehensiveTestRunner {
 <body>
     <div class="container">
         <div class="header">
-            <h1>CodeMindMap Test Report</h1>
+            <h1>DoraCodeBirdView Test Report</h1>
             <p>Generated on ${new Date(report.timestamp).toLocaleString()}</p>
         </div>
         

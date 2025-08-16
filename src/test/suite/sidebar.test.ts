@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { SidebarProvider, AnalysisData, TreeItemType, CodeMindMapTreeItem } from '../../sidebar-provider';
+import { SidebarProvider, AnalysisData, TreeItemType, DoraCodeBirdTreeItem } from '../../sidebar-provider';
 
 suite('Sidebar Provider Test Suite', () => {
     let sidebarProvider: SidebarProvider;
@@ -132,7 +132,7 @@ suite('Sidebar Provider Test Suite', () => {
     test('Should initialize with no data', async () => {
         const children = await sidebarProvider.getChildren();
         assert.strictEqual(children.length, 1);
-        assert.strictEqual(children[0].label, 'No analysis data available');
+        assert.strictEqual(children[0].label, 'Run analysis to see project structure');
     });
 
     test('Should display root items when analysis data is provided', async () => {

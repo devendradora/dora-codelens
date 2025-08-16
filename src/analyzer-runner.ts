@@ -121,6 +121,154 @@ export class AnalyzerRunner {
     }
 
     /**
+     * Execute current file analysis on the specified Python file
+     */
+    public async runCurrentFileAnalysis(
+        filePath: string,
+        progress?: vscode.Progress<{ message?: string; increment?: number }>,
+        cancellationToken?: vscode.CancellationToken
+    ): Promise<AnalysisResult> {
+        const startTime = Date.now();
+        
+        try {
+            // Validate file path
+            if (!fs.existsSync(filePath)) {
+                throw new Error(`File does not exist: ${filePath}`);
+            }
+
+            if (!filePath.endsWith('.py')) {
+                throw new Error(`File is not a Python file: ${filePath}`);
+            }
+            
+            // Set up cancellation
+            this.cancellationToken = new vscode.CancellationTokenSource();
+            if (cancellationToken) {
+                cancellationToken.onCancellationRequested(() => {
+                    this.cancelAnalysis();
+                });
+            }
+
+            // Update progress
+            progress?.report({ message: 'Preparing file analysis...', increment: 10 });
+
+            // Get Python path
+            const pythonPath = await this.getPythonPath();
+            
+            // Get current file analyzer script path
+            const analyzerPath = this.getCurrentFileAnalyzerScriptPath();
+            
+            // Prepare command arguments
+            const args = [filePath];
+            
+            this.log(`Starting current file analysis: ${pythonPath} ${analyzerPath} ${args.join(' ')}`);
+            
+            // Update progress
+            progress?.report({ message: 'Analyzing file...', increment: 30 });
+
+            // Execute the analyzer
+            const result = await this.executeCurrentFileAnalyzer(pythonPath, analyzerPath, args, progress);
+            
+            // Calculate execution time
+            const executionTime = Date.now() - startTime;
+            result.executionTime = executionTime;
+            
+            this.log(`Current file analysis completed in ${executionTime}ms`);
+            
+            return result;
+            
+        } catch (error) {
+            const executionTime = Date.now() - startTime;
+            this.logError('Current file analysis failed', error);
+            
+            return {
+                success: false,
+                errors: [{
+                    type: 'execution_error',
+                    message: error instanceof Error ? error.message : 'Unknown error occurred'
+                }],
+                executionTime
+            };
+        } finally {
+            this.cleanup();
+        }
+    }
+
+    /**
+     * Execute Git analysis on the specified project
+     */
+    public async runGitAnalysis(
+        options: { projectPath: string; analysisType: string; timeout?: number },
+        progress?: vscode.Progress<{ message?: string; increment?: number }>,
+        cancellationToken?: vscode.CancellationToken
+    ): Promise<AnalysisResult> {
+        const startTime = Date.now();
+        
+        try {
+            // Validate project path
+            if (!fs.existsSync(options.projectPath)) {
+                throw new Error(`Project path does not exist: ${options.projectPath}`);
+            }
+
+            // Check if it's a Git repository
+            const gitDir = path.join(options.projectPath, '.git');
+            if (!fs.existsSync(gitDir)) {
+                throw new Error('This workspace is not a Git repository. Git analytics require a Git repository.');
+            }
+            
+            // Set up cancellation
+            this.cancellationToken = new vscode.CancellationTokenSource();
+            if (cancellationToken) {
+                cancellationToken.onCancellationRequested(() => {
+                    this.cancelAnalysis();
+                });
+            }
+
+            // Update progress
+            progress?.report({ message: 'Preparing Git analysis...', increment: 10 });
+
+            // Get Python path
+            const pythonPath = await this.getPythonPath();
+            
+            // Get Git analyzer script path
+            const analyzerPath = this.getGitAnalyzerScriptPath();
+            
+            // Prepare command arguments based on analysis type
+            const args = this.buildGitAnalyzerArguments(options);
+            
+            this.log(`Starting Git analysis: ${pythonPath} ${analyzerPath} ${args.join(' ')}`);
+            
+            // Update progress
+            progress?.report({ message: 'Running Git analysis...', increment: 30 });
+
+            // Execute the Git analyzer
+            const result = await this.executeGitAnalyzer(pythonPath, analyzerPath, args, options, progress);
+            
+            // Calculate execution time
+            const executionTime = Date.now() - startTime;
+            result.executionTime = executionTime;
+            
+            this.log(`Git analysis completed in ${executionTime}ms`);
+            
+            return result;
+            
+        } catch (error) {
+            const executionTime = Date.now() - startTime;
+            this.logError('Git analysis failed', error);
+            
+            return {
+                success: false,
+                errors: [{
+                    type: 'git_error',
+                    message: error instanceof Error ? error.message : 'Unknown error occurred'
+                }],
+                executionTime
+            };
+        } finally {
+            this.cleanup();
+        }
+    }
+
+    /**
      * Cancel the currently running analysis
      */
     public cancelAnalysis(): void {
@@ -261,11 +409,64 @@ export class AnalyzerRunner {
     }
 
     /**
+     * Get the path to the current file analyzer script
+     */
+    private getCurrentFileAnalyzerScriptPath(): string {
+        const analyzerPath = path.join(this.extensionPath, 'analyzer', 'current_file_analyzer.py');
+        
+        if (!fs.existsSync(analyzerPath)) {
+            throw new Error(`Current file analyzer script not found at: ${analyzerPath}`);
+        }
+        
+        return analyzerPath;
+    }
+
+    /**
+     * Get the path to the Git analyzer script
+     */
+    private getGitAnalyzerScriptPath(): string {
+        const analyzerPath = path.join(this.extensionPath, 'analyzer', 'git_analytics_runner.py');
+        
+        if (!fs.existsSync(analyzerPath)) {
+            throw new Error(`Git analyzer script not found at: ${analyzerPath}`);
+        }
+        
+        return analyzerPath;
+    }
+
+    /**
      * Build command line arguments for the analyzer
      */
     private buildAnalyzerArguments(options: AnalyzerOptions): string[] {
         // The current analyzer.py only accepts a single project path argument
         return [options.projectPath];
+    }
+
+    /**
+     * Build command line arguments for the Git analyzer
+     */
+    private buildGitAnalyzerArguments(options: { projectPath: string; analysisType: string }): string[] {
+        const args = [options.projectPath];
+        
+        // Add analysis type flag
+        switch (options.analysisType) {
+            case 'git_author_statistics':
+                args.push('--author-stats');
+                break;
+            case 'git_module_contributions':
+                args.push('--module-contributions');
+                break;
+            case 'git_commit_timeline':
+                args.push('--commit-timeline');
+                break;
+            default:
+                args.push('--full-analysis');
+        }
+        
+        // Add JSON output flag
+        args.push('--json');
+        
+        return args;
     }
 
     /**
@@ -480,6 +681,246 @@ export class AnalyzerRunner {
     }
 
     /**
+     * Execute the current file analyzer process
+     */
+    private async executeCurrentFileAnalyzer(
+        pythonPath: string,
+        analyzerPath: string,
+        args: string[],
+        progress?: vscode.Progress<{ message?: string; increment?: number }>
+    ): Promise<AnalysisResult> {
+        return new Promise((resolve, reject) => {
+            const timeout = 60000; // 1 minute for single file analysis
+            let stdout = '';
+            let stderr = '';
+            
+            // Spawn the Python process
+            this.currentProcess = spawn(pythonPath, [analyzerPath, ...args], {
+                stdio: 'pipe'
+            });
+
+            // Set up timeout
+            const timeoutId = setTimeout(() => {
+                if (this.currentProcess) {
+                    this.currentProcess.kill('SIGTERM');
+                    reject(new Error(`Current file analysis timed out after ${timeout}ms`));
+                }
+            }, timeout);
+
+            // Handle stdout
+            this.currentProcess.stdout?.on('data', (data) => {
+                const output = data.toString();
+                stdout += output;
+                
+                // Update progress for current file analysis
+                if (output.includes('complexity')) {
+                    progress?.report({ message: 'Analyzing complexity...', increment: 50 });
+                } else if (output.includes('dependencies')) {
+                    progress?.report({ message: 'Analyzing dependencies...', increment: 70 });
+                } else if (output.includes('framework')) {
+                    progress?.report({ message: 'Detecting frameworks...', increment: 90 });
+                }
+            });
+
+            // Handle stderr
+            this.currentProcess.stderr?.on('data', (data) => {
+                stderr += data.toString();
+            });
+
+            // Handle process completion
+            this.currentProcess.on('close', (code) => {
+                clearTimeout(timeoutId);
+                this.currentProcess = null;
+                
+                if (code === 0 || (code === 1 && stdout.trim())) {
+                    try {
+                        // Parse JSON output
+                        const result = this.parseCurrentFileAnalyzerOutput(stdout);
+                        progress?.report({ message: 'Analysis complete', increment: 100 });
+                        
+                        if (code === 1) {
+                            this.log(`Current file analyzer completed with warnings/errors but produced valid output`);
+                        }
+                        
+                        resolve(result);
+                    } catch (parseError) {
+                        this.logError('Failed to parse current file analyzer output', parseError);
+                        reject(new Error(`Failed to parse current file analyzer output: ${parseError instanceof Error ? parseError.message : parseError}`));
+                    }
+                } else {
+                    const errorMessage = `Current file analyzer process exited with code ${code}`;
+                    this.logError(errorMessage, new Error(stderr));
+                    reject(new Error(`${errorMessage}. Error: ${stderr}`));
+                }
+            });
+
+            // Handle process errors
+            this.currentProcess.on('error', (error) => {
+                clearTimeout(timeoutId);
+                this.currentProcess = null;
+                
+                let errorMessage = `Failed to start current file analyzer process: ${error.message}`;
+                
+                if (error.message.includes('ENOENT')) {
+                    errorMessage = `Python executable not found. Please check your Python installation and path configuration.`;
+                } else if (error.message.includes('EACCES')) {
+                    errorMessage = `Permission denied when trying to execute Python. Please check file permissions.`;
+                }
+                
+                this.logError('Current file analyzer process spawn error', error);
+                reject(new Error(errorMessage));
+            });
+        });
+    }
+
+    /**
+     * Parse current file analyzer JSON output
+     */
+    private parseCurrentFileAnalyzerOutput(stdout: string): AnalysisResult {
+        // Clean up the output - remove any non-JSON content
+        const cleanOutput = this.cleanAnalyzerOutput(stdout);
+        
+        // Parse JSON
+        let parsedResult: any;
+        try {
+            parsedResult = JSON.parse(cleanOutput);
+        } catch (error) {
+            throw new Error(`Invalid JSON output from current file analyzer: ${error instanceof Error ? error.message : error}`);
+        }
+
+        // Convert to AnalysisResult format
+        return {
+            success: parsedResult.success !== false,
+            data: parsedResult,
+            errors: parsedResult.errors || [],
+            warnings: parsedResult.warnings || [],
+            executionTime: 0 // Will be set by caller
+        };
+    }
+
+    /**
+     * Execute the Git analyzer process
+     */
+    private async executeGitAnalyzer(
+        pythonPath: string,
+        analyzerPath: string,
+        args: string[],
+        options: { projectPath: string; analysisType: string; timeout?: number },
+        progress?: vscode.Progress<{ message?: string; increment?: number }>
+    ): Promise<AnalysisResult> {
+        return new Promise((resolve, reject) => {
+            const timeout = options.timeout || 180000; // 3 minutes default for Git analysis
+            let stdout = '';
+            let stderr = '';
+            
+            // Spawn the Python process
+            this.currentProcess = spawn(pythonPath, [analyzerPath, ...args], {
+                cwd: options.projectPath,
+                stdio: 'pipe'
+            });
+
+            // Set up timeout
+            const timeoutId = setTimeout(() => {
+                if (this.currentProcess) {
+                    this.currentProcess.kill('SIGTERM');
+                    reject(new Error(`Git analysis timed out after ${timeout}ms`));
+                }
+            }, timeout);
+
+            // Handle stdout
+            this.currentProcess.stdout?.on('data', (data) => {
+                const output = data.toString();
+                stdout += output;
+                
+                // Look for progress indicators in output
+                if (output.includes('Analyzing Git repository...')) {
+                    progress?.report({ message: 'Analyzing Git repository...', increment: 40 });
+                } else if (output.includes('Processing commits...')) {
+                    progress?.report({ message: 'Processing commits...', increment: 60 });
+                } else if (output.includes('Calculating statistics...')) {
+                    progress?.report({ message: 'Calculating statistics...', increment: 80 });
+                } else if (output.includes('Generating visualizations...')) {
+                    progress?.report({ message: 'Generating visualizations...', increment: 90 });
+                }
+            });
+
+            // Handle stderr
+            this.currentProcess.stderr?.on('data', (data) => {
+                stderr += data.toString();
+            });
+
+            // Handle process completion
+            this.currentProcess.on('close', (code) => {
+                clearTimeout(timeoutId);
+                this.currentProcess = null;
+                
+                if (code === 0 || (code === 1 && stdout.trim())) {
+                    // Accept exit code 1 if there's valid JSON output
+                    try {
+                        const result = this.parseGitAnalyzerOutput(stdout);
+                        progress?.report({ message: 'Git analysis complete', increment: 100 });
+                        
+                        if (code === 1) {
+                            this.log(`Git analyzer completed with warnings/errors but produced valid output`);
+                        }
+                        
+                        resolve(result);
+                    } catch (parseError) {
+                        this.logError('Failed to parse Git analyzer output', parseError);
+                        reject(new Error(`Failed to parse Git analyzer output: ${parseError instanceof Error ? parseError.message : parseError}`));
+                    }
+                } else {
+                    const errorMessage = `Git analyzer process exited with code ${code}`;
+                    this.logError(errorMessage, new Error(stderr));
+                    reject(new Error(`${errorMessage}. Error: ${stderr}`));
+                }
+            });
+
+            // Handle process errors
+            this.currentProcess.on('error', (error) => {
+                clearTimeout(timeoutId);
+                this.currentProcess = null;
+                
+                let errorMessage = `Failed to start Git analyzer process: ${error.message}`;
+                
+                if (error.message.includes('ENOENT')) {
+                    errorMessage = `Python executable not found. Please check your Python installation and path configuration.`;
+                } else if (error.message.includes('EACCES')) {
+                    errorMessage = `Permission denied when trying to execute Python. Please check file permissions.`;
+                }
+                
+                this.logError('Git analyzer process spawn error', error);
+                reject(new Error(errorMessage));
+            });
+        });
+    }
+
+    /**
+     * Parse Git analyzer JSON output
+     */
+    private parseGitAnalyzerOutput(stdout: string): AnalysisResult {
+        // Clean up the output - remove any non-JSON content
+        const cleanOutput = this.cleanAnalyzerOutput(stdout);
+        
+        // Parse JSON
+        let parsedResult: any;
+        try {
+            parsedResult = JSON.parse(cleanOutput);
+        } catch (error) {
+            throw new Error(`Invalid JSON output from Git analyzer: ${error instanceof Error ? error.message : error}`);
+        }
+
+        // Convert to AnalysisResult format
+        return {
+            success: parsedResult.success !== false,
+            data: parsedResult,
+            errors: parsedResult.errors || [],
+            warnings: parsedResult.warnings || [],
+            executionTime: 0 // Will be set by caller
+        };
+    }
+
+    /**
      * Clean up resources
      */
     private cleanup(): void {
@@ -500,6 +941,178 @@ export class AnalyzerRunner {
     private log(message: string): void {
         const timestamp = new Date().toISOString();
         this.outputChannel.appendLine(`[${timestamp}] AnalyzerRunner: ${message}`);
+    }
+
+    /**
+     * Execute database schema analysis on the specified project
+     */
+    public async runDatabaseSchemaAnalysis(
+        options: AnalyzerOptions,
+        progress?: vscode.Progress<{ message?: string; increment?: number }>,
+        cancellationToken?: vscode.CancellationToken
+    ): Promise<AnalysisResult> {
+        const startTime = Date.now();
+        
+        try {
+            // Validate inputs
+            await this.validateOptions(options);
+            
+            // Set up cancellation
+            this.cancellationToken = new vscode.CancellationTokenSource();
+            if (cancellationToken) {
+                cancellationToken.onCancellationRequested(() => {
+                    this.cancelAnalysis();
+                });
+            }
+
+            // Update progress
+            progress?.report({ message: 'Preparing database schema analysis...', increment: 10 });
+
+            // Get Python path
+            const pythonPath = await this.getPythonPath(options.pythonPath);
+            
+            // Get database schema analyzer script path
+            const analyzerPath = this.getDatabaseSchemaAnalyzerScriptPath();
+            
+            // Prepare command arguments
+            const args = [options.projectPath];
+            
+            this.log(`Starting database schema analysis: ${pythonPath} ${analyzerPath} ${args.join(' ')}`);
+            
+            // Update progress
+            progress?.report({ message: 'Analyzing database schema...', increment: 30 });
+
+            // Execute the database schema analyzer
+            const result = await this.executeDatabaseSchemaAnalyzer(pythonPath, analyzerPath, args, progress);
+            
+            // Calculate execution time
+            const executionTime = Date.now() - startTime;
+            result.executionTime = executionTime;
+            
+            this.log(`Database schema analysis completed in ${executionTime}ms`);
+            
+            return result;
+            
+        } catch (error) {
+            const executionTime = Date.now() - startTime;
+            this.logError('Database schema analysis failed', error);
+            
+            return {
+                success: false,
+                errors: [{
+                    type: 'execution_error',
+                    message: error instanceof Error ? error.message : 'Unknown error occurred'
+                }],
+                executionTime
+            };
+        } finally {
+            this.cleanup();
+        }
+    }
+
+    /**
+     * Get the database schema analyzer script path
+     */
+    private getDatabaseSchemaAnalyzerScriptPath(): string {
+        return path.join(this.extensionPath, 'analyzer', 'run_database_schema_analysis.py');
+    }
+
+    /**
+     * Execute the database schema analyzer process
+     */
+    private async executeDatabaseSchemaAnalyzer(
+        pythonPath: string,
+        analyzerPath: string,
+        args: string[],
+        progress?: vscode.Progress<{ message?: string; increment?: number }>
+    ): Promise<AnalysisResult> {
+        return new Promise((resolve, reject) => {
+            let stdout = '';
+            let stderr = '';
+
+            // Spawn the Python process
+            this.currentProcess = spawn(pythonPath, [analyzerPath, ...args], {
+                cwd: path.dirname(analyzerPath),
+                stdio: 'pipe'
+            });
+
+            // Handle stdout
+            this.currentProcess.stdout?.on('data', (data) => {
+                const output = data.toString();
+                stdout += output;
+                
+                // Update progress based on output
+                if (output.includes('Scanning for models')) {
+                    progress?.report({ message: 'Scanning for database models...', increment: 10 });
+                } else if (output.includes('Parsing SQL files')) {
+                    progress?.report({ message: 'Parsing SQL files...', increment: 20 });
+                } else if (output.includes('Generating graph data')) {
+                    progress?.report({ message: 'Generating schema graph...', increment: 30 });
+                }
+            });
+
+            // Handle stderr
+            this.currentProcess.stderr?.on('data', (data) => {
+                stderr += data.toString();
+            });
+
+            // Handle process completion
+            this.currentProcess.on('close', (code) => {
+                this.currentProcess = null;
+                
+                if (code === 0) {
+                    try {
+                        // Parse the JSON output
+                        const result = JSON.parse(stdout);
+                        
+                        // Validate the result structure
+                        if (result && typeof result === 'object') {
+                            resolve({
+                                success: true,
+                                data: result,
+                                errors: result.errors || [],
+                                warnings: result.warnings || []
+                            });
+                        } else {
+                            throw new Error('Invalid result format from database schema analyzer');
+                        }
+                    } catch (parseError) {
+                        this.logError('Failed to parse database schema analyzer output', parseError);
+                        reject(new Error(`Failed to parse database schema analyzer output: ${parseError instanceof Error ? parseError.message : parseError}`));
+                    }
+                } else {
+                    const errorMessage = `Database schema analyzer process exited with code ${code}`;
+                    this.logError(errorMessage, new Error(stderr));
+                    reject(new Error(`${errorMessage}. Error: ${stderr}`));
+                }
+            });
+
+            // Handle process errors
+            this.currentProcess.on('error', (error) => {
+                this.currentProcess = null;
+                
+                let errorMessage = 'Failed to start database schema analyzer process';
+                if (error.message.includes('ENOENT')) {
+                    errorMessage = 'Python executable not found. Please install Python or configure the Python path in settings.';
+                }
+                
+                this.logError('Database schema analyzer process spawn error', error);
+                reject(new Error(errorMessage));
+            });
+
+            // Set timeout
+            const timeout = setTimeout(() => {
+                if (this.currentProcess) {
+                    this.currentProcess.kill('SIGTERM');
+                    reject(new Error('Database schema analysis timed out'));
+                }
+            }, 120000); // 2 minutes timeout
+
+            // Clear timeout when process completes
+            this.currentProcess.on('close', () => {
+                clearTimeout(timeout);
+            });
+        });
     }
 
     /**

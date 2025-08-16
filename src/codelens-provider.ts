@@ -101,7 +101,7 @@ export class ComplexityCodeLensProvider implements vscode.CodeLensProvider {
         }
 
         // Check if CodeLens is enabled in configuration
-        const config = vscode.workspace.getConfiguration('codemindmap');
+        const config = vscode.workspace.getConfiguration('doracodebird');
         if (!config.get<boolean>('showComplexityCodeLens', true)) {
             return [];
         }
@@ -193,7 +193,7 @@ export class ComplexityCodeLensProvider implements vscode.CodeLensProvider {
             // Create command for CodeLens click
             const command: vscode.Command = {
                 title: title,
-                command: 'codemindmap.showFunctionComplexityDetails',
+                command: 'doracodebird.showFunctionComplexityDetails',
                 arguments: [func, document.uri, new vscode.Position(lineNumber, 0)]
             };
 
@@ -388,7 +388,7 @@ export class ComplexityCodeLensProvider implements vscode.CodeLensProvider {
      * Get complexity level based on thresholds
      */
     private getComplexityLevel(complexity: number): 'low' | 'medium' | 'high' {
-        const config = vscode.workspace.getConfiguration('codemindmap');
+        const config = vscode.workspace.getConfiguration('doracodebird');
         const thresholds = config.get<{low: number, medium: number, high: number}>('complexityThresholds', {
             low: 5,
             medium: 10,

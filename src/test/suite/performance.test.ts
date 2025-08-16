@@ -8,7 +8,7 @@ suite('Performance and Stress Tests', () => {
     let tempWorkspaceDir: string;
 
     suiteSetup(async () => {
-        extension = vscode.extensions.getExtension('codemindmap.codemindmap');
+        extension = vscode.extensions.getExtension('doracodebird.doracodebird-view');
         if (extension && !extension.isActive) {
             await extension.activate();
         }
@@ -34,12 +34,12 @@ suite('Performance and Stress Tests', () => {
         if (extension && extension.isActive) {
             // Extension is already active, so we'll test command registration instead
             const commands = await vscode.commands.getCommands();
-            const codemindmapCommands = commands.filter(cmd => cmd.startsWith('codemindmap.'));
+            const doracodebirdCommands = commands.filter(cmd => cmd.startsWith('doracodebird.'));
             
             const endTime = Date.now();
             const activationTime = endTime - startTime;
             
-            assert.ok(codemindmapCommands.length > 0, 'Extension commands should be registered');
+            assert.ok(doracodebirdCommands.length > 0, 'Extension commands should be registered');
             assert.ok(activationTime < 5000, `Command lookup should be fast (took ${activationTime}ms)`);
         }
     });
@@ -211,10 +211,10 @@ class LargeClass${i}:
         const startTime = Date.now();
         const commandCount = 20;
         const commands = [
-            'codemindmap.showOutput',
-            'codemindmap.clearCache',
-            'codemindmap.refreshSidebar',
-            'codemindmap.clearSelection'
+            'doracodebird.showOutput',
+            'doracodebird.clearCache',
+            'doracodebird.refreshSidebar',
+            'doracodebird.clearSelection'
         ];
         
         const promises = [];
@@ -271,7 +271,7 @@ def function_${i}_${k}(param):
         
         // Test that the extension can handle this without memory issues
         try {
-            await vscode.commands.executeCommand('codemindmap.analyzeProject');
+            await vscode.commands.executeCommand('doracodebird.analyzeProject');
             assert.ok(true, 'Extension should handle large interconnected projects');
         } catch (error) {
             // Analysis might fail in test environment, but should not cause memory issues
@@ -293,9 +293,9 @@ def concurrent_function_${i}():
         
         // Execute multiple operations concurrently
         const operations = [
-            Promise.resolve(vscode.commands.executeCommand('codemindmap.analyzeProject')).catch(() => {}),
-            Promise.resolve(vscode.commands.executeCommand('codemindmap.showModuleGraph')).catch(() => {}),
-            Promise.resolve(vscode.commands.executeCommand('codemindmap.refreshSidebar')).catch(() => {}),
+            Promise.resolve(vscode.commands.executeCommand('doracodebird.analyzeProject')).catch(() => {}),
+            Promise.resolve(vscode.commands.executeCommand('doracodebird.showModuleGraph')).catch(() => {}),
+            Promise.resolve(vscode.commands.executeCommand('doracodebird.refreshSidebar')).catch(() => {}),
             Promise.resolve(vscode.commands.executeCommand('codemindmap.clearCache')).catch(() => {}),
             Promise.resolve(vscode.commands.executeCommand('codemindmap.showOutput')).catch(() => {})
         ];
@@ -369,7 +369,7 @@ def concurrent_function_${i}():
         
         // Test that extension handles all these issues gracefully
         try {
-            await vscode.commands.executeCommand('codemindmap.analyzeProject');
+            await vscode.commands.executeCommand('doracodebird.analyzeProject');
             assert.ok(true, 'Extension should handle problematic files gracefully');
         } catch (error) {
             // Errors are expected with problematic files, but extension should not crash

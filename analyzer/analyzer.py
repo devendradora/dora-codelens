@@ -193,6 +193,8 @@ class AnalysisResult:
     call_graph: CallGraph
     framework_patterns: 'FrameworkPatterns'  # Forward reference to avoid circular import
     metadata: AnalysisMetadata
+    module_cards: List['ModuleCard'] = None  # Enhanced module cards
+    folder_structure: 'FolderStructure' = None  # Folder structure analysis
     success: bool = True
     
     def to_json(self, validate: bool = True) -> str:
@@ -231,7 +233,7 @@ class AnalysisResult:
     
     def _to_dict(self) -> Dict[str, Any]:
         """Convert analysis result to dictionary with proper structure."""
-        return {
+        result_dict = {
             "success": self.success,
             "metadata": {
                 "project_path": self.metadata.project_path,
@@ -262,6 +264,16 @@ class AnalysisResult:
             "framework_patterns": self._framework_patterns_to_dict(),
             "schema_version": "1.0.0"
         }
+        
+        # Add enhanced module cards if available
+        if self.module_cards:
+            result_dict["module_cards"] = [card.to_dict() for card in self.module_cards]
+        
+        # Add folder structure if available
+        if self.folder_structure:
+            result_dict["folder_structure"] = self.folder_structure.to_dict()
+        
+        return result_dict
     
     def _library_to_dict(self, library) -> Dict[str, Any]:
         """Convert Library to dictionary."""
@@ -595,6 +607,18 @@ class ProjectAnalyzer:
             call_graph_builder = CallGraphBuilder()
             call_graph = call_graph_builder.build_call_graph(enhanced_modules)
             
+            # Generate enhanced module cards
+            self.performance_optimizer.progress_reporter.update_progress("Generating module cards")
+            from module_card_generator import ModuleCardGenerator
+            card_generator = ModuleCardGenerator(self.project_path)
+            module_cards = card_generator.generate_module_cards(enhanced_modules, dependencies)
+            
+            # Analyze folder structure
+            self.performance_optimizer.progress_reporter.update_progress("Analyzing folder structure")
+            from folder_structure_analyzer import FolderStructureAnalyzer
+            folder_analyzer = FolderStructureAnalyzer(self.project_path)
+            folder_structure = folder_analyzer.analyze_folder_structure(enhanced_modules)
+            
             # Calculate complexity statistics
             complexity_stats = complexity_analyzer.calculate_project_complexity_stats(enhanced_modules)
             
@@ -621,6 +645,8 @@ class ProjectAnalyzer:
                 call_graph=call_graph,
                 framework_patterns=framework_patterns,
                 metadata=metadata,
+                module_cards=module_cards,
+                folder_structure=folder_structure,
                 success=len(self.errors) == 0
             )
             
@@ -927,6 +953,112 @@ class ProjectAnalyzer:
         if self.cache_manager:
             return self.cache_manager.get_cache_stats()
         return None
+    
+    def analyze_current_file(self, file_path: Union[str, Path]) -> Optional['FileAnalysisResult']:
+        """Analyze a single Python file for current file analysis.
+        
+        Args:
+            file_path: Path to the Python file to analyze
+            
+        Returns:
+            FileAnalysisResult object or None if analysis fails
+        """
+        try:
+            file_path = Path(file_path)
+            
+            if not file_path.exists() or file_path.suffix != '.py':
+                logger.error(f"Invalid Python file: {file_path}")
+                return None
+            
+            logger.info(f"Analyzing current file: {file_path}")
+            
+            # Parse the file using AST parser
+            from ast_parser import ASTParser
+            ast_parser = ASTParser()
+            module_info = ast_parser.parse_file(file_path)
+            
+            if not module_info:
+                logger.error(f"Failed to parse file: {file_path}")
+                return None
+            
+            # Enhance with complexity analysis
+            from complexity_analyzer import ComplexityAnalyzer
+            complexity_analyzer = ComplexityAnalyzer()
+            enhanced_module = complexity_analyzer.enhance_module_complexity(module_info)
+            
+            # Generate module card for this file
+            from module_card_generator import ModuleCardGenerator
+            card_generator = ModuleCardGenerator(self.project_path)
+            module_cards = card_generator.generate_module_cards([enhanced_module], {})
+            
+            # Detect framework patterns for this file (if framework_detector supports it)
+            framework_patterns = {}
+            try:
+                from framework_detector import FrameworkDetector
+                framework_detector = FrameworkDetector(self.project_path, [])
+                # Note: This assumes framework_detector has a method for single file analysis
+                # If not available, we'll just use empty patterns
+                if hasattr(framework_detector, 'detect_patterns_in_file'):
+                    framework_patterns = framework_detector.detect_patterns_in_file(file_path)
+            except Exception as e:
+                logger.debug(f"Framework pattern detection failed for single file: {e}")
+            
+            # Create file analysis result
+            from dataclasses import dataclass
+            
+            @dataclass
+            class FileAnalysisResult:
+                """Analysis result for a single file."""
+                file_path: str
+                module_info: ModuleInfo
+                module_card: Optional['ModuleCard']
+                framework_patterns: Dict[str, Any]
+                complexity_summary: Dict[str, Any]
+                success: bool = True
+                
+                def to_dict(self) -> Dict[str, Any]:
+                    """Convert to dictionary for JSON serialization."""
+                    return {
+                        "success": self.success,
+                        "file_path": self.file_path,
+                        "module_info": {
+                            "name": self.module_info.name,
+                            "functions": len(self.module_info.functions),
+                            "classes": len(self.module_info.classes),
+                            "imports": len(self.module_info.imports),
+                            "complexity": {
+                                "cyclomatic": self.module_info.complexity.cyclomatic,
+                                "level": self.module_info.complexity.level.value
+                            },
+                            "size_lines": self.module_info.size_lines
+                        },
+                        "module_card": self.module_card.to_dict() if self.module_card else None,
+                        "framework_patterns": self.framework_patterns,
+                        "complexity_summary": self.complexity_summary
+                    }
+            
+            # Calculate complexity summary
+            complexity_summary = {
+                "total_functions": len(enhanced_module.functions),
+                "average_complexity": sum(f.complexity.cyclomatic for f in enhanced_module.functions) / len(enhanced_module.functions) if enhanced_module.functions else 0,
+                "max_complexity": max((f.complexity.cyclomatic for f in enhanced_module.functions), default=0),
+                "complexity_level": enhanced_module.complexity.level.value
+            }
+            
+            result = FileAnalysisResult(
+                file_path=str(file_path),
+                module_info=enhanced_module,
+                module_card=module_cards[0] if module_cards else None,
+                framework_patterns=framework_patterns,
+                complexity_summary=complexity_summary
+            )
+            
+            logger.info(f"Successfully analyzed file: {file_path}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to analyze current file {file_path}: {e}")
+            return None
 
 
 def main():

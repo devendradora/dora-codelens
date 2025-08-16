@@ -100,15 +100,15 @@ export enum TreeItemType {
 }
 
 /**
- * Custom tree item for the CodeMindMap sidebar
+ * Custom tree item for the DoraCodeBirdView sidebar
  */
-export class CodeMindMapTreeItem extends vscode.TreeItem {
+export class DoraCodeBirdTreeItem extends vscode.TreeItem {
     constructor(
         public readonly label: string,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
         public readonly itemType: TreeItemType,
         public readonly data?: any,
-        public readonly parent?: CodeMindMapTreeItem
+        public readonly parent?: DoraCodeBirdTreeItem
     ) {
         super(label, collapsibleState);
         
@@ -217,7 +217,7 @@ export class CodeMindMapTreeItem extends vscode.TreeItem {
             case TreeItemType.CLASS:
             case TreeItemType.METHOD:
                 return {
-                    command: 'codemindmap.navigateToItem',
+                    command: 'doracodebird.navigateToItem',
                     title: 'Navigate to Item',
                     arguments: [this]
                 };
@@ -229,11 +229,11 @@ export class CodeMindMapTreeItem extends vscode.TreeItem {
 }
 
 /**
- * Tree data provider for the CodeMindMap sidebar
+ * Tree data provider for the DoraCodeBirdView sidebar
  */
-export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeItem> {
-    private _onDidChangeTreeData: vscode.EventEmitter<CodeMindMapTreeItem | undefined | null | void> = new vscode.EventEmitter<CodeMindMapTreeItem | undefined | null | void>();
-    readonly onDidChangeTreeData: vscode.Event<CodeMindMapTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
+export class SidebarProvider implements vscode.TreeDataProvider<DoraCodeBirdTreeItem> {
+    private _onDidChangeTreeData: vscode.EventEmitter<DoraCodeBirdTreeItem | undefined | null | void> = new vscode.EventEmitter<DoraCodeBirdTreeItem | undefined | null | void>();
+    readonly onDidChangeTreeData: vscode.Event<DoraCodeBirdTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
     private analysisData: AnalysisData | null = null;
     private filterText: string = '';
@@ -449,18 +449,18 @@ export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeI
     /**
      * Get tree item representation
      */
-    getTreeItem(element: CodeMindMapTreeItem): vscode.TreeItem {
+    getTreeItem(element: DoraCodeBirdTreeItem): vscode.TreeItem {
         return element;
     }
 
     /**
      * Get children of a tree item
      */
-    getChildren(element?: CodeMindMapTreeItem): Thenable<CodeMindMapTreeItem[]> {
+    getChildren(element?: DoraCodeBirdTreeItem): Thenable<DoraCodeBirdTreeItem[]> {
         if (!this.analysisData) {
             return Promise.resolve([
-                new CodeMindMapTreeItem(
-                    'No analysis data available',
+                new DoraCodeBirdTreeItem(
+                    'Run analysis to see project structure',
                     vscode.TreeItemCollapsibleState.None,
                     TreeItemType.ROOT
                 )
@@ -504,11 +504,11 @@ export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeI
     /**
      * Get root level tree items
      */
-    private getRootItems(): CodeMindMapTreeItem[] {
-        const items: CodeMindMapTreeItem[] = [];
+    private getRootItems(): DoraCodeBirdTreeItem[] {
+        const items: DoraCodeBirdTreeItem[] = [];
 
         // Tech Stack section
-        items.push(new CodeMindMapTreeItem(
+        items.push(new DoraCodeBirdTreeItem(
             `Tech Stack (${this.analysisData!.tech_stack.libraries.length} libraries)`,
             vscode.TreeItemCollapsibleState.Collapsed,
             TreeItemType.TECH_STACK
@@ -516,7 +516,7 @@ export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeI
 
         // Modules section
         const moduleCount = this.getFilteredModules().length;
-        items.push(new CodeMindMapTreeItem(
+        items.push(new DoraCodeBirdTreeItem(
             `Modules (${moduleCount})`,
             vscode.TreeItemCollapsibleState.Expanded,
             TreeItemType.MODULES
@@ -525,7 +525,7 @@ export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeI
         // Frameworks section (if any frameworks detected)
         const frameworks = this.getDetectedFrameworks();
         if (frameworks.length > 0) {
-            items.push(new CodeMindMapTreeItem(
+            items.push(new DoraCodeBirdTreeItem(
                 `Frameworks (${frameworks.length})`,
                 vscode.TreeItemCollapsibleState.Collapsed,
                 TreeItemType.FRAMEWORKS
@@ -538,10 +538,10 @@ export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeI
     /**
      * Get tech stack children
      */
-    private getTechStackChildren(): CodeMindMapTreeItem[] {
+    private getTechStackChildren(): DoraCodeBirdTreeItem[] {
         const libraries = this.analysisData!.tech_stack.libraries;
         
-        return libraries.map(lib => new CodeMindMapTreeItem(
+        return libraries.map(lib => new DoraCodeBirdTreeItem(
             `${lib.name}${lib.version ? ` (${lib.version})` : ''}`,
             vscode.TreeItemCollapsibleState.None,
             TreeItemType.LIBRARY,
@@ -552,11 +552,11 @@ export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeI
     /**
      * Get module children with filtering
      */
-    private getModuleChildren(): CodeMindMapTreeItem[] {
+    private getModuleChildren(): DoraCodeBirdTreeItem[] {
         const modules = this.getFilteredModules();
         
         return modules.map(module => {
-            const item = new CodeMindMapTreeItem(
+            const item = new DoraCodeBirdTreeItem(
                 path.basename(module.name),
                 vscode.TreeItemCollapsibleState.Collapsed,
                 TreeItemType.MODULE,
@@ -587,10 +587,10 @@ export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeI
     /**
      * Get framework children
      */
-    private getFrameworkChildren(): CodeMindMapTreeItem[] {
+    private getFrameworkChildren(): DoraCodeBirdTreeItem[] {
         const frameworks = this.getDetectedFrameworks();
         
-        return frameworks.map(framework => new CodeMindMapTreeItem(
+        return frameworks.map(framework => new DoraCodeBirdTreeItem(
             framework,
             vscode.TreeItemCollapsibleState.None,
             TreeItemType.FRAMEWORK,
@@ -601,14 +601,14 @@ export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeI
     /**
      * Get children for a specific module
      */
-    private getModuleItemChildren(module: ModuleInfo): CodeMindMapTreeItem[] {
-        const items: CodeMindMapTreeItem[] = [];
+    private getModuleItemChildren(module: ModuleInfo): DoraCodeBirdTreeItem[] {
+        const items: DoraCodeBirdTreeItem[] = [];
 
         // Add dependencies section if module has imports
         if (module.imports.length > 0) {
             const dependencies = this.getModuleDependencies(module.name);
             if (dependencies.length > 0) {
-                items.push(new CodeMindMapTreeItem(
+                items.push(new DoraCodeBirdTreeItem(
                     `Dependencies (${dependencies.length})`,
                     vscode.TreeItemCollapsibleState.Collapsed,
                     TreeItemType.ROOT, // Using ROOT as a generic container type
@@ -620,7 +620,7 @@ export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeI
         // Add dependents section
         const dependents = this.getModuleDependents(module.name);
         if (dependents.length > 0) {
-            items.push(new CodeMindMapTreeItem(
+            items.push(new DoraCodeBirdTreeItem(
                 `Used by (${dependents.length})`,
                 vscode.TreeItemCollapsibleState.Collapsed,
                 TreeItemType.ROOT, // Using ROOT as a generic container type
@@ -630,7 +630,7 @@ export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeI
 
         // Add classes
         module.classes.forEach(cls => {
-            items.push(new CodeMindMapTreeItem(
+            items.push(new DoraCodeBirdTreeItem(
                 cls.name,
                 cls.methods.length > 0 ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None,
                 TreeItemType.CLASS,
@@ -640,7 +640,7 @@ export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeI
 
         // Add standalone functions (not methods)
         module.functions.filter(func => !func.is_method).forEach(func => {
-            items.push(new CodeMindMapTreeItem(
+            items.push(new DoraCodeBirdTreeItem(
                 func.name,
                 vscode.TreeItemCollapsibleState.None,
                 TreeItemType.FUNCTION,
@@ -654,8 +654,8 @@ export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeI
     /**
      * Get children for a class (its methods)
      */
-    private getClassChildren(cls: ClassInfo): CodeMindMapTreeItem[] {
-        return cls.methods.map(method => new CodeMindMapTreeItem(
+    private getClassChildren(cls: ClassInfo): DoraCodeBirdTreeItem[] {
+        return cls.methods.map(method => new DoraCodeBirdTreeItem(
             method.name,
             vscode.TreeItemCollapsibleState.None,
             TreeItemType.METHOD,
@@ -681,8 +681,8 @@ export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeI
     /**
      * Get children for dependency/dependent containers
      */
-    private getDependencyChildren(containerData: any): CodeMindMapTreeItem[] {
-        const items: CodeMindMapTreeItem[] = [];
+    private getDependencyChildren(containerData: any): DoraCodeBirdTreeItem[] {
+        const items: DoraCodeBirdTreeItem[] = [];
         
         containerData.items.forEach((moduleName: string) => {
             const module = this.analysisData!.modules.find(m => 
@@ -690,7 +690,7 @@ export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeI
             );
             
             if (module) {
-                items.push(new CodeMindMapTreeItem(
+                items.push(new DoraCodeBirdTreeItem(
                     path.basename(module.name),
                     vscode.TreeItemCollapsibleState.None,
                     TreeItemType.MODULE,
@@ -698,7 +698,7 @@ export class SidebarProvider implements vscode.TreeDataProvider<CodeMindMapTreeI
                 ));
             } else {
                 // External dependency
-                items.push(new CodeMindMapTreeItem(
+                items.push(new DoraCodeBirdTreeItem(
                     moduleName,
                     vscode.TreeItemCollapsibleState.None,
                     TreeItemType.LIBRARY,
