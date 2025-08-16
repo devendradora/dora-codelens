@@ -1,447 +1,500 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
+import * as vscode from "vscode";
+import * as path from "path";
 
 /**
  * Interface for analysis data that will be displayed in the webview
  */
 export interface WebviewAnalysisData {
-    modules?: ModuleGraphData;
-    functions?: CallGraphData;
-    techStack?: TechStackData;
-    frameworkPatterns?: FrameworkPatternsData;
-    gitAnalytics?: GitAnalyticsData;
+  modules?: ModuleGraphData;
+  functions?: CallGraphData;
+  techStack?: TechStackData;
+  frameworkPatterns?: FrameworkPatternsData;
+  gitAnalytics?: GitAnalyticsData;
 }
 
 /**
  * Git analytics data structure
  */
 export interface GitAnalyticsData {
-    repositoryInfo: any;
-    authorContributions: any[];
-    moduleStatistics: any;
-    commitTimeline: any;
-    contributionGraphs: any[];
-    analysisType: string;
+  repositoryInfo: any;
+  authorContributions: any[];
+  moduleStatistics: any;
+  commitTimeline: any;
+  contributionGraphs: any[];
+  analysisType: string;
 }
 
 /**
  * Module graph data structure
  */
 export interface ModuleGraphData {
-    nodes: ModuleNode[];
-    edges: ModuleEdge[];
+  nodes: ModuleNode[];
+  edges: ModuleEdge[];
 }
 
 export interface ModuleNode {
-    id: string;
-    name: string;
-    path: string;
-    complexity: number;
-    size: number;
-    functions: string[];
+  id: string;
+  name: string;
+  path: string;
+  complexity: number;
+  size: number;
+  functions: string[];
 }
 
 export interface ModuleEdge {
-    source: string;
-    target: string;
-    type: 'import' | 'dependency';
-    weight: number;
+  source: string;
+  target: string;
+  type: "import" | "dependency";
+  weight: number;
 }
 
 /**
  * Call graph data structure
  */
 export interface CallGraphData {
-    nodes: FunctionNode[];
-    edges: CallEdge[];
+  nodes: FunctionNode[];
+  edges: CallEdge[];
 }
 
 export interface FunctionNode {
-    id: string;
-    name: string;
-    module: string;
-    complexity: number;
-    lineNumber: number;
-    parameters: Parameter[];
+  id: string;
+  name: string;
+  module: string;
+  complexity: number;
+  lineNumber: number;
+  parameters: Parameter[];
 }
 
 export interface Parameter {
-    name: string;
-    type_hint?: string;
-    default_value?: string;
-    is_vararg?: boolean;
-    is_kwarg?: boolean;
+  name: string;
+  type_hint?: string;
+  default_value?: string;
+  is_vararg?: boolean;
+  is_kwarg?: boolean;
 }
 
 export interface CallEdge {
-    caller: string;
-    callee: string;
-    callCount: number;
-    lineNumbers: number[];
+  caller: string;
+  callee: string;
+  callCount: number;
+  lineNumbers: number[];
 }
 
 /**
  * Tech stack data structure
  */
 export interface TechStackData {
-    libraries: Library[];
-    pythonVersion: string;
-    frameworks: string[];
-    packageManager: 'pip' | 'poetry' | 'pipenv';
+  libraries: Library[];
+  pythonVersion: string;
+  frameworks: string[];
+  packageManager: "pip" | "poetry" | "pipenv";
 }
 
 export interface Library {
-    name: string;
-    version?: string;
-    category?: string;
+  name: string;
+  version?: string;
+  category?: string;
 }
 
 /**
  * Framework patterns data structure
  */
 export interface FrameworkPatternsData {
-    django?: DjangoPatterns;
-    flask?: FlaskPatterns;
-    fastapi?: FastAPIPatterns;
+  django?: DjangoPatterns;
+  flask?: FlaskPatterns;
+  fastapi?: FastAPIPatterns;
 }
 
 export interface DjangoPatterns {
-    urlPatterns: URLPattern[];
-    views: ViewMapping[];
-    models: ModelMapping[];
-    serializers: SerializerMapping[];
+  urlPatterns: URLPattern[];
+  views: ViewMapping[];
+  models: ModelMapping[];
+  serializers: SerializerMapping[];
 }
 
 export interface URLPattern {
-    pattern: string;
-    viewName: string;
-    viewFunction: string;
-    namespace?: string;
+  pattern: string;
+  viewName: string;
+  viewFunction: string;
+  namespace?: string;
 }
 
 export interface ViewMapping {
-    name: string;
-    file: string;
-    lineNumber: number;
+  name: string;
+  file: string;
+  lineNumber: number;
 }
 
 export interface ModelMapping {
-    name: string;
-    file: string;
-    lineNumber: number;
+  name: string;
+  file: string;
+  lineNumber: number;
 }
 
 export interface SerializerMapping {
-    name: string;
-    file: string;
-    lineNumber: number;
+  name: string;
+  file: string;
+  lineNumber: number;
 }
 
 export interface FlaskPatterns {
-    routes: FlaskRoute[];
-    blueprints: Blueprint[];
+  routes: FlaskRoute[];
+  blueprints: Blueprint[];
 }
 
 export interface FlaskRoute {
-    pattern: string;
-    methods: string[];
-    function: string;
-    file: string;
-    lineNumber: number;
+  pattern: string;
+  methods: string[];
+  function: string;
+  file: string;
+  lineNumber: number;
 }
 
 export interface Blueprint {
-    name: string;
-    file: string;
-    routes: FlaskRoute[];
+  name: string;
+  file: string;
+  routes: FlaskRoute[];
 }
 
 export interface FastAPIPatterns {
-    routes: FastAPIRoute[];
-    dependencies: DependencyMapping[];
+  routes: FastAPIRoute[];
+  dependencies: DependencyMapping[];
 }
 
 export interface FastAPIRoute {
-    pattern: string;
-    method: string;
-    function: string;
-    file: string;
-    lineNumber: number;
+  pattern: string;
+  method: string;
+  function: string;
+  file: string;
+  lineNumber: number;
 }
 
 export interface DependencyMapping {
-    name: string;
-    file: string;
-    lineNumber: number;
+  name: string;
+  file: string;
+  lineNumber: number;
 }
 
 /**
  * Webview message types for communication between extension and webview
  */
 export interface WebviewMessage {
-    command: string;
-    data?: any;
+  command: string;
+  data?: any;
 }
 
 /**
  * WebviewProvider manages the graph visualization webview panel
  */
 export class WebviewProvider {
-    private panel: vscode.WebviewPanel | undefined;
-    private context: vscode.ExtensionContext;
-    private outputChannel: vscode.OutputChannel;
-    private analysisData: WebviewAnalysisData | null = null;
-    private currentView: 'module-graph' | 'call-hierarchy' | 'current-file' | 'json-view' | 'git-analytics' = 'module-graph';
-    private selectedFunction: string | null = null;
-    private debugMode: boolean = false;
+  private panel: vscode.WebviewPanel | undefined;
+  private context: vscode.ExtensionContext;
+  private outputChannel: vscode.OutputChannel;
+  private analysisData: WebviewAnalysisData | null = null;
+  private currentView:
+    | "module-graph"
+    | "call-hierarchy"
+    | "current-file"
+    | "json-view"
+    | "git-analytics" = "module-graph";
+  private selectedFunction: string | null = null;
+  private debugMode: boolean = false;
 
-    constructor(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel) {
-        this.context = context;
-        this.outputChannel = outputChannel;
-        
-        // Enable debug mode based on configuration or development environment
-        const config = vscode.workspace.getConfiguration('doracodebird');
-        this.debugMode = config.get('enableDebugMode', false) || 
-                        context.extensionMode === vscode.ExtensionMode.Development;
-        
-        if (this.debugMode) {
-            this.log('Debug mode enabled for WebviewProvider');
+  constructor(
+    context: vscode.ExtensionContext,
+    outputChannel: vscode.OutputChannel
+  ) {
+    this.context = context;
+    this.outputChannel = outputChannel;
+
+    // Enable debug mode based on configuration or development environment
+    const config = vscode.workspace.getConfiguration("doracodebird");
+    this.debugMode =
+      config.get("enableDebugMode", false) ||
+      context.extensionMode === vscode.ExtensionMode.Development;
+
+    if (this.debugMode) {
+      this.log("Debug mode enabled for WebviewProvider");
+    }
+  }
+
+  /**
+   * Show the module graph visualization
+   */
+  public showModuleGraph(analysisData: WebviewAnalysisData): void {
+    this.analysisData = analysisData;
+    this.currentView = "module-graph";
+    this.selectedFunction = null;
+
+    this.createOrShowWebview();
+    this.updateWebviewContent();
+
+    this.log("Module graph webview displayed");
+  }
+
+  /**
+   * Show the call hierarchy visualization for a specific function
+   */
+  public showCallHierarchy(
+    analysisData: WebviewAnalysisData,
+    functionName: string
+  ): void {
+    this.analysisData = analysisData;
+    this.currentView = "call-hierarchy";
+    this.selectedFunction = functionName;
+
+    this.createOrShowWebview();
+    this.updateWebviewContent();
+
+    this.log(`Call hierarchy webview displayed for function: ${functionName}`);
+  }
+
+  /**
+   * Show the tech stack visualization
+   */
+  public showTechStack(analysisData: WebviewAnalysisData): void {
+    this.analysisData = analysisData;
+    this.currentView = "module-graph"; // For now, use module-graph view
+    this.selectedFunction = null;
+
+    this.createOrShowWebview();
+    this.updateWebviewContent();
+
+    this.log("Tech stack webview displayed");
+  }
+
+  /**
+   * Show current file analysis visualization
+   */
+  public showCurrentFileAnalysis(
+    analysisData: any,
+    view: "graph" | "json" = "graph"
+  ): void {
+    // Convert current file analysis data to webview format
+    const webviewData = this.convertCurrentFileAnalysisData(analysisData);
+
+    this.analysisData = webviewData;
+    this.currentView = view === "json" ? "json-view" : "current-file";
+    this.selectedFunction = null;
+
+    this.createOrShowWebview();
+    this.updateWebviewContent();
+
+    this.log(`Current file analysis webview displayed in ${view} view`);
+  }
+
+  /**
+   * Show Git analytics visualization
+   */
+  public showGitAnalytics(analysisData: any, analysisType: string): void {
+    // Convert Git analytics data to webview format
+    const webviewData = this.convertGitAnalyticsData(
+      analysisData,
+      analysisType
+    );
+
+    this.analysisData = webviewData;
+    this.currentView = "git-analytics";
+    this.selectedFunction = null;
+
+    this.createOrShowWebview();
+    this.updateWebviewContent();
+
+    this.log(`Git analytics webview displayed for ${analysisType}`);
+  }
+
+  /**
+   * Update the webview with new analysis data
+   */
+  public updateAnalysisData(analysisData: WebviewAnalysisData | null): void {
+    this.analysisData = analysisData;
+
+    if (this.panel && this.panel.visible) {
+      this.updateWebviewContent();
+    }
+  }
+
+  /**
+   * Create or show the webview panel
+   */
+  private createOrShowWebview(): void {
+    try {
+      const columnToShowIn = vscode.window.activeTextEditor
+        ? vscode.window.activeTextEditor.viewColumn
+        : undefined;
+
+      if (this.panel) {
+        // If panel exists, just reveal it
+        this.panel.reveal(columnToShowIn);
+        return;
+      }
+
+      // Validate extension resources exist
+      const resourcesPath = vscode.Uri.joinPath(
+        this.context.extensionUri,
+        "resources"
+      );
+
+      // Create new webview panel
+      this.panel = vscode.window.createWebviewPanel(
+        "doracodebirdGraph",
+        "DoraCodeBirdView - Graph Visualization",
+        columnToShowIn || vscode.ViewColumn.One,
+        {
+          enableScripts: true,
+          retainContextWhenHidden: true,
+          localResourceRoots: [
+            resourcesPath,
+            vscode.Uri.joinPath(this.context.extensionUri, "node_modules"),
+          ],
         }
-    }
+      );
 
-    /**
-     * Show the module graph visualization
-     */
-    public showModuleGraph(analysisData: WebviewAnalysisData): void {
-        this.analysisData = analysisData;
-        this.currentView = 'module-graph';
-        this.selectedFunction = null;
-        
-        this.createOrShowWebview();
-        this.updateWebviewContent();
-        
-        this.log('Module graph webview displayed');
-    }
+      // Set up webview icon with error handling
+      try {
+        this.panel.iconPath = {
+          light: vscode.Uri.joinPath(
+            this.context.extensionUri,
+            "resources",
+            "light",
+            "graph.svg"
+          ),
+          dark: vscode.Uri.joinPath(
+            this.context.extensionUri,
+            "resources",
+            "dark",
+            "graph.svg"
+          ),
+        };
+      } catch (iconError) {
+        this.log("Failed to set webview icon");
+      }
 
-    /**
-     * Show the call hierarchy visualization for a specific function
-     */
-    public showCallHierarchy(analysisData: WebviewAnalysisData, functionName: string): void {
-        this.analysisData = analysisData;
-        this.currentView = 'call-hierarchy';
-        this.selectedFunction = functionName;
-        
-        this.createOrShowWebview();
-        this.updateWebviewContent();
-        
-        this.log(`Call hierarchy webview displayed for function: ${functionName}`);
-    }
+      // Handle webview disposal
+      this.panel.onDidDispose(
+        () => {
+          this.panel = undefined;
+          this.log("Webview panel disposed");
+        },
+        null,
+        this.context.subscriptions
+      );
 
-    /**
-     * Show the tech stack visualization
-     */
-    public showTechStack(analysisData: WebviewAnalysisData): void {
-        this.analysisData = analysisData;
-        this.currentView = 'module-graph'; // For now, use module-graph view
-        this.selectedFunction = null;
-        
-        this.createOrShowWebview();
-        this.updateWebviewContent();
-        
-        this.log('Tech stack webview displayed');
-    }
-
-    /**
-     * Show current file analysis visualization
-     */
-    public showCurrentFileAnalysis(analysisData: any, view: 'graph' | 'json' = 'graph'): void {
-        // Convert current file analysis data to webview format
-        const webviewData = this.convertCurrentFileAnalysisData(analysisData);
-        
-        this.analysisData = webviewData;
-        this.currentView = view === 'json' ? 'json-view' : 'current-file';
-        this.selectedFunction = null;
-        
-        this.createOrShowWebview();
-        this.updateWebviewContent();
-        
-        this.log(`Current file analysis webview displayed in ${view} view`);
-    }
-
-    /**
-     * Show Git analytics visualization
-     */
-    public showGitAnalytics(analysisData: any, analysisType: string): void {
-        // Convert Git analytics data to webview format
-        const webviewData = this.convertGitAnalyticsData(analysisData, analysisType);
-        
-        this.analysisData = webviewData;
-        this.currentView = 'git-analytics';
-        this.selectedFunction = null;
-        
-        this.createOrShowWebview();
-        this.updateWebviewContent();
-        
-        this.log(`Git analytics webview displayed for ${analysisType}`);
-    }
-
-    /**
-     * Update the webview with new analysis data
-     */
-    public updateAnalysisData(analysisData: WebviewAnalysisData | null): void {
-        this.analysisData = analysisData;
-        
-        if (this.panel && this.panel.visible) {
+      // Handle webview state changes
+      this.panel.onDidChangeViewState(
+        (e) => {
+          if (e.webviewPanel.visible) {
+            this.log("Webview became visible, updating content");
             this.updateWebviewContent();
-        }
+          } else {
+            this.log("Webview became hidden");
+          }
+        },
+        null,
+        this.context.subscriptions
+      );
+
+      // Handle messages from webview with error handling
+      this.panel.webview.onDidReceiveMessage(
+        (message: WebviewMessage) => {
+          try {
+            this.handleWebviewMessage(message);
+          } catch (error) {
+            this.logError("Error handling webview message", error);
+          }
+        },
+        undefined,
+        this.context.subscriptions
+      );
+
+      this.log("Webview panel created successfully");
+    } catch (error) {
+      this.logError("Failed to create webview panel", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update the webview content based on current view and data
+   */
+  private updateWebviewContent(): void {
+    if (!this.panel) {
+      return;
     }
 
-    /**
-     * Create or show the webview panel
-     */
-    private createOrShowWebview(): void {
+    try {
+      this.log(`Updating webview content for ${this.currentView}`);
+
+      const html = this.getWebviewHtml();
+      this.panel.webview.html = html;
+
+      // Send analysis data to webview after a short delay to ensure DOM is ready
+      setTimeout(() => {
         try {
-            const columnToShowIn = vscode.window.activeTextEditor
-                ? vscode.window.activeTextEditor.viewColumn
-                : undefined;
+          this.sendMessageToWebview({
+            command: "updateData",
+            data: {
+              analysisData: this.analysisData,
+              currentView: this.currentView,
+              selectedFunction: this.selectedFunction,
+              debugMode: this.debugMode,
+            },
+          });
 
-            if (this.panel) {
-                // If panel exists, just reveal it
-                this.panel.reveal(columnToShowIn);
-                return;
-            }
-
-            // Validate extension resources exist
-            const resourcesPath = vscode.Uri.joinPath(this.context.extensionUri, 'resources');
-            
-            // Create new webview panel
-            this.panel = vscode.window.createWebviewPanel(
-                'doracodebirdGraph',
-                'DoraCodeBirdView - Graph Visualization',
-                columnToShowIn || vscode.ViewColumn.One,
-                {
-                    enableScripts: true,
-                    retainContextWhenHidden: true,
-                    localResourceRoots: [
-                        resourcesPath,
-                        vscode.Uri.joinPath(this.context.extensionUri, 'node_modules')
-                    ]
-                }
-            );
-
-            // Set up webview icon with error handling
-            try {
-                this.panel.iconPath = {
-                    light: vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'light', 'graph.svg'),
-                    dark: vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'dark', 'graph.svg')
-                };
-            } catch (iconError) {
-                this.log('Failed to set webview icon');
-            }
-
-            // Handle webview disposal
-            this.panel.onDidDispose(() => {
-                this.panel = undefined;
-                this.log('Webview panel disposed');
-            }, null, this.context.subscriptions);
-
-            // Handle webview state changes
-            this.panel.onDidChangeViewState(e => {
-                if (e.webviewPanel.visible) {
-                    this.log('Webview became visible, updating content');
-                    this.updateWebviewContent();
-                } else {
-                    this.log('Webview became hidden');
-                }
-            }, null, this.context.subscriptions);
-
-            // Handle messages from webview with error handling
-            this.panel.webview.onDidReceiveMessage(
-                (message: WebviewMessage) => {
-                    try {
-                        this.handleWebviewMessage(message);
-                    } catch (error) {
-                        this.logError('Error handling webview message', error);
-                    }
-                },
-                undefined,
-                this.context.subscriptions
-            );
-
-            this.log('Webview panel created successfully');
-            
+          this.log(`Webview content updated for ${this.currentView}`);
         } catch (error) {
-            this.logError('Failed to create webview panel', error);
-            throw error;
+          this.logError("Failed to send data to webview", error);
         }
+      }, 100);
+    } catch (error) {
+      this.logError("Failed to update webview content", error);
     }
+  }
 
-    /**
-     * Update the webview content based on current view and data
-     */
-    private updateWebviewContent(): void {
-        if (!this.panel) {
-            return;
-        }
+  /**
+   * Generate HTML content for the webview
+   */
+  private getWebviewHtml(): string {
+    const webview = this.panel!.webview;
 
-        try {
-            this.log(`Updating webview content for ${this.currentView}`);
-            
-            const html = this.getWebviewHtml();
-            this.panel.webview.html = html;
+    // Get URIs for resources
+    const cytoscapeUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(
+        this.context.extensionUri,
+        "node_modules",
+        "cytoscape",
+        "dist",
+        "cytoscape.min.js"
+      )
+    );
 
-            // Send analysis data to webview after a short delay to ensure DOM is ready
-            setTimeout(() => {
-                try {
-                    this.sendMessageToWebview({
-                        command: 'updateData',
-                        data: {
-                            analysisData: this.analysisData,
-                            currentView: this.currentView,
-                            selectedFunction: this.selectedFunction,
-                            debugMode: this.debugMode
-                        }
-                    });
-                    
-                    this.log(`Webview content updated for ${this.currentView}`);
-                    
-                } catch (error) {
-                    this.logError('Failed to send data to webview', error);
-                }
-            }, 100);
+    const cytoscapeDagreUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(
+        this.context.extensionUri,
+        "node_modules",
+        "cytoscape-dagre",
+        "cytoscape-dagre.js"
+      )
+    );
 
-        } catch (error) {
-            this.logError('Failed to update webview content', error);
-        }
-    }
+    const dagreUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(
+        this.context.extensionUri,
+        "node_modules",
+        "dagre",
+        "dist",
+        "dagre.min.js"
+      )
+    );
 
-    /**
-     * Generate HTML content for the webview
-     */
-    private getWebviewHtml(): string {
-        const webview = this.panel!.webview;
-        
-        // Get URIs for resources
-        const cytoscapeUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(this.context.extensionUri, 'node_modules', 'cytoscape', 'dist', 'cytoscape.min.js')
-        );
-        
-        const cytoscapeDagreUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(this.context.extensionUri, 'node_modules', 'cytoscape-dagre', 'cytoscape-dagre.js')
-        );
-        
-        const dagreUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(this.context.extensionUri, 'node_modules', 'dagre', 'dist', 'dagre.min.js')
-        );
-        
-        const styleUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'webview.css')
-        );
+    const styleUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, "resources", "webview.css")
+    );
 
-        // Generate nonce for security
-        const nonce = this.getNonce();
+    // Generate nonce for security
+    const nonce = this.getNonce();
 
-        return `<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -611,6 +664,7 @@ export class WebviewProvider {
                 console.log('DoraCodeBirdView webview initialized successfully');
                 
                 // Request initial data
+                console.log('Sending ready message to extension');
                 vscode.postMessage({ command: 'ready' });
                 
             } catch (error) {
@@ -643,16 +697,19 @@ export class WebviewProvider {
         // Handle messages from extension
         window.addEventListener('message', event => {
             const message = event.data;
+            console.log('Received message from extension:', message);
             
             switch (message.command) {
                 case 'updateData':
+                    console.log('Processing updateData message');
                     handleDataUpdate(message.data);
                     break;
                 case 'error':
+                    console.log('Processing error message');
                     showError(message.data.message);
                     break;
                 default:
-                    console.log('Unknown message:', message.command);
+                    console.log('Unknown message command:', message.command);
             }
         });
         
@@ -660,17 +717,24 @@ export class WebviewProvider {
         function handleDataUpdate(data) {
             try {
                 console.log('Handling data update', data);
+                console.log('Data keys:', data ? Object.keys(data) : 'null');
                 
                 analysisData = data.analysisData;
                 currentView = data.currentView;
                 selectedFunction = data.selectedFunction;
                 debugMode = data.debugMode || false;
                 
+                console.log('Analysis data:', analysisData);
+                console.log('Current view:', currentView);
+                
                 if (!analysisData) {
-                    showError('Analysis data is being loaded...');
+                    console.log('No analysis data available, hiding loading and showing message');
+                    hideLoading();
+                    showError('No analysis data available. Please run an analysis first.');
                     return;
                 }
                 
+                console.log('Updating toolbar and rendering graph');
                 updateToolbar();
                 renderGraph();
                 
@@ -764,6 +828,44 @@ export class WebviewProvider {
             
             const elements = createCallHierarchyElements();
             initializeCytoscape(elements, getCallHierarchyStyle(), getCallHierarchyLayout());
+        }
+        
+        // Render current file analysis
+        function renderCurrentFileAnalysis() {
+            if (!analysisData) {
+                showError('No current file analysis data available');
+                return;
+            }
+            
+            // Create elements for current file visualization
+            const elements = createCurrentFileElements();
+            initializeCytoscape(elements, getCurrentFileStyle(), getCurrentFileLayout());
+        }
+        
+        // Render JSON view
+        function renderJsonView() {
+            if (!analysisData) {
+                showError('No analysis data available for JSON view');
+                return;
+            }
+            
+            // Hide the graph container and show JSON content
+            const graphContainer = document.getElementById('cy');
+            if (graphContainer) {
+                graphContainer.innerHTML = '<pre style="padding: 20px; font-family: monospace; white-space: pre-wrap; color: var(--vscode-editor-foreground);">' + 
+                    JSON.stringify(analysisData, null, 2) + '</pre>';
+            }
+        }
+        
+        // Render Git analytics
+        function renderGitAnalytics() {
+            if (!analysisData.gitAnalytics) {
+                showError('No Git analytics data available');
+                return;
+            }
+            
+            const elements = createGitAnalyticsElements();
+            initializeCytoscape(elements, getGitAnalyticsStyle(), getGitAnalyticsLayout());
         }
         
         // Create elements for module graph
@@ -863,6 +965,75 @@ export class WebviewProvider {
             return elements;
         }
         
+        // Create elements for current file analysis
+        function createCurrentFileElements() {
+            const elements = [];
+            
+            // If we have modules data (converted from current file analysis)
+            if (analysisData.modules) {
+                return createModuleGraphElements();
+            }
+            
+            // If we have functions data
+            if (analysisData.functions) {
+                return createCallHierarchyElements();
+            }
+            
+            // Fallback: create a simple file node
+            elements.push({
+                data: {
+                    id: 'current-file',
+                    label: 'Current File',
+                    type: 'file'
+                }
+            });
+            
+            return elements;
+        }
+        
+        // Create elements for Git analytics
+        function createGitAnalyticsElements() {
+            const elements = [];
+            const gitData = analysisData.gitAnalytics;
+            
+            if (!gitData) {
+                return elements;
+            }
+            
+            // Add author nodes
+            if (gitData.authorContributions) {
+                gitData.authorContributions.forEach((author, index) => {
+                    elements.push({
+                        data: {
+                            id: 'author_' + index,
+                            label: author.authorName,
+                            commits: author.totalCommits,
+                            linesAdded: author.linesAdded,
+                            linesRemoved: author.linesRemoved,
+                            type: 'author'
+                        }
+                    });
+                });
+            }
+            
+            // Add module nodes if available
+            if (gitData.moduleStatistics) {
+                Object.entries(gitData.moduleStatistics).forEach(([modulePath, stats], index) => {
+                    elements.push({
+                        data: {
+                            id: 'module_' + index,
+                            label: modulePath,
+                            commits: stats.totalCommits,
+                            authors: stats.uniqueAuthors,
+                            type: 'module'
+                        }
+                    });
+                });
+            }
+            
+            return elements;
+        }
+        
         // Initialize Cytoscape instance
         function initializeCytoscape(elements, style, layout) {
             try {
@@ -932,37 +1103,35 @@ export class WebviewProvider {
             
             if (data.type === 'module') {
                 infoTitle.textContent = 'Module: ' + data.label;
-                infoContent.innerHTML = \`
-                    <div class="info-item">
-                        <strong>Path:</strong> \${data.path}
-                    </div>
-                    <div class="info-item">
-                        <strong>Complexity:</strong> \${data.complexity}
-                    </div>
-                    <div class="info-item">
-                        <strong>Size:</strong> \${data.size} lines
-                    </div>
-                    <div class="info-item">
-                        <strong>Functions:</strong> \${data.functions.length}
-                    </div>
-                \`;
+                infoContent.innerHTML = 
+                    '<div class="info-item">' +
+                        '<strong>Path:</strong> ' + data.path +
+                    '</div>' +
+                    '<div class="info-item">' +
+                        '<strong>Complexity:</strong> ' + data.complexity +
+                    '</div>' +
+                    '<div class="info-item">' +
+                        '<strong>Size:</strong> ' + data.size + ' lines' +
+                    '</div>' +
+                    '<div class="info-item">' +
+                        '<strong>Functions:</strong> ' + data.functions.length +
+                    '</div>';
             } else if (data.type === 'function') {
                 const params = data.parameters.map(p => p.name).join(', ');
                 infoTitle.textContent = 'Function: ' + data.label;
-                infoContent.innerHTML = \`
-                    <div class="info-item">
-                        <strong>Module:</strong> \${data.module}
-                    </div>
-                    <div class="info-item">
-                        <strong>Line:</strong> \${data.lineNumber}
-                    </div>
-                    <div class="info-item">
-                        <strong>Complexity:</strong> \${data.complexity}
-                    </div>
-                    <div class="info-item">
-                        <strong>Parameters:</strong> (\${params})
-                    </div>
-                \`;
+                infoContent.innerHTML = 
+                    '<div class="info-item">' +
+                        '<strong>Module:</strong> ' + data.module +
+                    '</div>' +
+                    '<div class="info-item">' +
+                        '<strong>Line:</strong> ' + data.lineNumber +
+                    '</div>' +
+                    '<div class="info-item">' +
+                        '<strong>Complexity:</strong> ' + data.complexity +
+                    '</div>' +
+                    '<div class="info-item">' +
+                        '<strong>Parameters:</strong> (' + params + ')' +
+                    '</div>';
             }
         }
         
@@ -1091,7 +1260,298 @@ export class WebviewProvider {
                 name: 'dagre',
                 directed: true,
                 padding: 10,
-                spacingFactor: 1.25,
+                spacingFactor: 1.5,
+                rankDir: 'TB',
+                animate: false
+            };
+        }
+        
+        // Get current file analysis style
+        function getCurrentFileStyle() {
+            return [
+                {
+                    selector: 'node[type="file"]',
+                    style: {
+                        'background-color': '#007acc',
+                        'label': 'data(label)',
+                        'width': 80,
+                        'height': 40,
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'font-size': '12px',
+                        'color': '#fff',
+                        'text-outline-width': 2,
+                        'text-outline-color': '#000',
+                        'shape': 'rectangle'
+                    }
+                },
+                {
+                    selector: 'node[type="function"]',
+                    style: {
+                        'background-color': function(ele) {
+                            return getComplexityColor(ele.data('complexity'));
+                        },
+                        'label': 'data(label)',
+                        'width': 60,
+                        'height': 30,
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'font-size': '10px',
+                        'color': '#fff',
+                        'text-outline-width': 1,
+                        'text-outline-color': '#000',
+                        'shape': 'ellipse'
+                    }
+                },
+                {
+                    selector: 'node[type="class"]',
+                    style: {
+                        'background-color': '#6f42c1',
+                        'label': 'data(label)',
+                        'width': 70,
+                        'height': 35,
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'font-size': '11px',
+                        'color': '#fff',
+                        'text-outline-width': 1,
+                        'text-outline-color': '#000',
+                        'shape': 'rectangle'
+                    }
+                },
+                {
+                    selector: 'edge[type="contains"]',
+                    style: {
+                        'width': 2,
+                        'line-color': '#666',
+                        'target-arrow-color': '#666',
+                        'target-arrow-shape': 'triangle',
+                        'curve-style': 'bezier'
+                    }
+                },
+                {
+                    selector: ':selected',
+                    style: {
+                        'border-width': 3,
+                        'border-color': '#007acc'
+                    }
+                }
+            ];
+        }
+        
+        // Get current file layout
+        function getCurrentFileLayout() {
+            return {
+                name: 'dagre',
+                directed: true,
+                padding: 20,
+                spacingFactor: 1.2,
+                rankDir: 'TB',
+                animate: false
+            };
+        }
+        
+        // Get Git analytics style
+        function getGitAnalyticsStyle() {
+            return [
+                {
+                    selector: 'node[type="author"]',
+                    style: {
+                        'background-color': '#28a745',
+                        'label': 'data(label)',
+                        'width': function(ele) {
+                            return Math.max(40, Math.min(80, ele.data('commits') * 2));
+                        },
+                        'height': function(ele) {
+                            return Math.max(40, Math.min(80, ele.data('commits') * 2));
+                        },
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'font-size': '10px',
+                        'color': '#fff',
+                        'text-outline-width': 1,
+                        'text-outline-color': '#000',
+                        'shape': 'ellipse'
+                    }
+                },
+                {
+                    selector: 'node[type="module"]',
+                    style: {
+                        'background-color': '#17a2b8',
+                        'label': 'data(label)',
+                        'width': function(ele) {
+                            return Math.max(50, Math.min(100, ele.data('commits') * 3));
+                        },
+                        'height': function(ele) {
+                            return Math.max(30, Math.min(60, ele.data('commits') * 2));
+                        },
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'font-size': '9px',
+                        'color': '#fff',
+                        'text-outline-width': 1,
+                        'text-outline-color': '#000',
+                        'shape': 'rectangle'
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 2,
+                        'line-color': '#666',
+                        'target-arrow-color': '#666',
+                        'target-arrow-shape': 'triangle',
+                        'curve-style': 'bezier'
+                    }
+                },
+                {
+                    selector: ':selected',
+                    style: {
+                        'border-width': 2,
+                        'border-color': '#007acc'
+                    }
+                }
+            ];
+        }
+        
+        // Get Git analytics layout
+        function getGitAnalyticsLayout() {
+            return {
+                name: 'cose',
+                idealEdgeLength: 80,
+                nodeOverlap: 10,
+                refresh: 20,
+                fit: true,
+                padding: 30,
+                randomize: false,
+                componentSpacing: 80,
+                nodeRepulsion: 200000,
+                edgeElasticity: 50,
+                nestingFactor: 5,
+                gravity: 40,
+                numIter: 1000,
+                initialTemp: 200,
+                coolingFactor: 0.95,
+                minTemp: 1.0
+            };
+        }
+        
+        // Utility functions
+        function showLoading() {
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const fallback = document.getElementById('fallback-view');
+            
+            if (loading) loading.classList.remove('hidden');
+            if (error) error.classList.add('hidden');
+            if (fallback) fallback.classList.add('hidden');
+        }
+        
+        function hideLoading() {
+            const loading = document.getElementById('loading');
+            if (loading) loading.classList.add('hidden');
+        }
+        
+        function showError(message) {
+            const error = document.getElementById('error');
+            const errorMessage = document.getElementById('error-message');
+            const loading = document.getElementById('loading');
+            const fallback = document.getElementById('fallback-view');
+            
+            if (loading) loading.classList.add('hidden');
+            if (fallback) fallback.classList.add('hidden');
+            if (error) error.classList.remove('hidden');
+            if (errorMessage) errorMessage.textContent = message;
+        }
+        
+        function hideError() {
+            const error = document.getElementById('error');
+            if (error) error.classList.add('hidden');
+        }
+        
+        function showLibraryError(message) {
+            showError(message);
+            const errorStack = document.getElementById('error-stack');
+            if (errorStack) {
+                errorStack.textContent = 'Library loading failed. Please check that all required dependencies are installed.';
+            }
+        }
+        
+        function closeInfoPanel() {
+            const infoPanel = document.getElementById('info-panel');
+            if (infoPanel) infoPanel.classList.remove('visible');
+        }
+        
+        function fitToView() {
+            if (cy) {
+                cy.fit();
+            }
+        }
+        
+        function resetView() {
+            if (cy) {
+                cy.reset();
+            }
+        }
+        
+        function retryLoad() {
+            if (analysisData) {
+                renderGraph();
+            }
+        }
+        
+        function showFallbackView() {
+            const fallback = document.getElementById('fallback-view');
+            const fallbackData = document.getElementById('fallback-data');
+            const error = document.getElementById('error');
+            
+            if (error) error.classList.add('hidden');
+            if (fallback) fallback.classList.remove('hidden');
+            
+            if (fallbackData && analysisData) {
+                fallbackData.innerHTML = '<pre>' + JSON.stringify(analysisData, null, 2) + '</pre>';
+            }
+        }
+        
+        function handleSearch(event) {
+            const searchTerm = event.target.value.toLowerCase();
+            
+            if (!cy || !searchTerm) {
+                // Reset highlighting
+                if (cy) {
+                    cy.elements().removeClass('dimmed highlighted');
+                }
+                return;
+            }
+            
+            // Find matching nodes
+            const matchingNodes = cy.nodes().filter(node => {
+                const label = node.data('label') || '';
+                return label.toLowerCase().includes(searchTerm);
+            });
+            
+            if (matchingNodes.length > 0) {
+                // Dim all elements
+                cy.elements().addClass('dimmed');
+                
+                // Highlight matching nodes and their neighbors
+                matchingNodes.removeClass('dimmed').addClass('highlighted');
+                matchingNodes.neighborhood().removeClass('dimmed').addClass('highlighted');
+            } else {
+                // No matches, reset
+                cy.elements().removeClass('dimmed highlighted');
+            }
+        }
+        
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initialize);
+        
+        // Also initialize immediately in case DOM is already loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initialize);
+        } else {
+            initialize();
+        }pacingFactor: 1.25,
                 rankDir: 'TB',
                 ranker: 'tight-tree',
                 fit: true
@@ -1226,22 +1686,22 @@ export class WebviewProvider {
                 content = '<h4>Modules:</h4><ul>';
                 analysisData.modules.nodes.forEach(module => {
                     const complexityColor = getComplexityColor(module.complexity);
-                    content += \`<li style="border-left: 4px solid \${complexityColor}; padding-left: 8px; margin: 4px 0;">
-                        <strong>\${module.name}</strong><br>
-                        <small>Path: \${module.path}</small><br>
-                        <small>Complexity: \${module.complexity}, Size: \${module.size} lines</small>
-                    </li>\`;
+                    content += '<li style="border-left: 4px solid ' + complexityColor + '; padding-left: 8px; margin: 4px 0;">' +
+                        '<strong>' + module.name + '</strong><br>' +
+                        '<small>Path: ' + module.path + '</small><br>' +
+                        '<small>Complexity: ' + module.complexity + ', Size: ' + module.size + ' lines</small>' +
+                    '</li>';
                 });
                 content += '</ul>';
             } else if (currentView === 'call-hierarchy' && analysisData.functions) {
                 content = '<h4>Functions:</h4><ul>';
                 analysisData.functions.nodes.forEach(func => {
                     const complexityColor = getComplexityColor(func.complexity);
-                    content += \`<li style="border-left: 4px solid \${complexityColor}; padding-left: 8px; margin: 4px 0;">
-                        <strong>\${func.name}</strong><br>
-                        <small>Module: \${func.module}, Line: \${func.lineNumber}</small><br>
-                        <small>Complexity: \${func.complexity}</small>
-                    </li>\`;
+                    content += '<li style="border-left: 4px solid ' + complexityColor + '; padding-left: 8px; margin: 4px 0;">' +
+                        '<strong>' + func.name + '</strong><br>' +
+                        '<small>Module: ' + func.module + ', Line: ' + func.lineNumber + '</small><br>' +
+                        '<small>Complexity: ' + func.complexity + '</small>' +
+                    '</li>';
                 });
                 content += '</ul>';
             }
@@ -1255,12 +1715,18 @@ export class WebviewProvider {
         
         function waitForLibraries() {
             initializationAttempts++;
+            console.log('Waiting for libraries, attempt:', initializationAttempts);
+            console.log('Dagre available:', typeof dagre !== 'undefined');
+            console.log('Cytoscape available:', typeof cytoscape !== 'undefined');
+            console.log('CytoscapeDagre available:', typeof cytoscapeDagre !== 'undefined');
             
             if (typeof dagre !== 'undefined' && typeof cytoscape !== 'undefined') {
                 // Libraries loaded successfully
+                console.log('All required libraries loaded, initializing...');
                 try {
                     if (typeof cytoscapeDagre !== 'undefined') {
                         cytoscape.use(cytoscapeDagre);
+                        console.log('Cytoscape Dagre extension registered');
                     }
                     initialize();
                 } catch (error) {
@@ -1273,6 +1739,7 @@ export class WebviewProvider {
                 if (typeof dagre === 'undefined') missingLibs.push('Dagre');
                 if (typeof cytoscape === 'undefined') missingLibs.push('Cytoscape.js');
                 
+                console.error('Library loading timeout. Missing:', missingLibs);
                 showLibraryError('Required libraries failed to load: ' + missingLibs.join(', '));
             } else {
                 // Keep waiting
@@ -1291,304 +1758,319 @@ export class WebviewProvider {
     </script>
 </body>
 </html>`;
+  }
+
+  /**
+   * Generate a nonce for Content Security Policy
+   */
+  private getNonce(): string {
+    let text = "";
+    const possible =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    for (let i = 0; i < 32; i++) {
+      text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
+  }
+
+  /**
+   * Send a message to the webview
+   */
+  private sendMessageToWebview(message: WebviewMessage): void {
+    if (this.panel && this.panel.webview) {
+      try {
+        this.panel.webview.postMessage(message);
+        this.log(`Message sent to webview: ${message.command}`);
+      } catch (error) {
+        this.logError("Failed to send message to webview", error);
+      }
+    }
+  }
+
+  /**
+   * Handle messages received from the webview
+   */
+  private handleWebviewMessage(message: WebviewMessage): void {
+    this.log(`Received message from webview: ${message.command}`);
+
+    switch (message.command) {
+      case "ready":
+        this.log("Webview is ready");
+        // Send initial data if available, otherwise send empty state
+        this.sendMessageToWebview({
+          command: "updateData",
+          data: {
+            analysisData: this.analysisData,
+            currentView: this.currentView,
+            selectedFunction: this.selectedFunction,
+            debugMode: this.debugMode,
+          },
+        });
+        break;
+
+      case "error":
+        this.logError("Webview error", message.data);
+        break;
+
+      case "viewChanged":
+        this.currentView = message.data?.view || this.currentView;
+        this.selectedFunction = message.data?.selectedFunction || null;
+        this.log(`View changed to: ${this.currentView}`);
+        break;
+
+      case "retry":
+        this.log("Webview requested retry");
+        this.updateWebviewContent();
+        break;
+
+      default:
+        this.log(`Unknown message command: ${message.command}`);
+    }
+  }
+
+  /**
+   * Convert current file analysis data to webview format
+   */
+  private convertCurrentFileAnalysisData(
+    analysisData: any
+  ): WebviewAnalysisData {
+    // Create a simplified webview data structure for current file analysis
+    const nodes: any[] = [];
+    const edges: any[] = [];
+
+    // Add file as a node
+    if (analysisData.file_name) {
+      nodes.push({
+        id: analysisData.file_name,
+        name: analysisData.file_name,
+        path: analysisData.file_path,
+        complexity:
+          analysisData.complexity_metrics?.overall_complexity?.cyclomatic || 0,
+        size: analysisData.complexity_metrics?.total_lines || 0,
+        functions:
+          analysisData.complexity_metrics?.function_complexities?.map(
+            (f: any) => f.name
+          ) || [],
+      });
     }
 
-    /**
-     * Generate a nonce for Content Security Policy
-     */
-    private getNonce(): string {
-        let text = '';
-        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        for (let i = 0; i < 32; i++) {
-            text += possible.charAt(Math.floor(Math.random() * possible.length));
+    // Add functions as nodes
+    if (analysisData.complexity_metrics?.function_complexities) {
+      analysisData.complexity_metrics.function_complexities.forEach(
+        (func: any) => {
+          nodes.push({
+            id: `${analysisData.file_name}::${func.name}`,
+            name: func.name,
+            module: analysisData.file_name,
+            complexity: func.complexity?.cyclomatic || 0,
+            line_number: func.line_number,
+            parameters: func.parameters || [],
+          });
+
+          // Add edge from file to function
+          edges.push({
+            source: analysisData.file_name,
+            target: `${analysisData.file_name}::${func.name}`,
+            type: "contains",
+          });
         }
-        return text;
+      );
     }
 
-    /**
-     * Send a message to the webview
-     */
-    private sendMessageToWebview(message: WebviewMessage): void {
-        if (this.panel && this.panel.webview) {
-            try {
-                this.panel.webview.postMessage(message);
-                this.log(`Message sent to webview: ${message.command}`);
-            } catch (error) {
-                this.logError('Failed to send message to webview', error);
-            }
-        }
-    }
+    // Add classes as nodes
+    if (analysisData.complexity_metrics?.class_complexities) {
+      analysisData.complexity_metrics.class_complexities.forEach((cls: any) => {
+        nodes.push({
+          id: `${analysisData.file_name}::${cls.name}`,
+          name: cls.name,
+          module: analysisData.file_name,
+          complexity: 0, // Classes don't have direct complexity
+          line_number: cls.line_number,
+          type: "class",
+        });
 
-    /**
-     * Handle messages received from the webview
-     */
-    private handleWebviewMessage(message: WebviewMessage): void {
-        this.log(`Received message from webview: ${message.command}`);
+        // Add edge from file to class
+        edges.push({
+          source: analysisData.file_name,
+          target: `${analysisData.file_name}::${cls.name}`,
+          type: "contains",
+        });
 
-        switch (message.command) {
-            case 'ready':
-                this.log('Webview is ready');
-                // Send initial data if available
-                if (this.analysisData) {
-                    this.sendMessageToWebview({
-                        command: 'updateData',
-                        data: {
-                            analysisData: this.analysisData,
-                            currentView: this.currentView,
-                            selectedFunction: this.selectedFunction,
-                            debugMode: this.debugMode
-                        }
-                    });
-                }
-                break;
-
-            case 'error':
-                this.logError('Webview error', message.data);
-                break;
-
-            case 'viewChanged':
-                this.currentView = message.data?.view || this.currentView;
-                this.selectedFunction = message.data?.selectedFunction || null;
-                this.log(`View changed to: ${this.currentView}`);
-                break;
-
-            case 'retry':
-                this.log('Webview requested retry');
-                this.updateWebviewContent();
-                break;
-
-            default:
-                this.log(`Unknown message command: ${message.command}`);
-        }
-    }
-
-    /**
-     * Convert current file analysis data to webview format
-     */
-    private convertCurrentFileAnalysisData(analysisData: any): WebviewAnalysisData {
-        // Create a simplified webview data structure for current file analysis
-        const nodes: any[] = [];
-        const edges: any[] = [];
-        
-        // Add file as a node
-        if (analysisData.file_name) {
+        // Add methods as nodes
+        if (cls.methods) {
+          cls.methods.forEach((method: any) => {
+            const methodId = `${analysisData.file_name}::${cls.name}::${method.name}`;
             nodes.push({
-                id: analysisData.file_name,
-                name: analysisData.file_name,
-                path: analysisData.file_path,
-                complexity: analysisData.complexity_metrics?.overall_complexity?.cyclomatic || 0,
-                size: analysisData.complexity_metrics?.total_lines || 0,
-                functions: analysisData.complexity_metrics?.function_complexities?.map((f: any) => f.name) || []
+              id: methodId,
+              name: method.name,
+              module: analysisData.file_name,
+              complexity: method.complexity?.cyclomatic || 0,
+              line_number: method.line_number || 0,
+              parameters: method.parameters || [],
+              is_method: true,
             });
+
+            // Add edge from class to method
+            edges.push({
+              source: `${analysisData.file_name}::${cls.name}`,
+              target: methodId,
+              type: "contains",
+            });
+          });
         }
-        
-        // Add functions as nodes
-        if (analysisData.complexity_metrics?.function_complexities) {
-            analysisData.complexity_metrics.function_complexities.forEach((func: any) => {
-                nodes.push({
-                    id: `${analysisData.file_name}::${func.name}`,
-                    name: func.name,
-                    module: analysisData.file_name,
-                    complexity: func.complexity?.cyclomatic || 0,
-                    line_number: func.line_number,
-                    parameters: func.parameters || []
-                });
-                
-                // Add edge from file to function
+      });
+    }
+
+    return {
+      modules: {
+        nodes: nodes,
+        edges: edges,
+      },
+      functions: {
+        nodes: nodes.filter((n) => n.name !== analysisData.file_name),
+        edges: edges,
+      },
+      techStack: {
+        libraries: analysisData.tech_stack?.libraries || [],
+        frameworks: analysisData.tech_stack?.frameworks || [],
+        pythonVersion: analysisData.tech_stack?.python_version || "unknown",
+        packageManager: analysisData.tech_stack?.package_manager || "pip",
+      },
+      frameworkPatterns: analysisData.framework_patterns || {},
+    };
+  }
+
+  /**
+   * Convert Git analytics data to webview format
+   */
+  private convertGitAnalyticsData(
+    analysisData: any,
+    analysisType: string
+  ): WebviewAnalysisData {
+    // Create nodes and edges for Git analytics visualization
+    const nodes: any[] = [];
+    const edges: any[] = [];
+
+    // For Git analytics, we'll create a different visualization structure
+    // This could show authors as nodes, modules as nodes, etc.
+
+    if (analysisData.author_contributions) {
+      analysisData.author_contributions.forEach(
+        (author: any, index: number) => {
+          nodes.push({
+            id: `author_${index}`,
+            name: author.author_name,
+            email: author.author_email,
+            commits: author.total_commits,
+            linesAdded: author.lines_added,
+            linesRemoved: author.lines_removed,
+            contributionPercentage: author.contribution_percentage,
+            type: "author",
+          });
+        }
+      );
+    }
+
+    if (analysisData.module_statistics) {
+      Object.entries(analysisData.module_statistics).forEach(
+        ([modulePath, stats]: [string, any], index: number) => {
+          nodes.push({
+            id: `module_${index}`,
+            name: modulePath,
+            path: modulePath,
+            commits: stats.total_commits,
+            authors: stats.unique_authors,
+            linesAdded: stats.lines_added,
+            linesRemoved: stats.lines_removed,
+            type: "module",
+          });
+
+          // Create edges between authors and modules they contributed to
+          if (stats.author_breakdown) {
+            stats.author_breakdown.forEach((authorContrib: any) => {
+              const authorIndex = analysisData.author_contributions?.findIndex(
+                (a: any) => a.author_name === authorContrib.author_name
+              );
+              if (authorIndex >= 0) {
                 edges.push({
-                    source: analysisData.file_name,
-                    target: `${analysisData.file_name}::${func.name}`,
-                    type: 'contains'
+                  source: `author_${authorIndex}`,
+                  target: `module_${index}`,
+                  commits: authorContrib.total_commits,
+                  type: "contribution",
                 });
+              }
             });
+          }
         }
-        
-        // Add classes as nodes
-        if (analysisData.complexity_metrics?.class_complexities) {
-            analysisData.complexity_metrics.class_complexities.forEach((cls: any) => {
-                nodes.push({
-                    id: `${analysisData.file_name}::${cls.name}`,
-                    name: cls.name,
-                    module: analysisData.file_name,
-                    complexity: 0, // Classes don't have direct complexity
-                    line_number: cls.line_number,
-                    type: 'class'
-                });
-                
-                // Add edge from file to class
-                edges.push({
-                    source: analysisData.file_name,
-                    target: `${analysisData.file_name}::${cls.name}`,
-                    type: 'contains'
-                });
-                
-                // Add methods as nodes
-                if (cls.methods) {
-                    cls.methods.forEach((method: any) => {
-                        const methodId = `${analysisData.file_name}::${cls.name}::${method.name}`;
-                        nodes.push({
-                            id: methodId,
-                            name: method.name,
-                            module: analysisData.file_name,
-                            complexity: method.complexity?.cyclomatic || 0,
-                            line_number: method.line_number || 0,
-                            parameters: method.parameters || [],
-                            is_method: true
-                        });
-                        
-                        // Add edge from class to method
-                        edges.push({
-                            source: `${analysisData.file_name}::${cls.name}`,
-                            target: methodId,
-                            type: 'contains'
-                        });
-                    });
-                }
-            });
-        }
-        
-        return {
-            modules: {
-                nodes: nodes,
-                edges: edges
-            },
-            functions: {
-                nodes: nodes.filter(n => n.name !== analysisData.file_name),
-                edges: edges
-            },
-            techStack: {
-                libraries: analysisData.tech_stack?.libraries || [],
-                frameworks: analysisData.tech_stack?.frameworks || [],
-                pythonVersion: analysisData.tech_stack?.python_version || 'unknown',
-                packageManager: analysisData.tech_stack?.package_manager || 'pip'
-            },
-            frameworkPatterns: analysisData.framework_patterns || {}
-        };
+      );
     }
 
-    /**
-     * Convert Git analytics data to webview format
-     */
-    private convertGitAnalyticsData(analysisData: any, analysisType: string): WebviewAnalysisData {
-        // Create nodes and edges for Git analytics visualization
-        const nodes: any[] = [];
-        const edges: any[] = [];
-        
-        // For Git analytics, we'll create a different visualization structure
-        // This could show authors as nodes, modules as nodes, etc.
-        
-        if (analysisData.author_contributions) {
-            analysisData.author_contributions.forEach((author: any, index: number) => {
-                nodes.push({
-                    id: `author_${index}`,
-                    name: author.author_name,
-                    email: author.author_email,
-                    commits: author.total_commits,
-                    linesAdded: author.lines_added,
-                    linesRemoved: author.lines_removed,
-                    contributionPercentage: author.contribution_percentage,
-                    type: 'author'
-                });
-            });
-        }
-        
-        if (analysisData.module_statistics) {
-            Object.entries(analysisData.module_statistics).forEach(([modulePath, stats]: [string, any], index: number) => {
-                nodes.push({
-                    id: `module_${index}`,
-                    name: modulePath,
-                    path: modulePath,
-                    commits: stats.total_commits,
-                    authors: stats.unique_authors,
-                    linesAdded: stats.lines_added,
-                    linesRemoved: stats.lines_removed,
-                    type: 'module'
-                });
-                
-                // Create edges between authors and modules they contributed to
-                if (stats.author_breakdown) {
-                    stats.author_breakdown.forEach((authorContrib: any) => {
-                        const authorIndex = analysisData.author_contributions?.findIndex(
-                            (a: any) => a.author_name === authorContrib.author_name
-                        );
-                        if (authorIndex >= 0) {
-                            edges.push({
-                                source: `author_${authorIndex}`,
-                                target: `module_${index}`,
-                                commits: authorContrib.total_commits,
-                                type: 'contribution'
-                            });
-                        }
-                    });
-                }
-            });
-        }
-        
-        return {
-            modules: {
-                nodes: nodes,
-                edges: edges
-            },
-            functions: {
-                nodes: [],
-                edges: []
-            },
-            techStack: {
-                libraries: [],
-                frameworks: [],
-                pythonVersion: 'unknown',
-                packageManager: 'pip'
-            },
-            gitAnalytics: {
-                repositoryInfo: analysisData.repository_info || {},
-                authorContributions: analysisData.author_contributions || [],
-                moduleStatistics: analysisData.module_statistics || {},
-                commitTimeline: analysisData.commit_timeline || {},
-                contributionGraphs: analysisData.contribution_graphs || [],
-                analysisType: analysisType
-            },
-            frameworkPatterns: {}
-        };
+    return {
+      modules: {
+        nodes: nodes,
+        edges: edges,
+      },
+      functions: {
+        nodes: [],
+        edges: [],
+      },
+      techStack: {
+        libraries: [],
+        frameworks: [],
+        pythonVersion: "unknown",
+        packageManager: "pip",
+      },
+      gitAnalytics: {
+        repositoryInfo: analysisData.repository_info || {},
+        authorContributions: analysisData.author_contributions || [],
+        moduleStatistics: analysisData.module_statistics || {},
+        commitTimeline: analysisData.commit_timeline || {},
+        contributionGraphs: analysisData.contribution_graphs || [],
+        analysisType: analysisType,
+      },
+      frameworkPatterns: {},
+    };
+  }
+
+  /**
+   * Log message to output channel
+   */
+  private log(message: string): void {
+    const timestamp = new Date().toISOString();
+    const logMessage = `[${timestamp}] ${message}`;
+
+    this.outputChannel.appendLine(logMessage);
+
+    if (this.debugMode) {
+      console.log(`[DoraCodeBirdView] ${logMessage}`);
+    }
+  }
+
+  /**
+   * Log error message to output channel
+   */
+  private logError(message: string, error: any): void {
+    const timestamp = new Date().toISOString();
+    const errorMessage =
+      error instanceof Error
+        ? `${error.message}\n${error.stack}`
+        : JSON.stringify(error);
+
+    const logMessage = `[${timestamp}] ERROR: ${message}\n${errorMessage}`;
+    this.outputChannel.appendLine(logMessage);
+
+    console.error(`[DoraCodeBirdView] ${message}`, error);
+  }
+
+  /**
+   * Dispose of the webview provider
+   */
+  public dispose(): void {
+    if (this.panel) {
+      this.panel.dispose();
+      this.panel = undefined;
     }
 
-    /**
-     * Log message to output channel
-     */
-    private log(message: string): void {
-        const timestamp = new Date().toISOString();
-        const logMessage = `[${timestamp}] ${message}`;
-        
-        this.outputChannel.appendLine(logMessage);
-        
-        if (this.debugMode) {
-            console.log(`[DoraCodeBirdView] ${logMessage}`);
-        }
-    }
-
-    /**
-     * Log error message to output channel
-     */
-    private logError(message: string, error: any): void {
-        const timestamp = new Date().toISOString();
-        const errorMessage = error instanceof Error 
-            ? `${error.message}\n${error.stack}`
-            : JSON.stringify(error);
-        
-        const logMessage = `[${timestamp}] ERROR: ${message}\n${errorMessage}`;
-        this.outputChannel.appendLine(logMessage);
-        
-        console.error(`[DoraCodeBirdView] ${message}`, error);
-    }
-
-    /**
-     * Dispose of the webview provider
-     */
-    public dispose(): void {
-        if (this.panel) {
-            this.panel.dispose();
-            this.panel = undefined;
-        }
-        
-        this.log('WebviewProvider disposed');
-    }
+    this.log("WebviewProvider disposed");
+  }
 }

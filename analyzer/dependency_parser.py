@@ -59,12 +59,15 @@ class DependencyParser:
         """
         logger.info("Starting dependency parsing...")
         
+        # Detect Python version first
+        self._detect_python_version()
+        
         # Try parsing different dependency file formats
         self._parse_requirements_txt()
         self._parse_pyproject_toml()
         self._parse_pipfile()
         
-        # Detect frameworks from libraries
+        # Detect frameworks from libraries and code analysis
         frameworks = self._detect_frameworks()
         
         tech_stack = TechStack(
@@ -401,31 +404,173 @@ class DependencyParser:
         return None
     
     def _detect_frameworks(self) -> List[str]:
-        """Detect frameworks from the list of libraries.
+        """Detect frameworks from the list of libraries and code analysis.
         
         Returns:
             List of detected framework names
         """
         frameworks = []
         framework_indicators = {
-            'django': ['django'],
-            'flask': ['flask'],
-            'fastapi': ['fastapi'],
-            'tornado': ['tornado'],
-            'pyramid': ['pyramid'],
-            'bottle': ['bottle'],
-            'cherrypy': ['cherrypy'],
-            'falcon': ['falcon'],
-            'sanic': ['sanic'],
-            'quart': ['quart'],
-            'starlette': ['starlette'],
-            'aiohttp': ['aiohttp']
+            'Django': ['django', 'django-rest-framework', 'djangorestframework'],
+            'Flask': ['flask', 'flask-restful', 'flask-sqlalchemy', 'flask-migrate'],
+            'FastAPI': ['fastapi', 'uvicorn', 'starlette'],
+            'Tornado': ['tornado'],
+            'Pyramid': ['pyramid'],
+            'Bottle': ['bottle'],
+            'CherryPy': ['cherrypy'],
+            'Web2py': ['web2py'],
+            'Falcon': ['falcon'],
+            'Sanic': ['sanic'],
+            'Quart': ['quart'],
+            'Starlette': ['starlette'],
+            'AioHttp': ['aiohttp'],
+            'Streamlit': ['streamlit'],
+            'Dash': ['dash', 'plotly-dash'],
+            'Celery': ['celery'],
+            'SQLAlchemy': ['sqlalchemy'],
+            'Pandas': ['pandas'],
+            'NumPy': ['numpy'],
+            'Matplotlib': ['matplotlib'],
+            'Seaborn': ['seaborn'],
+            'Scikit-learn': ['scikit-learn', 'sklearn'],
+            'TensorFlow': ['tensorflow'],
+            'PyTorch': ['torch', 'pytorch'],
+            'Keras': ['keras'],
+            'Requests': ['requests'],
+            'BeautifulSoup': ['beautifulsoup4', 'bs4'],
+            'Scrapy': ['scrapy'],
+            'Pytest': ['pytest']
         }
         
         library_names = {lib.name.lower() for lib in self.libraries}
         
         for framework, indicators in framework_indicators.items():
-            if any(indicator in library_names for indicator in indicators):
+            if any(indicator.lower() in library_names for indicator in indicators):
                 frameworks.append(framework)
         
+        # Also check for framework patterns in Python files
+        frameworks.extend(self._detect_frameworks_from_code())
+        
+        # Remove duplicates and return
+        unique_frameworks = list(set(frameworks))
+        return unique_frameworks if unique_frameworks else ["Not able to detect any known framework"]
+    
+    def _detect_frameworks_from_code(self) -> List[str]:
+        """Detect frameworks by analyzing Python code files."""
+        frameworks = []
+        
+        try:
+            # Look for common framework import patterns
+            python_files = list(self.project_path.glob('**/*.py'))
+            
+            framework_patterns = {
+                'Django': [
+                    'from django',
+                    'import django',
+                    'django.conf',
+                    'django.urls',
+                    'django.views',
+                    'django.models'
+                ],
+                'Flask': [
+                    'from flask',
+                    'import flask',
+                    'Flask(__name__)',
+                    '@app.route'
+                ],
+                'FastAPI': [
+                    'from fastapi',
+                    'import fastapi',
+                    'FastAPI()',
+                    '@app.get',
+                    '@app.post'
+                ],
+                'Streamlit': [
+                    'import streamlit',
+                    'streamlit as st',
+                    'st.'
+                ]
+            }
+            
+            for py_file in python_files[:20]:  # Limit to first 20 files for performance
+                try:
+                    with open(py_file, 'r', encoding='utf-8', errors='ignore') as f:
+                        content = f.read()
+                        
+                        for framework, patterns in framework_patterns.items():
+                            if any(pattern in content for pattern in patterns):
+                                frameworks.append(framework)
+                                break  # Found one framework in this file, move to next file
+                                
+                except Exception as e:
+                    logger.debug(f"Could not read file {py_file}: {e}")
+                    continue
+                    
+        except Exception as e:
+            logger.warning(f"Error detecting frameworks from code: {e}")
+        
         return frameworks
+    
+    def _detect_python_version(self):
+        """Detect Python version using multiple methods."""
+        import subprocess
+        import sys
+        
+        # Method 1: Try to get version from current Python interpreter
+        try:
+            self.python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+            logger.info(f"Detected Python version from current interpreter: {self.python_version}")
+            return
+        except Exception as e:
+            logger.warning(f"Could not get Python version from current interpreter: {e}")
+        
+        # Method 2: Try python --version command
+        for python_cmd in ['python3', 'python']:
+            try:
+                result = subprocess.run(
+                    [python_cmd, '--version'], 
+                    capture_output=True, 
+                    text=True, 
+                    timeout=5
+                )
+                if result.returncode == 0:
+                    version_output = result.stdout.strip()
+                    # Extract version number from "Python 3.9.7" format
+                    if 'Python' in version_output:
+                        version = version_output.split()[1]
+                        self.python_version = version
+                        logger.info(f"Detected Python version from {python_cmd}: {self.python_version}")
+                        return
+            except Exception as e:
+                logger.debug(f"Could not get Python version from {python_cmd}: {e}")
+        
+        # Method 3: Try which python/python3 to get path and version
+        for python_cmd in ['python3', 'python']:
+            try:
+                which_result = subprocess.run(
+                    ['which', python_cmd], 
+                    capture_output=True, 
+                    text=True, 
+                    timeout=5
+                )
+                if which_result.returncode == 0:
+                    python_path = which_result.stdout.strip()
+                    version_result = subprocess.run(
+                        [python_path, '--version'], 
+                        capture_output=True, 
+                        text=True, 
+                        timeout=5
+                    )
+                    if version_result.returncode == 0:
+                        version_output = version_result.stdout.strip()
+                        if 'Python' in version_output:
+                            version = version_output.split()[1]
+                            self.python_version = version
+                            logger.info(f"Detected Python version from {python_path}: {self.python_version}")
+                            return
+            except Exception as e:
+                logger.debug(f"Could not get Python version from which {python_cmd}: {e}")
+        
+        # Fallback: Set a default version
+        self.python_version = "Unknown"
+        logger.warning("Could not detect Python version, using 'Unknown'")

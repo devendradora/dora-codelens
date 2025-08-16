@@ -478,6 +478,39 @@ export class TabbedWebviewProvider {
     }
 
     /**
+     * Show current file analysis in tabbed interface
+     */
+    public showCurrentFileAnalysis(analysisData: any, view: 'graph' | 'json' = 'graph'): void {
+        // Convert current file analysis data to tabbed format
+        const tabbedData = this.convertCurrentFileAnalysisToTabbedData(analysisData);
+        
+        this.analysisData = tabbedData;
+        this.currentTab = view === 'json' ? 'codegraphjson' : 'codegraph';
+        this.currentSubTab = null;
+        
+        // Set tab configs for current file analysis (exclude tech stack)
+        this.tabConfigs = [
+            {
+                id: 'codegraph',
+                title: 'Code Graph',
+                icon: '🔗',
+                enabled: true
+            },
+            {
+                id: 'codegraphjson',
+                title: 'Code Graph JSON',
+                icon: '📄',
+                enabled: true
+            }
+        ];
+        
+        this.createOrShowWebview();
+        this.updateWebviewContent();
+        
+        this.log(`Current file analysis tabbed webview displayed in ${view} view`);
+    }
+
+    /**
      * Switch to a specific tab
      */
     public switchToTab(tabId: string, subTabId?: string): void {
@@ -826,20 +859,27 @@ export class TabbedWebviewProvider {
             display: none !important;
         }
 
-        /* Module info panel styles */
+        /* Module info panel styles - Updated to be footer modal */
         .module-info-panel {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 350px;
-            max-height: 70%;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            max-height: 40vh;
             background-color: var(--vscode-editor-background);
-            border: 1px solid var(--vscode-widget-border);
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border-top: 1px solid var(--vscode-widget-border);
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
             z-index: 1000;
             overflow-y: auto;
             display: none;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .module-info-panel.show {
+            transform: translateY(0);
+            display: block;
         }
 
         .module-info-header {
@@ -1240,7 +1280,24 @@ export class TabbedWebviewProvider {
             <!-- Code Graph Tab -->
             <div class="tab-panel" id="codegraph-panel">
                 <div class="content-area" id="codegraph-content">
-                    <div id="cy" style="width: 100%; height: 100%;"></div>
+                    <!-- Graph Controls Toolbar -->
+                    <div class="graph-toolbar" style="display: flex; align-items: center; padding: 8px 16px; background-color: var(--vscode-editor-inactiveSelectionBackground); border-bottom: 1px solid var(--vscode-widget-border); gap: 12px;">
+                        <input type="text" id="searchInput" placeholder="Search nodes..." style="padding: 6px 12px; border: 1px solid var(--vscode-input-border); background: var(--vscode-input-background); color: var(--vscode-input-foreground); border-radius: 4px; min-width: 200px;">
+                        <button onclick="fitToView()" style="padding: 6px 12px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; cursor: pointer;" title="Fit to View">🔍 Fit</button>
+                        <button onclick="zoomIn()" style="padding: 6px 12px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; cursor: pointer;" title="Zoom In">🔍+ Zoom In</button>
+                        <button onclick="zoomOut()" style="padding: 6px 12px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; cursor: pointer;" title="Zoom Out">🔍- Zoom Out</button>
+                        <button onclick="resetView()" style="padding: 6px 12px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; cursor: pointer;" title="Reset View">🔄 Reset</button>
+                        <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 12px; color: var(--vscode-descriptionForeground);">Complexity:</span>
+                            <span style="display: inline-block; width: 12px; height: 12px; background: #28a745; border-radius: 2px;" title="Low (≤5)"></span>
+                            <span style="font-size: 11px; color: var(--vscode-descriptionForeground);">Low</span>
+                            <span style="display: inline-block; width: 12px; height: 12px; background: #ffc107; border-radius: 2px;" title="Medium (6-10)"></span>
+                            <span style="font-size: 11px; color: var(--vscode-descriptionForeground);">Medium</span>
+                            <span style="display: inline-block; width: 12px; height: 12px; background: #dc3545; border-radius: 2px;" title="High (>10)"></span>
+                            <span style="font-size: 11px; color: var(--vscode-descriptionForeground);">High</span>
+                        </div>
+                    </div>
+                    <div id="cy" style="width: 100%; height: calc(100% - 60px);"></div>
                     <!-- Module info panel for showing dependency details -->
                     <div class="module-info-panel" id="moduleInfoPanel">
                         <div class="module-info-header">
@@ -1318,6 +1375,9 @@ export class TabbedWebviewProvider {
                     switchSubTab(subTabId);
                 }
             });
+            
+            // Setup search functionality
+            setupSearch();
         }
 
         // Handle messages from extension
@@ -1601,10 +1661,28 @@ export class TabbedWebviewProvider {
                         font-size: 18px;
                     }
                     
-                    .frameworks-grid, .libraries-grid {
+                    .frameworks-grid {
                         display: grid;
                         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
                         gap: 12px;
+                    }
+                    
+                    .libraries-grid {
+                        display: grid;
+                        grid-template-columns: repeat(3, 1fr);
+                        gap: 12px;
+                    }
+                    
+                    @media (max-width: 1200px) {
+                        .libraries-grid {
+                            grid-template-columns: repeat(2, 1fr);
+                        }
+                    }
+                    
+                    @media (max-width: 768px) {
+                        .libraries-grid {
+                            grid-template-columns: 1fr;
+                        }
                     }
                     
                     .framework-item, .library-item {
@@ -1755,14 +1833,45 @@ export class TabbedWebviewProvider {
             }
             
             try {
+                // Create module-wise structured data
+                const moduleWiseData = {};
+                
+                if (analysisData.modules && analysisData.modules.nodes) {
+                    analysisData.modules.nodes.forEach(module => {
+                        const moduleName = module.folderPath || module.name;
+                        if (!moduleWiseData[moduleName]) {
+                            moduleWiseData[moduleName] = {
+                                path: module.path,
+                                folderPath: module.folderPath,
+                                complexity: module.complexity,
+                                fileCount: module.fileCount,
+                                dependencies: module.dependencies,
+                                metadata: module.metadata,
+                                files: []
+                            };
+                        }
+                        moduleWiseData[moduleName].files.push({
+                            id: module.id,
+                            name: module.name,
+                            displayName: module.displayName,
+                            path: module.path,
+                            complexity: module.complexity,
+                            dependencies: module.dependencies,
+                            metadata: module.metadata
+                        });
+                    });
+                }
+                
                 // Create a focused JSON structure for code graph
                 const codeGraphData = {
+                    moduleWiseStructure: moduleWiseData,
                     modules: analysisData.modules,
                     functions: analysisData.functions,
                     metadata: {
                         totalModules: analysisData.modules.nodes ? analysisData.modules.nodes.length : 0,
                         totalFunctions: analysisData.functions && analysisData.functions.nodes ? analysisData.functions.nodes.length : 0,
-                        analysisTimestamp: new Date().toISOString()
+                        analysisTimestamp: new Date().toISOString(),
+                        structureFormat: 'module-wise-organized'
                     }
                 };
                 
@@ -2671,21 +2780,22 @@ export class TabbedWebviewProvider {
         // Get layout for code graph
         function getCodeGraphLayout() {
             return {
-                name: 'cose',
+                name: 'grid',
                 animate: true,
                 animationDuration: 1000,
                 fit: true,
                 padding: 50,
-                nodeRepulsion: 8000,
-                nodeOverlap: 20,
-                idealEdgeLength: 100,
-                edgeElasticity: 200,
-                nestingFactor: 1.2,
-                gravity: 1,
-                numIter: 1000,
-                initialTemp: 1000,
-                coolingFactor: 0.99,
-                minTemp: 1.0
+                avoidOverlap: true,
+                avoidOverlapPadding: 10,
+                nodeDimensionsIncludeLabels: true,
+                spacingFactor: 1.5,
+                condense: false,
+                rows: undefined,
+                cols: undefined,
+                position: function(node) {
+                    // Custom positioning logic for better arrangement
+                    return {};
+                }
             };
         }
         
@@ -2773,7 +2883,7 @@ export class TabbedWebviewProvider {
                 </div>
             \`;
             
-            modal.style.display = 'block';
+            modal.classList.add('show');
         }
         
         // Show file details
@@ -2808,64 +2918,186 @@ export class TabbedWebviewProvider {
                 \` : ''}
             \`;
             
-            modal.style.display = 'block';
+            modal.classList.add('show');
         }
         
         // Close module info modal
         function closeModuleInfo() {
             const modal = document.getElementById('moduleInfoPanel');
-            modal.style.display = 'none';
+            modal.classList.remove('show');
+        }
+        
+        // Graph control functions
+        function fitToView() {
+            if (cy) {
+                cy.fit();
+            }
+        }
+        
+        function zoomIn() {
+            if (cy) {
+                cy.zoom(cy.zoom() * 1.2);
+                cy.center();
+            }
+        }
+        
+        function zoomOut() {
+            if (cy) {
+                cy.zoom(cy.zoom() * 0.8);
+                cy.center();
+            }
+        }
+        
+        function resetView() {
+            if (cy) {
+                cy.reset();
+            }
+        }
+        
+        // Search functionality
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', function(e) {
+                    const searchTerm = e.target.value.toLowerCase();
+                    
+                    if (!cy || !searchTerm) {
+                        // Reset highlighting
+                        if (cy) {
+                            cy.elements().removeClass('dimmed highlighted');
+                        }
+                        return;
+                    }
+                    
+                    // Find matching nodes
+                    const matchingNodes = cy.nodes().filter(node => {
+                        const label = node.data('label') || node.data('name') || '';
+                        return label.toLowerCase().includes(searchTerm);
+                    });
+                    
+                    if (matchingNodes.length > 0) {
+                        // Dim all elements
+                        cy.elements().addClass('dimmed');
+                        
+                        // Highlight matching nodes and their neighbors
+                        matchingNodes.removeClass('dimmed').addClass('highlighted');
+                        matchingNodes.neighborhood().removeClass('dimmed').addClass('highlighted');
+                    } else {
+                        // No matches, reset
+                        cy.elements().removeClass('dimmed highlighted');
+                    }
+                });
+            }
         }
         
         // Export code graph JSON
         function exportCodeGraphJson() {
-            if (!analysisData || !analysisData.modules) {
-                alert('No code graph data available to export');
-                return;
-            }
-            
-            const codeGraphData = {
-                modules: analysisData.modules,
-                functions: analysisData.functions,
-                metadata: {
-                    totalModules: analysisData.modules.nodes ? analysisData.modules.nodes.length : 0,
-                    totalFunctions: analysisData.functions && analysisData.functions.nodes ? analysisData.functions.nodes.length : 0,
-                    exportTimestamp: new Date().toISOString()
+            try {
+                if (!analysisData || !analysisData.modules) {
+                    vscode.postMessage({
+                        command: 'showError',
+                        message: 'No code graph data available to export'
+                    });
+                    return;
                 }
-            };
-            
-            const jsonString = JSON.stringify(codeGraphData, null, 2);
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'code-graph-data.json';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+                
+                // Create module-wise structured data
+                const moduleWiseData = {};
+                
+                if (analysisData.modules && analysisData.modules.nodes) {
+                    analysisData.modules.nodes.forEach(module => {
+                        const moduleName = module.folderPath || module.name;
+                        if (!moduleWiseData[moduleName]) {
+                            moduleWiseData[moduleName] = {
+                                path: module.path,
+                                folderPath: module.folderPath,
+                                complexity: module.complexity,
+                                fileCount: module.fileCount,
+                                dependencies: module.dependencies,
+                                metadata: module.metadata,
+                                files: []
+                            };
+                        }
+                        moduleWiseData[moduleName].files.push({
+                            id: module.id,
+                            name: module.name,
+                            displayName: module.displayName,
+                            path: module.path,
+                            complexity: module.complexity,
+                            dependencies: module.dependencies,
+                            metadata: module.metadata
+                        });
+                    });
+                }
+                
+                const codeGraphData = {
+                    moduleWiseStructure: moduleWiseData,
+                    modules: analysisData.modules,
+                    functions: analysisData.functions,
+                    metadata: {
+                        totalModules: analysisData.modules.nodes ? analysisData.modules.nodes.length : 0,
+                        totalFunctions: analysisData.functions && analysisData.functions.nodes ? analysisData.functions.nodes.length : 0,
+                        exportTimestamp: new Date().toISOString(),
+                        exportFormat: 'module-wise-json'
+                    }
+                };
+                
+                const jsonString = JSON.stringify(codeGraphData, null, 2);
+                
+                // Use VS Code API to save file
+                vscode.postMessage({
+                    command: 'saveFile',
+                    data: {
+                        content: jsonString,
+                        filename: 'code-graph-data.json',
+                        type: 'application/json'
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Error exporting code graph JSON:', error);
+                vscode.postMessage({
+                    command: 'showError',
+                    message: 'Failed to export JSON: ' + error.message
+                });
+            }
         }
         
         // Copy code graph JSON to clipboard
         function copyCodeGraphJson() {
-            const jsonDisplay = document.getElementById('codegraph-json-display');
-            if (!jsonDisplay || !jsonDisplay.textContent) {
-                alert('No JSON data available to copy');
-                return;
-            }
-            
-            navigator.clipboard.writeText(jsonDisplay.textContent).then(() => {
+            try {
+                const jsonDisplay = document.getElementById('codegraph-json-display');
+                if (!jsonDisplay || !jsonDisplay.textContent) {
+                    vscode.postMessage({
+                        command: 'showError',
+                        message: 'No JSON data available to copy'
+                    });
+                    return;
+                }
+                
+                // Use VS Code API to copy to clipboard
+                vscode.postMessage({
+                    command: 'copyToClipboard',
+                    data: jsonDisplay.textContent
+                });
+                
                 // Show temporary success message
                 const originalText = jsonDisplay.textContent;
                 jsonDisplay.textContent = 'JSON copied to clipboard!';
+                jsonDisplay.style.color = 'var(--vscode-charts-green)';
+                
                 setTimeout(() => {
                     jsonDisplay.textContent = originalText;
+                    jsonDisplay.style.color = 'var(--vscode-editor-foreground)';
                 }, 2000);
-            }).catch(err => {
-                console.error('Failed to copy JSON:', err);
-                alert('Failed to copy JSON to clipboard');
-            });
+                
+            } catch (error) {
+                console.error('Failed to copy JSON:', error);
+                vscode.postMessage({
+                    command: 'showError',
+                    message: 'Failed to copy JSON to clipboard: ' + error.message
+                });
+            }
         }
 
         // Create elements for module cards
@@ -3470,6 +3702,18 @@ export class TabbedWebviewProvider {
                 this.logError('Tabbed webview error', new Error(message.data?.message || 'Unknown error'));
                 break;
                 
+            case 'saveFile':
+                this.handleSaveFile(message.data);
+                break;
+                
+            case 'copyToClipboard':
+                this.handleCopyToClipboard(message.data);
+                break;
+                
+            case 'showError':
+                vscode.window.showErrorMessage(message.data?.message || 'An error occurred');
+                break;
+                
             default:
                 this.log(`Unknown tabbed webview message: ${message.command}`);
         }
@@ -3485,6 +3729,271 @@ export class TabbedWebviewProvider {
     }
 
     /**
+     * Convert current file analysis data to tabbed format
+     */
+    private convertCurrentFileAnalysisToTabbedData(analysisData: any): TabbedAnalysisData {
+        // Create nodes and edges for current file visualization
+        const nodes: any[] = [];
+        const edges: any[] = [];
+        
+        // Add file as a node
+        if (analysisData.file_name) {
+            nodes.push({
+                id: analysisData.file_name,
+                name: analysisData.file_name,
+                displayName: analysisData.file_name,
+                path: analysisData.file_path,
+                folderPath: '',
+                complexity: {
+                    overall: analysisData.complexity_metrics?.overall_complexity?.cyclomatic || 0,
+                    cyclomatic: analysisData.complexity_metrics?.overall_complexity?.cyclomatic || 0,
+                    maintainability: analysisData.complexity_metrics?.maintainability_index || 0,
+                    colorCode: this.getComplexityColorCode(analysisData.complexity_metrics?.overall_complexity?.cyclomatic || 0)
+                },
+                fileCount: 1,
+                dependencies: analysisData.dependency_info?.external_dependencies || [],
+                styling: {
+                    backgroundColor: '#007acc',
+                    borderColor: '#005a9e',
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    shadowStyle: '0 2px 4px rgba(0,0,0,0.1)',
+                    textColor: '#ffffff',
+                    fontSize: '12px',
+                    padding: '8px',
+                    minWidth: 120,
+                    minHeight: 60
+                },
+                metadata: {
+                    lastModified: analysisData.analysis_timestamp || new Date().toISOString(),
+                    size: analysisData.complexity_metrics?.total_lines || 0,
+                    functions: analysisData.complexity_metrics?.function_complexities?.map((f: any) => f.name) || [],
+                    classes: analysisData.complexity_metrics?.class_complexities?.map((c: any) => c.name) || []
+                }
+            });
+        }
+        
+        // Add functions as nodes
+        if (analysisData.complexity_metrics?.function_complexities) {
+            analysisData.complexity_metrics.function_complexities.forEach((func: any) => {
+                const nodeId = `${analysisData.file_name}::${func.name}`;
+                nodes.push({
+                    id: nodeId,
+                    name: func.name,
+                    displayName: func.name,
+                    path: analysisData.file_path,
+                    folderPath: '',
+                    complexity: {
+                        overall: func.complexity?.cyclomatic || 0,
+                        cyclomatic: func.complexity?.cyclomatic || 0,
+                        maintainability: 100 - (func.complexity?.cyclomatic || 0) * 5,
+                        colorCode: this.getComplexityColorCode(func.complexity?.cyclomatic || 0)
+                    },
+                    fileCount: 0,
+                    dependencies: [],
+                    styling: {
+                        backgroundColor: this.getComplexityColor(func.complexity?.cyclomatic || 0),
+                        borderColor: this.getComplexityBorderColor(func.complexity?.cyclomatic || 0),
+                        borderWidth: 1,
+                        borderRadius: 20,
+                        shadowStyle: '0 1px 2px rgba(0,0,0,0.1)',
+                        textColor: '#ffffff',
+                        fontSize: '10px',
+                        padding: '6px',
+                        minWidth: 80,
+                        minHeight: 40
+                    },
+                    metadata: {
+                        lastModified: analysisData.analysis_timestamp || new Date().toISOString(),
+                        size: 0,
+                        functions: [],
+                        classes: []
+                    }
+                });
+                
+                // Add edge from file to function
+                edges.push({
+                    source: analysisData.file_name,
+                    target: nodeId,
+                    type: 'contains',
+                    weight: 1
+                });
+            });
+        }
+        
+        // Add classes as nodes
+        if (analysisData.complexity_metrics?.class_complexities) {
+            analysisData.complexity_metrics.class_complexities.forEach((cls: any) => {
+                const classId = `${analysisData.file_name}::${cls.name}`;
+                nodes.push({
+                    id: classId,
+                    name: cls.name,
+                    displayName: cls.name,
+                    path: analysisData.file_path,
+                    folderPath: '',
+                    complexity: {
+                        overall: 0,
+                        cyclomatic: 0,
+                        maintainability: 100,
+                        colorCode: 'green' as const
+                    },
+                    fileCount: 0,
+                    dependencies: [],
+                    styling: {
+                        backgroundColor: '#6f42c1',
+                        borderColor: '#5a2d91',
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        shadowStyle: '0 1px 2px rgba(0,0,0,0.1)',
+                        textColor: '#ffffff',
+                        fontSize: '11px',
+                        padding: '8px',
+                        minWidth: 100,
+                        minHeight: 50
+                    },
+                    metadata: {
+                        lastModified: analysisData.analysis_timestamp || new Date().toISOString(),
+                        size: 0,
+                        functions: cls.methods?.map((m: any) => m.name) || [],
+                        classes: []
+                    }
+                });
+                
+                // Add edge from file to class
+                edges.push({
+                    source: analysisData.file_name,
+                    target: classId,
+                    type: 'contains',
+                    weight: 1
+                });
+                
+                // Add methods as nodes
+                if (cls.methods) {
+                    cls.methods.forEach((method: any) => {
+                        const methodId = `${analysisData.file_name}::${cls.name}::${method.name}`;
+                        nodes.push({
+                            id: methodId,
+                            name: method.name,
+                            displayName: method.name,
+                            path: analysisData.file_path,
+                            folderPath: '',
+                            complexity: {
+                                overall: method.complexity?.cyclomatic || 0,
+                                cyclomatic: method.complexity?.cyclomatic || 0,
+                                maintainability: 100 - (method.complexity?.cyclomatic || 0) * 5,
+                                colorCode: this.getComplexityColorCode(method.complexity?.cyclomatic || 0)
+                            },
+                            fileCount: 0,
+                            dependencies: [],
+                            styling: {
+                                backgroundColor: this.getComplexityColor(method.complexity?.cyclomatic || 0),
+                                borderColor: this.getComplexityBorderColor(method.complexity?.cyclomatic || 0),
+                                borderWidth: 1,
+                                borderRadius: 15,
+                                shadowStyle: '0 1px 2px rgba(0,0,0,0.1)',
+                                textColor: '#ffffff',
+                                fontSize: '9px',
+                                padding: '4px',
+                                minWidth: 70,
+                                minHeight: 30
+                            },
+                            metadata: {
+                                lastModified: analysisData.analysis_timestamp || new Date().toISOString(),
+                                size: 0,
+                                functions: [],
+                                classes: []
+                            }
+                        });
+                        
+                        // Add edge from class to method
+                        edges.push({
+                            source: classId,
+                            target: methodId,
+                            type: 'contains',
+                            weight: 1
+                        });
+                    });
+                }
+            });
+        }
+        
+        return {
+            modules: {
+                nodes: nodes,
+                edges: edges,
+                folderStructure: {
+                    rootPath: analysisData.file_path || '',
+                    folders: [],
+                    moduleGroupings: []
+                }
+            },
+            functions: {
+                nodes: nodes.filter(n => n.name !== analysisData.file_name),
+                edges: edges
+            },
+            currentFile: {
+                filePath: analysisData.file_path || '',
+                fileName: analysisData.file_name || '',
+                complexity: {
+                    overall: analysisData.complexity_metrics?.overall_complexity?.cyclomatic || 0,
+                    cyclomatic: analysisData.complexity_metrics?.overall_complexity?.cyclomatic || 0,
+                    maintainability: analysisData.complexity_metrics?.maintainability_index || 0,
+                    colorCode: this.getComplexityColorCode(analysisData.complexity_metrics?.overall_complexity?.cyclomatic || 0)
+                },
+                dependencies: analysisData.dependency_info?.external_dependencies || [],
+                functions: nodes.filter(n => n.name !== analysisData.file_name && !n.name.includes('::')),
+                classes: analysisData.complexity_metrics?.class_complexities?.map((cls: any) => ({
+                    name: cls.name,
+                    lineNumber: cls.line_number,
+                    methods: cls.methods?.map((m: any) => m.name) || [],
+                    complexity: 0
+                })) || [],
+                imports: analysisData.dependency_info?.imports?.map((imp: any) => ({
+                    module: imp.module,
+                    items: imp.names || [],
+                    isFromImport: imp.is_from_import,
+                    lineNumber: imp.line_number
+                })) || [],
+                frameworkPatterns: analysisData.framework_patterns || {}
+            },
+            exportMetadata: {
+                analysisTimestamp: analysisData.analysis_timestamp || new Date().toISOString(),
+                doraCodeBirdVersion: '0.1.0',
+                projectPath: analysisData.file_path || '',
+                totalFiles: 1,
+                totalLines: analysisData.complexity_metrics?.total_lines || 0
+            }
+        };
+    }
+
+    /**
+     * Get complexity color based on score
+     */
+    private getComplexityColor(complexity: number): string {
+        if (complexity <= 5) return '#28a745'; // Green
+        if (complexity <= 10) return '#ffc107'; // Orange
+        return '#dc3545'; // Red
+    }
+
+    /**
+     * Get complexity border color based on score
+     */
+    private getComplexityBorderColor(complexity: number): string {
+        if (complexity <= 5) return '#1e7e34'; // Dark green
+        if (complexity <= 10) return '#e0a800'; // Dark orange
+        return '#c82333'; // Dark red
+    }
+
+    /**
+     * Get complexity color code based on score
+     */
+    private getComplexityColorCode(complexity: number): 'green' | 'orange' | 'red' {
+        if (complexity <= 5) return 'green';
+        if (complexity <= 10) return 'orange';
+        return 'red';
+    }
+
+    /**
      * Generate a random nonce for security
      */
     private getNonce(): string {
@@ -3494,6 +4003,44 @@ export class TabbedWebviewProvider {
             text += possible.charAt(Math.floor(Math.random() * possible.length));
         }
         return text;
+    }
+
+    /**
+     * Handle save file request from webview
+     */
+    private async handleSaveFile(data: any): Promise<void> {
+        try {
+            const { content, filename, type } = data;
+            
+            const saveUri = await vscode.window.showSaveDialog({
+                defaultUri: vscode.Uri.file(filename),
+                filters: {
+                    'JSON Files': ['json'],
+                    'All Files': ['*']
+                }
+            });
+            
+            if (saveUri) {
+                await vscode.workspace.fs.writeFile(saveUri, Buffer.from(content, 'utf8'));
+                vscode.window.showInformationMessage(`File saved: ${saveUri.fsPath}`);
+            }
+        } catch (error) {
+            this.logError('Failed to save file', error instanceof Error ? error : new Error(String(error)));
+            vscode.window.showErrorMessage('Failed to save file');
+        }
+    }
+
+    /**
+     * Handle copy to clipboard request from webview
+     */
+    private async handleCopyToClipboard(data: string): Promise<void> {
+        try {
+            await vscode.env.clipboard.writeText(data);
+            vscode.window.showInformationMessage('Copied to clipboard');
+        } catch (error) {
+            this.logError('Failed to copy to clipboard', error instanceof Error ? error : new Error(String(error)));
+            vscode.window.showErrorMessage('Failed to copy to clipboard');
+        }
     }
 
     /**

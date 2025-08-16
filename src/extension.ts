@@ -2439,21 +2439,45 @@ Would you like to open a terminal to check permissions?`;
             if (result.success && result.data) {
                 this.log('Current file analysis completed successfully');
                 
-                // Show results in webview
-                await this.webviewProvider.showCurrentFileAnalysis(result.data);
+                // Show results in tabbed webview using TabbedWebviewProvider
+                try {
+                    const { TabbedWebviewProvider } = await import('./tabbed-webview-provider');
+                    const tabbedProvider = new TabbedWebviewProvider(this.context, this.outputChannel);
+                    
+                    // Show with Code Graph tab active by default
+                    await tabbedProvider.showCurrentFileAnalysis(result.data, 'graph');
+                    
+                    this.log('Current file analysis displayed in tabbed interface');
+                } catch (error) {
+                    this.logError('Failed to show current file analysis in tabbed view', error);
+                    // Fallback to regular webview
+                    await this.webviewProvider.showCurrentFileAnalysis(result.data);
+                }
 
                 // Show success message with options
                 const action = await vscode.window.showInformationMessage(
                     'Current file analysis completed successfully!',
-                    'Show Graph View',
-                    'Show JSON View',
+                    'Show Code Graph',
+                    'Show Code Graph JSON',
                     'View Output'
                 );
 
-                if (action === 'Show Graph View') {
-                    await this.webviewProvider.showCurrentFileAnalysis(result.data, 'graph');
-                } else if (action === 'Show JSON View') {
-                    await this.webviewProvider.showCurrentFileAnalysis(result.data, 'json');
+                if (action === 'Show Code Graph') {
+                    try {
+                        const { TabbedWebviewProvider } = await import('./tabbed-webview-provider');
+                        const tabbedProvider = new TabbedWebviewProvider(this.context, this.outputChannel);
+                        await tabbedProvider.showCurrentFileAnalysis(result.data, 'graph');
+                    } catch (error) {
+                        await this.webviewProvider.showCurrentFileAnalysis(result.data, 'graph');
+                    }
+                } else if (action === 'Show Code Graph JSON') {
+                    try {
+                        const { TabbedWebviewProvider } = await import('./tabbed-webview-provider');
+                        const tabbedProvider = new TabbedWebviewProvider(this.context, this.outputChannel);
+                        await tabbedProvider.showCurrentFileAnalysis(result.data, 'json');
+                    } catch (error) {
+                        await this.webviewProvider.showCurrentFileAnalysis(result.data, 'json');
+                    }
                 } else if (action === 'View Output') {
                     this.outputChannel.show();
                 }
