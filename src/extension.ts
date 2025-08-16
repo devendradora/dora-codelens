@@ -180,17 +180,9 @@ export class DoraCodeBirdExtension {
                 this.showJsonViewFromContext(uri, position);
             }),
 
-            // Full Analysis submenu commands
-            vscode.commands.registerCommand('doracodebird.fullAnalysisTechStack', () => {
-                this.showFullAnalysisTechStack();
-            }),
-
-            vscode.commands.registerCommand('doracodebird.fullAnalysisGraphView', () => {
-                this.showFullAnalysisGraphView();
-            }),
-
-            vscode.commands.registerCommand('doracodebird.fullAnalysisJsonView', () => {
-                this.showFullAnalysisJsonView();
+            // Full Code Analysis command
+            vscode.commands.registerCommand('doracodebird.fullCodeAnalysis', () => {
+                this.showFullCodeAnalysis();
             }),
 
             // Current File Analysis command
@@ -1264,6 +1256,121 @@ Complexity Guidelines:
     }
 
     /**
+     * Initialize Git repository helper
+     */
+    private async initializeGitRepository(): Promise<void> {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            vscode.window.showErrorMessage('No workspace folder open');
+            return;
+        }
+
+        const choice = await vscode.window.showInformationMessage(
+            'Would you like to initialize a Git repository in this workspace?',
+            'Yes, Initialize',
+            'Cancel'
+        );
+
+        if (choice === 'Yes, Initialize') {
+            const terminal = vscode.window.createTerminal('Git Init');
+            terminal.sendText(`cd "${workspaceFolders[0].uri.fsPath}" && git init`);
+            terminal.show();
+            
+            vscode.window.showInformationMessage(
+                'Git repository initialization started. After initialization, you can use Git analytics.',
+                'Learn More'
+            ).then(action => {
+                if (action === 'Learn More') {
+                    vscode.env.openExternal(vscode.Uri.parse('https://git-scm.com/book/en/v2/Git-Basics-Getting-a-Git-Repository'));
+                }
+            });
+        }
+    }
+
+    /**
+     * Check Git installation helper
+     */
+    private async checkGitInstallation(): Promise<void> {
+        const terminal = vscode.window.createTerminal('Git Check');
+        terminal.sendText('git --version');
+        terminal.show();
+        
+        vscode.window.showInformationMessage(
+            'Check the terminal output to see if Git is installed. If not, please install Git.',
+            'Install Git'
+        ).then(action => {
+            if (action === 'Install Git') {
+                vscode.env.openExternal(vscode.Uri.parse('https://git-scm.com/downloads'));
+            }
+        });
+    }
+
+    /**
+     * Show first commit help
+     */
+    private async showFirstCommitHelp(): Promise<void> {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            return;
+        }
+
+        const choice = await vscode.window.showInformationMessage(
+            'To use Git analytics, you need to make at least one commit. Would you like help with making your first commit?',
+            'Open Terminal',
+            'Learn More'
+        );
+
+        if (choice === 'Open Terminal') {
+            const terminal = vscode.window.createTerminal('First Commit');
+            terminal.sendText(`cd "${workspaceFolders[0].uri.fsPath}"`);
+            terminal.sendText('# Add all files to staging area');
+            terminal.sendText('git add .');
+            terminal.sendText('# Make your first commit');
+            terminal.sendText('git commit -m "Initial commit"');
+            terminal.show();
+        } else if (choice === 'Learn More') {
+            vscode.env.openExternal(vscode.Uri.parse('https://git-scm.com/book/en/v2/Git-Basics-Recording-Changes-to-the-Repository'));
+        }
+    }
+
+    /**
+     * Show permission help
+     */
+    private async showPermissionHelp(): Promise<void> {
+        const message = `Git permission issues can occur due to:
+
+1. File/directory permissions
+2. Git repository ownership
+3. SSH key issues (for remote repositories)
+
+Try these solutions:
+- Check file permissions: ls -la .git
+- Fix ownership: sudo chown -R $USER:$USER .git
+- For SSH issues, check your SSH keys
+
+Would you like to open a terminal to check permissions?`;
+
+        const choice = await vscode.window.showInformationMessage(
+            'Git Permission Issues',
+            { modal: true, detail: message },
+            'Open Terminal',
+            'Learn More'
+        );
+
+        if (choice === 'Open Terminal') {
+            const terminal = vscode.window.createTerminal('Git Permissions');
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (workspaceFolders) {
+                terminal.sendText(`cd "${workspaceFolders[0].uri.fsPath}"`);
+                terminal.sendText('ls -la .git');
+            }
+            terminal.show();
+        } else if (choice === 'Learn More') {
+            vscode.env.openExternal(vscode.Uri.parse('https://git-scm.com/book/en/v2/Git-on-the-Server-Setting-Up-the-Server'));
+        }
+    }
+
+    /**
      * Display Git Author Statistics (fallback method)
      */
     private displayGitAuthorStatistics(data: any): void {
@@ -1510,6 +1617,130 @@ Complexity Guidelines:
     }
 
     /**
+     * Convert analysis result to tabbed webview data format
+     */
+    private convertAnalysisDataForTabbedView(result: AnalysisResult): any {
+        const tabbedData: any = {};
+
+        try {
+            if (result?.data) {
+                // Convert tech stack data
+                if (result.data.tech_stack) {
+                    const techStack = result.data.tech_stack;
+                    tabbedData.techStack = {
+                        libraries: techStack.libraries || [],
+                        frameworks: techStack.frameworks || [],
+                        pythonVersion: techStack.python_version || 'Unknown',
+                        packageManager: techStack.package_manager || 'pip',
+                        dependencies: techStack.dependencies || []
+                    };
+                }
+
+                // Convert modules data for code graph
+                if (result.data.modules) {
+                    const modulesData = result.data.modules;
+                    tabbedData.modules = {
+                        nodes: (modulesData.nodes || []).map((module: any) => ({
+                            id: module.id || module.name || 'unknown',
+                            name: path.basename(module.name || module.id || 'unknown'),
+                            displayName: module.display_name || module.name || 'unknown',
+                            path: this.convertToRelativePath(module.path || ''),
+                            folderPath: path.dirname(module.path || '.'),
+                            complexity: {
+                                overall: this.extractComplexityValue(module.complexity),
+                                cyclomatic: module.cyclomatic_complexity || 0,
+                                maintainability: module.maintainability_index || 0,
+                                colorCode: this.getComplexityColorCode(this.extractComplexityValue(module.complexity))
+                            },
+                            fileCount: module.file_count || 1,
+                            dependencies: module.dependencies || [],
+                            styling: this.getModuleStyling(module),
+                            metadata: {
+                                lastModified: new Date().toISOString(),
+                                size: module.size || 0,
+                                functions: module.functions || [],
+                                classes: module.classes || []
+                            }
+                        })),
+                        edges: (modulesData.edges || []).map((edge: any) => ({
+                            source: edge?.source || 'unknown',
+                            target: edge?.target || 'unknown',
+                            type: (edge?.type as 'import' | 'dependency') || 'import',
+                            weight: edge?.weight || 1
+                        })),
+                        folderStructure: {
+                            rootPath: '.',
+                            folders: [],
+                            moduleGroupings: []
+                        }
+                    };
+                }
+
+                // Convert functions data
+                if (result.data.functions) {
+                    const functionsData = result.data.functions;
+                    tabbedData.functions = {
+                        nodes: (functionsData.nodes || []).map((func: any) => ({
+                            id: func.id || func.name || 'unknown',
+                            name: func.name || 'unknown',
+                            module: func.module || 'unknown',
+                            complexity: this.extractComplexityValue(func.complexity),
+                            lineNumber: func.line_number || 0,
+                            parameters: func.parameters || []
+                        })),
+                        edges: (functionsData.edges || []).map((edge: any) => ({
+                            caller: edge?.caller || 'unknown',
+                            callee: edge?.callee || 'unknown',
+                            callCount: edge?.call_count || 1,
+                            lineNumbers: edge?.line_numbers || []
+                        }))
+                    };
+                }
+            }
+        } catch (error) {
+            this.logError('Error converting analysis data for tabbed view', error);
+        }
+
+        return tabbedData;
+    }
+
+    /**
+     * Get complexity color code
+     */
+    private getComplexityColorCode(complexity: number): 'green' | 'orange' | 'red' {
+        if (complexity <= 5) return 'green';
+        if (complexity <= 10) return 'orange';
+        return 'red';
+    }
+
+    /**
+     * Get module styling
+     */
+    private getModuleStyling(module: any): any {
+        const complexity = this.extractComplexityValue(module.complexity);
+        const colorCode = this.getComplexityColorCode(complexity);
+        
+        const colors = {
+            green: { bg: '#27ae60', border: '#229954' },
+            orange: { bg: '#f39c12', border: '#e67e22' },
+            red: { bg: '#e74c3c', border: '#c0392b' }
+        };
+
+        return {
+            backgroundColor: colors[colorCode].bg,
+            borderColor: colors[colorCode].border,
+            borderWidth: 2,
+            borderRadius: 8,
+            shadowStyle: '0 2px 4px rgba(0,0,0,0.1)',
+            textColor: '#ffffff',
+            fontSize: '12px',
+            padding: '8px',
+            minWidth: 120,
+            minHeight: 80
+        };
+    }
+
+    /**
      * Convert database schema analysis result to tabbed webview data format
      */
     private convertDatabaseSchemaForTabbedView(schemaData: any): any {
@@ -1633,6 +1864,152 @@ Complexity Guidelines:
                         totalTables: 0,
                         totalRelationships: 0
                     }
+                }
+            };
+        }
+    }
+
+    /**
+     * Convert Git analytics result to tabbed webview data format
+     */
+    private convertGitAnalyticsForTabbedView(gitData: any, analysisType: string): any {
+        try {
+            const tabbedData: any = {
+                gitAnalytics: {
+                    repositoryInfo: {
+                        name: 'unknown',
+                        branch: 'unknown',
+                        totalCommits: 0,
+                        dateRange: {
+                            start: new Date().toISOString(),
+                            end: new Date().toISOString()
+                        },
+                        contributors: 0
+                    },
+                    authorContributions: [],
+                    moduleStatistics: [],
+                    commitTimeline: [],
+                    contributionGraphs: [],
+                    analysisType: analysisType
+                }
+            };
+
+            if (gitData) {
+                // Convert repository info
+                if (gitData.repository_info) {
+                    const repoInfo = gitData.repository_info;
+                    tabbedData.gitAnalytics.repositoryInfo = {
+                        name: repoInfo.name || 'unknown',
+                        branch: repoInfo.branch || 'unknown',
+                        totalCommits: repoInfo.total_commits || 0,
+                        dateRange: {
+                            start: repoInfo.date_range?.start || new Date().toISOString(),
+                            end: repoInfo.date_range?.end || new Date().toISOString()
+                        },
+                        contributors: repoInfo.contributors || 0
+                    };
+                }
+
+                // Convert author contributions
+                if (gitData.author_contributions) {
+                    tabbedData.gitAnalytics.authorContributions = gitData.author_contributions.map((author: any) => ({
+                        authorName: author.author_name || 'Unknown',
+                        authorEmail: author.author_email || '',
+                        totalCommits: author.total_commits || 0,
+                        linesAdded: author.lines_added || 0,
+                        linesRemoved: author.lines_removed || 0,
+                        modulesTouched: author.modules_touched || [],
+                        firstCommit: author.first_commit || new Date().toISOString(),
+                        lastCommit: author.last_commit || new Date().toISOString(),
+                        contributionPercentage: author.contribution_percentage || 0
+                    }));
+                }
+
+                // Convert module statistics
+                if (gitData.module_statistics) {
+                    const moduleStats = gitData.module_statistics;
+                    tabbedData.gitAnalytics.moduleStatistics = Object.keys(moduleStats).map(modulePath => {
+                        const stats = moduleStats[modulePath];
+                        return {
+                            modulePath: modulePath,
+                            totalCommits: stats.total_commits || 0,
+                            uniqueAuthors: stats.unique_authors || 0,
+                            linesAdded: stats.lines_added || 0,
+                            linesRemoved: stats.lines_removed || 0,
+                            authorBreakdown: (stats.author_breakdown || []).map((author: any) => ({
+                                authorName: author.author_name || 'Unknown',
+                                authorEmail: author.author_email || '',
+                                totalCommits: author.total_commits || 0,
+                                linesAdded: author.lines_added || 0,
+                                linesRemoved: author.lines_removed || 0,
+                                contributionPercentage: author.contribution_percentage || 0
+                            })),
+                            commitFrequency: stats.commit_frequency || {}
+                        };
+                    });
+                }
+
+                // Convert commit timeline
+                if (gitData.commit_timeline) {
+                    if (gitData.commit_timeline.timeline_entries) {
+                        // Handle timeline visualization data format
+                        tabbedData.gitAnalytics.commitTimeline = gitData.commit_timeline.timeline_entries.map((entry: any) => ({
+                            date: entry.date || new Date().toISOString(),
+                            commits: entry.commit_count || 0,
+                            authors: entry.authors || [],
+                            modules: entry.modules || []
+                        }));
+                    } else if (Array.isArray(gitData.commit_timeline)) {
+                        // Handle direct timeline array format
+                        tabbedData.gitAnalytics.commitTimeline = gitData.commit_timeline.map((entry: any) => ({
+                            date: entry.date || new Date().toISOString(),
+                            commits: entry.commit_count || 0,
+                            authors: Array.from(entry.authors || []),
+                            modules: entry.modules || []
+                        }));
+                    }
+                }
+
+                // Convert contribution graphs
+                if (gitData.contribution_graphs) {
+                    tabbedData.gitAnalytics.contributionGraphs = gitData.contribution_graphs.map((graph: any) => ({
+                        type: graph.type || 'commits',
+                        data: {
+                            labels: graph.data?.labels || [],
+                            datasets: (graph.data?.datasets || []).map((dataset: any) => ({
+                                label: dataset.label || '',
+                                data: dataset.data || [],
+                                backgroundColor: dataset.backgroundColor || dataset.background_color || '#36A2EB',
+                                borderColor: dataset.borderColor || dataset.border_color || '#36A2EB'
+                            }))
+                        }
+                    }));
+                }
+            }
+
+            this.log(`Converted Git analytics data for ${analysisType}: ${tabbedData.gitAnalytics.authorContributions.length} authors, ${tabbedData.gitAnalytics.moduleStatistics.length} modules, ${tabbedData.gitAnalytics.commitTimeline.length} timeline entries`);
+            
+            return tabbedData;
+
+        } catch (error) {
+            this.logError('Error converting Git analytics data for tabbed view', error);
+            return {
+                gitAnalytics: {
+                    repositoryInfo: {
+                        name: 'unknown',
+                        branch: 'unknown',
+                        totalCommits: 0,
+                        dateRange: {
+                            start: new Date().toISOString(),
+                            end: new Date().toISOString()
+                        },
+                        contributors: 0
+                    },
+                    authorContributions: [],
+                    moduleStatistics: [],
+                    commitTimeline: [],
+                    contributionGraphs: [],
+                    analysisType: analysisType
                 }
             };
         }
@@ -2108,6 +2485,57 @@ Complexity Guidelines:
     }
 
     /**
+     * Show Full Code Analysis with tabbed interface
+     */
+    private async showFullCodeAnalysis(): Promise<void> {
+        this.log('Full Code Analysis requested');
+        
+        // Run analysis if not available
+        if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
+            await this.analyzeProject();
+            if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
+                return;
+            }
+        }
+
+        // Check if we have valid data for visualization
+        const hasValidData = this.lastAnalysisResult.data && (
+            (this.lastAnalysisResult.data.modules && this.lastAnalysisResult.data.modules.nodes && this.lastAnalysisResult.data.modules.nodes.length > 0) ||
+            (this.lastAnalysisResult.data.functions && this.lastAnalysisResult.data.functions.nodes && this.lastAnalysisResult.data.functions.nodes.length > 0) ||
+            (this.lastAnalysisResult.data.tech_stack)
+        );
+
+        if (!hasValidData) {
+            vscode.window.showWarningMessage(
+                'No valid data available for full analysis. The analysis may have failed or found no data.',
+                'Run Analysis Again'
+            ).then(action => {
+                if (action === 'Run Analysis Again') {
+                    this.analyzeProject();
+                }
+            });
+            return;
+        }
+
+        try {
+            // Import TabbedWebviewProvider dynamically
+            const { TabbedWebviewProvider } = await import('./tabbed-webview-provider');
+            const tabbedProvider = new TabbedWebviewProvider(this.context, this.outputChannel);
+            
+            // Convert analysis result to tabbed format
+            const tabbedData = this.convertAnalysisDataForTabbedView(this.lastAnalysisResult);
+            
+            // Show the full analysis with tabbed interface
+            tabbedProvider.showFullAnalysis(tabbedData);
+            
+            this.log('Full Code Analysis displayed in tabbed interface');
+        } catch (error) {
+            this.logError('Failed to show Full Code Analysis', error);
+            vscode.window.showErrorMessage('Failed to show Full Code Analysis. Check output for details.');
+        }
+    }
+
+    /**
      * Show Git Author Statistics
      */
     private async showGitAuthorStatistics(): Promise<void> {
@@ -2143,10 +2571,20 @@ Complexity Guidelines:
             if (result.success && result.data) {
                 this.log('Git author statistics analysis completed successfully');
                 
-                // Show results in tabbed webview
-                if (this.webviewProvider.showGitAnalytics) {
-                    this.webviewProvider.showGitAnalytics(result.data, 'author_statistics');
-                } else {
+                // Show results in tabbed webview using TabbedWebviewProvider
+                try {
+                    const { TabbedWebviewProvider } = await import('./tabbed-webview-provider');
+                    const tabbedProvider = new TabbedWebviewProvider(this.context, this.outputChannel);
+                    
+                    // Convert data to tabbed format
+                    const tabbedData = this.convertGitAnalyticsForTabbedView(result.data, 'author_statistics');
+                    
+                    // Show Git Analytics tab
+                    tabbedProvider.showTab('git', tabbedData);
+                    
+                    this.log('Git author statistics displayed in tabbed interface');
+                } catch (tabbedError) {
+                    this.logError('Failed to show tabbed Git analytics, using fallback', tabbedError);
                     // Fallback to basic display
                     this.displayGitAuthorStatistics(result.data);
                 }
@@ -2203,10 +2641,20 @@ Complexity Guidelines:
             if (result.success && result.data) {
                 this.log('Git module contributions analysis completed successfully');
                 
-                // Show results in tabbed webview
-                if (this.webviewProvider.showGitAnalytics) {
-                    this.webviewProvider.showGitAnalytics(result.data, 'module_contributions');
-                } else {
+                // Show results in tabbed webview using TabbedWebviewProvider
+                try {
+                    const { TabbedWebviewProvider } = await import('./tabbed-webview-provider');
+                    const tabbedProvider = new TabbedWebviewProvider(this.context, this.outputChannel);
+                    
+                    // Convert data to tabbed format
+                    const tabbedData = this.convertGitAnalyticsForTabbedView(result.data, 'module_contributions');
+                    
+                    // Show Git Analytics tab
+                    tabbedProvider.showTab('git', tabbedData);
+                    
+                    this.log('Git module contributions displayed in tabbed interface');
+                } catch (tabbedError) {
+                    this.logError('Failed to show tabbed Git analytics, using fallback', tabbedError);
                     // Fallback to basic display
                     this.displayGitModuleContributions(result.data);
                 }
@@ -2263,10 +2711,20 @@ Complexity Guidelines:
             if (result.success && result.data) {
                 this.log('Git commit timeline analysis completed successfully');
                 
-                // Show results in tabbed webview
-                if (this.webviewProvider.showGitAnalytics) {
-                    this.webviewProvider.showGitAnalytics(result.data, 'commit_timeline');
-                } else {
+                // Show results in tabbed webview using TabbedWebviewProvider
+                try {
+                    const { TabbedWebviewProvider } = await import('./tabbed-webview-provider');
+                    const tabbedProvider = new TabbedWebviewProvider(this.context, this.outputChannel);
+                    
+                    // Convert data to tabbed format
+                    const tabbedData = this.convertGitAnalyticsForTabbedView(result.data, 'commit_timeline');
+                    
+                    // Show Git Analytics tab
+                    tabbedProvider.showTab('git', tabbedData);
+                    
+                    this.log('Git commit timeline displayed in tabbed interface');
+                } catch (tabbedError) {
+                    this.logError('Failed to show tabbed Git analytics, using fallback', tabbedError);
                     // Fallback to basic display
                     this.displayGitCommitTimeline(result.data);
                 }

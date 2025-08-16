@@ -432,33 +432,16 @@ export class TabbedWebviewProvider {
                 enabled: true
             },
             {
-                id: 'graph',
-                title: 'Graph View',
-                icon: '📊',
+                id: 'codegraph',
+                title: 'Code Graph',
+                icon: '🔗',
                 enabled: true
             },
             {
-                id: 'json',
-                title: 'JSON View',
+                id: 'codegraphjson',
+                title: 'Code Graph JSON',
                 icon: '📄',
                 enabled: true
-            },
-            {
-                id: 'git',
-                title: 'Git Analytics',
-                icon: '📈',
-                enabled: true
-            },
-            {
-                id: 'dbschema',
-                title: 'DB Schema',
-                icon: '🗄️',
-                enabled: true,
-                hasSubTabs: true,
-                subTabs: [
-                    { id: 'graph', title: 'Graph View', parentTab: 'dbschema' },
-                    { id: 'rawsql', title: 'Raw SQL', parentTab: 'dbschema' }
-                ]
             }
         ];
     }
@@ -680,6 +663,10 @@ export class TabbedWebviewProvider {
         
         const chartJsUri = webview.asWebviewUri(
             vscode.Uri.joinPath(this.context.extensionUri, 'node_modules', 'chart.js', 'dist', 'chart.min.js')
+        );
+        
+        const gitAnalyticsChartsUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'git-analytics-charts.js')
         );
         
         const styleUri = webview.asWebviewUri(
@@ -1250,48 +1237,31 @@ export class TabbedWebviewProvider {
                 </div>
             </div>
 
-            <!-- Graph View Tab -->
-            <div class="tab-panel" id="graph-panel">
-                <div class="content-area" id="graph-content">
+            <!-- Code Graph Tab -->
+            <div class="tab-panel" id="codegraph-panel">
+                <div class="content-area" id="codegraph-content">
                     <div id="cy" style="width: 100%; height: 100%;"></div>
-                </div>
-            </div>
-
-            <!-- JSON View Tab -->
-            <div class="tab-panel" id="json-panel">
-                <div class="content-area" id="json-content">
-                    <pre id="json-display" style="white-space: pre-wrap; font-family: var(--vscode-editor-font-family);"></pre>
-                </div>
-            </div>
-
-            <!-- Git Analytics Tab -->
-            <div class="tab-panel" id="git-panel">
-                <div class="content-area" id="git-content">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <p>Loading Git analytics...</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- DB Schema Tab -->
-            <div class="tab-panel" id="dbschema-panel">
-                <div class="sub-tab-header" id="dbschema-sub-tabs">
-                    <button class="sub-tab-button active" data-subtab="graph">Graph View</button>
-                    <button class="sub-tab-button" data-subtab="rawsql">Raw SQL</button>
-                </div>
-                
-                <div class="content-area">
-                    <div class="sub-tab-content active" id="dbschema-graph-content">
-                        <div id="schema-cy" style="width: 100%; height: 400px;"></div>
-                    </div>
-                    
-                    <div class="sub-tab-content" id="dbschema-rawsql-content">
-                        <div class="loading">
-                            <div class="spinner"></div>
-                            <p>Loading SQL data...</p>
+                    <!-- Module info panel for showing dependency details -->
+                    <div class="module-info-panel" id="moduleInfoPanel">
+                        <div class="module-info-header">
+                            <h3 id="moduleInfoTitle">Module Details</h3>
+                            <button class="close-btn" onclick="closeModuleInfo()">×</button>
+                        </div>
+                        <div class="module-info-content" id="moduleInfoContent">
+                            <!-- Module details will be populated here -->
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Code Graph JSON Tab -->
+            <div class="tab-panel" id="codegraphjson-panel">
+                <div class="content-area" id="codegraphjson-content">
+                    <div class="json-controls" style="margin-bottom: 16px;">
+                        <button onclick="exportCodeGraphJson()" style="padding: 8px 16px; margin-right: 8px;">Export JSON</button>
+                        <button onclick="copyCodeGraphJson()" style="padding: 8px 16px;">Copy to Clipboard</button>
+                    </div>
+                    <pre id="codegraph-json-display" style="white-space: pre-wrap; font-family: var(--vscode-editor-font-family); background: var(--vscode-editor-background); padding: 16px; border-radius: 4px; overflow: auto; max-height: 80vh;"></pre>
                 </div>
             </div>
         </div>
@@ -1479,17 +1449,11 @@ export class TabbedWebviewProvider {
                     case 'techstack':
                         renderTechStackTab();
                         break;
-                    case 'graph':
-                        renderGraphTab();
+                    case 'codegraph':
+                        renderCodeGraphTab();
                         break;
-                    case 'json':
-                        renderJsonTab();
-                        break;
-                    case 'git':
-                        renderGitTab();
-                        break;
-                    case 'dbschema':
-                        renderDbSchemaTab();
+                    case 'codegraphjson':
+                        renderCodeGraphJsonTab();
                         break;
                     default:
                         showEmptyState(currentTab);
@@ -1770,30 +1734,42 @@ export class TabbedWebviewProvider {
             \`;
         }
         
-        // Render graph tab
-        function renderGraphTab() {
+        // Render code graph tab with enhanced module visualization
+        function renderCodeGraphTab() {
             if (!analysisData.modules) {
-                showEmptyState('graph');
+                showEmptyState('codegraph');
                 return;
             }
             
-            // Initialize Cytoscape for module graph with enhanced styling
-            initializeModuleGraph();
+            // Initialize enhanced Cytoscape for code graph with folder rectangles and file circles
+            initializeCodeGraphCytoscape();
         }
         
-        // Render JSON tab
-        function renderJsonTab() {
-            const jsonDisplay = document.getElementById('json-display');
+        // Render code graph JSON tab
+        function renderCodeGraphJsonTab() {
+            const jsonDisplay = document.getElementById('codegraph-json-display');
             
-            if (!analysisData) {
-                jsonDisplay.textContent = 'No analysis data available';
+            if (!analysisData || !analysisData.modules) {
+                jsonDisplay.textContent = 'No code graph data available';
                 return;
             }
             
             try {
-                jsonDisplay.textContent = JSON.stringify(analysisData, null, 2);
+                // Create a focused JSON structure for code graph
+                const codeGraphData = {
+                    modules: analysisData.modules,
+                    functions: analysisData.functions,
+                    metadata: {
+                        totalModules: analysisData.modules.nodes ? analysisData.modules.nodes.length : 0,
+                        totalFunctions: analysisData.functions && analysisData.functions.nodes ? analysisData.functions.nodes.length : 0,
+                        analysisTimestamp: new Date().toISOString()
+                    }
+                };
+                
+                const jsonString = JSON.stringify(codeGraphData, null, 2);
+                jsonDisplay.textContent = jsonString;
             } catch (error) {
-                jsonDisplay.textContent = 'Error formatting JSON: ' + error.message;
+                jsonDisplay.textContent = \`Error displaying code graph JSON: \${error.message}\`;
             }
         }
         
@@ -2432,6 +2408,55 @@ export class TabbedWebviewProvider {
             }
         }
         
+        // Initialize code graph with folders as rectangles and files as circles
+        function initializeCodeGraphCytoscape() {
+            try {
+                const container = document.getElementById('cy');
+                if (!container) {
+                    throw new Error('Graph container element not found');
+                }
+                
+                // Destroy existing instance
+                if (cy) {
+                    try {
+                        cy.destroy();
+                    } catch (destroyError) {
+                        console.warn('Error destroying previous Cytoscape instance:', destroyError);
+                    }
+                    cy = null;
+                }
+                
+                const elements = createCodeGraphElements();
+                const style = getCodeGraphStyle();
+                const layout = getCodeGraphLayout();
+                
+                console.log('Initializing code graph with', elements.length, 'elements');
+                
+                // Create new instance with code graph styling
+                cy = cytoscape({
+                    container: container,
+                    elements: elements,
+                    style: style,
+                    layout: layout,
+                    wheelSensitivity: 0.2,
+                    minZoom: 0.1,
+                    maxZoom: 3
+                });
+                
+                // Set up event handlers for code graph
+                setupCodeGraphEvents();
+                
+                console.log('Code graph initialized successfully');
+                
+            } catch (error) {
+                console.error('Error initializing code graph:', error);
+                const container = document.getElementById('cy');
+                if (container) {
+                    container.innerHTML = \`<div class="error">Failed to initialize code graph: \${error.message}</div>\`;
+                }
+            }
+        }
+
         // Initialize module graph with enhanced styling
         function initializeModuleGraph() {
             try {
@@ -2481,6 +2506,368 @@ export class TabbedWebviewProvider {
             }
         }
         
+        // Create elements for code graph (folders as rectangles, files as circles)
+        function createCodeGraphElements() {
+            const elements = [];
+            const modules = analysisData.modules;
+            
+            // Group modules by folder structure
+            const folderGroups = {};
+            const fileNodes = [];
+            
+            modules.nodes.forEach(module => {
+                const folderPath = module.folderPath || '.';
+                
+                if (!folderGroups[folderPath]) {
+                    folderGroups[folderPath] = {
+                        id: 'folder_' + folderPath.replace(/[^a-zA-Z0-9]/g, '_'),
+                        name: folderPath === '.' ? 'Root' : folderPath.split('/').pop(),
+                        path: folderPath,
+                        modules: [],
+                        complexity: 0,
+                        fileCount: 0
+                    };
+                }
+                
+                folderGroups[folderPath].modules.push(module);
+                folderGroups[folderPath].complexity += module.complexity.overall;
+                folderGroups[folderPath].fileCount += module.fileCount;
+                
+                // Add individual file nodes (circles)
+                fileNodes.push({
+                    data: {
+                        id: module.id,
+                        label: module.name,
+                        name: module.name,
+                        path: module.path,
+                        parent: folderGroups[folderPath].id,
+                        complexity: module.complexity.overall,
+                        colorCode: module.complexity.colorCode,
+                        dependencies: module.dependencies,
+                        metadata: module.metadata,
+                        type: 'file'
+                    }
+                });
+            });
+            
+            // Add folder nodes (rectangles with curved corners)
+            Object.values(folderGroups).forEach(folder => {
+                folder.complexity = folder.complexity / folder.modules.length; // Average complexity
+                
+                elements.push({
+                    data: {
+                        id: folder.id,
+                        label: folder.name,
+                        name: folder.name,
+                        path: folder.path,
+                        complexity: folder.complexity,
+                        fileCount: folder.fileCount,
+                        moduleCount: folder.modules.length,
+                        colorCode: folder.complexity > 15 ? 'red' : folder.complexity > 8 ? 'orange' : 'green',
+                        type: 'folder'
+                    }
+                });
+            });
+            
+            // Add file nodes
+            elements.push(...fileNodes);
+            
+            // Add dependency edges between files
+            modules.edges.forEach(edge => {
+                elements.push({
+                    data: {
+                        id: edge.source + '-' + edge.target,
+                        source: edge.source,
+                        target: edge.target,
+                        type: edge.type,
+                        weight: edge.weight
+                    }
+                });
+            });
+            
+            return elements;
+        }
+        
+        // Get styling for code graph
+        function getCodeGraphStyle() {
+            return [
+                // Folder styling (rectangles with curved corners)
+                {
+                    selector: 'node[type="folder"]',
+                    style: {
+                        'shape': 'round-rectangle',
+                        'width': 'mapData(moduleCount, 1, 20, 120, 300)',
+                        'height': 'mapData(fileCount, 1, 50, 80, 150)',
+                        'background-color': 'data(colorCode)',
+                        'background-opacity': 0.8,
+                        'border-width': 2,
+                        'border-color': '#666',
+                        'border-opacity': 0.8,
+                        'label': 'data(label)',
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'font-size': '14px',
+                        'font-weight': 'bold',
+                        'color': '#fff',
+                        'text-outline-width': 2,
+                        'text-outline-color': '#000',
+                        'text-outline-opacity': 0.7,
+                        'corner-radius': '10px'
+                    }
+                },
+                // File styling (circles)
+                {
+                    selector: 'node[type="file"]',
+                    style: {
+                        'shape': 'ellipse',
+                        'width': 'mapData(complexity, 1, 30, 30, 80)',
+                        'height': 'mapData(complexity, 1, 30, 30, 80)',
+                        'background-color': 'data(colorCode)',
+                        'background-opacity': 0.9,
+                        'border-width': 2,
+                        'border-color': '#333',
+                        'label': 'data(label)',
+                        'text-valign': 'bottom',
+                        'text-halign': 'center',
+                        'font-size': '10px',
+                        'color': '#333',
+                        'text-margin-y': 5
+                    }
+                },
+                // Edge styling
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 'mapData(weight, 1, 10, 1, 5)',
+                        'line-color': '#999',
+                        'target-arrow-color': '#999',
+                        'target-arrow-shape': 'triangle',
+                        'curve-style': 'bezier',
+                        'opacity': 0.6
+                    }
+                },
+                // Color mappings
+                {
+                    selector: 'node[colorCode="green"]',
+                    style: {
+                        'background-color': '#27ae60'
+                    }
+                },
+                {
+                    selector: 'node[colorCode="orange"]',
+                    style: {
+                        'background-color': '#f39c12'
+                    }
+                },
+                {
+                    selector: 'node[colorCode="red"]',
+                    style: {
+                        'background-color': '#e74c3c'
+                    }
+                }
+            ];
+        }
+        
+        // Get layout for code graph
+        function getCodeGraphLayout() {
+            return {
+                name: 'cose',
+                animate: true,
+                animationDuration: 1000,
+                fit: true,
+                padding: 50,
+                nodeRepulsion: 8000,
+                nodeOverlap: 20,
+                idealEdgeLength: 100,
+                edgeElasticity: 200,
+                nestingFactor: 1.2,
+                gravity: 1,
+                numIter: 1000,
+                initialTemp: 1000,
+                coolingFactor: 0.99,
+                minTemp: 1.0
+            };
+        }
+        
+        // Set up event handlers for code graph
+        function setupCodeGraphEvents() {
+            if (!cy) return;
+            
+            // Handle folder clicks to show dependency modal
+            cy.on('tap', 'node[type="folder"]', function(evt) {
+                const node = evt.target;
+                const folderData = node.data();
+                showFolderDependencies(folderData);
+            });
+            
+            // Handle file clicks to show file details
+            cy.on('tap', 'node[type="file"]', function(evt) {
+                const node = evt.target;
+                const fileData = node.data();
+                showFileDetails(fileData);
+            });
+            
+            // Handle hover effects
+            cy.on('mouseover', 'node', function(evt) {
+                const node = evt.target;
+                node.style('border-width', '4px');
+                
+                // Highlight connected edges
+                const connectedEdges = node.connectedEdges();
+                connectedEdges.style('line-color', '#007acc');
+                connectedEdges.style('target-arrow-color', '#007acc');
+                connectedEdges.style('opacity', '1');
+            });
+            
+            cy.on('mouseout', 'node', function(evt) {
+                const node = evt.target;
+                node.style('border-width', '2px');
+                
+                // Reset connected edges
+                const connectedEdges = node.connectedEdges();
+                connectedEdges.style('line-color', '#999');
+                connectedEdges.style('target-arrow-color', '#999');
+                connectedEdges.style('opacity', '0.6');
+            });
+        }
+        
+        // Show folder dependencies in modal
+        function showFolderDependencies(folderData) {
+            const modal = document.getElementById('moduleInfoPanel');
+            const title = document.getElementById('moduleInfoTitle');
+            const content = document.getElementById('moduleInfoContent');
+            
+            title.textContent = \`Folder: \${folderData.name}\`;
+            
+            // Get all files in this folder
+            const folderFiles = cy.nodes(\`[parent="\${folderData.id}"]\`);
+            const dependencies = new Set();
+            
+            folderFiles.forEach(fileNode => {
+                const fileDeps = fileNode.data('dependencies') || [];
+                fileDeps.forEach(dep => dependencies.add(dep));
+            });
+            
+            content.innerHTML = \`
+                <div class="info-section">
+                    <strong>Path:</strong> \${folderData.path}
+                </div>
+                <div class="info-section">
+                    <strong>Files:</strong> \${folderData.moduleCount}
+                </div>
+                <div class="info-section">
+                    <strong>Average Complexity:</strong> 
+                    <span class="complexity-badge \${folderData.colorCode}">\${folderData.complexity.toFixed(1)}</span>
+                </div>
+                <div class="info-section">
+                    <strong>Dependencies:</strong>
+                    <ul style="margin: 8px 0; padding-left: 20px;">
+                        \${Array.from(dependencies).map(dep => \`<li>\${dep}</li>\`).join('')}
+                    </ul>
+                </div>
+                <div class="info-section">
+                    <strong>Files in Folder:</strong>
+                    <ul style="margin: 8px 0; padding-left: 20px;">
+                        \${folderFiles.map(node => \`<li>\${node.data('name')} (complexity: \${node.data('complexity')})</li>\`).join('')}
+                    </ul>
+                </div>
+            \`;
+            
+            modal.style.display = 'block';
+        }
+        
+        // Show file details
+        function showFileDetails(fileData) {
+            const modal = document.getElementById('moduleInfoPanel');
+            const title = document.getElementById('moduleInfoTitle');
+            const content = document.getElementById('moduleInfoContent');
+            
+            title.textContent = \`File: \${fileData.name}\`;
+            
+            content.innerHTML = \`
+                <div class="info-section">
+                    <strong>Path:</strong> \${fileData.path}
+                </div>
+                <div class="info-section">
+                    <strong>Complexity:</strong> 
+                    <span class="complexity-badge \${fileData.colorCode}">\${fileData.complexity}</span>
+                </div>
+                <div class="info-section">
+                    <strong>Dependencies:</strong>
+                    <ul style="margin: 8px 0; padding-left: 20px;">
+                        \${(fileData.dependencies || []).map(dep => \`<li>\${dep}</li>\`).join('')}
+                    </ul>
+                </div>
+                \${fileData.metadata ? \`
+                <div class="info-section">
+                    <strong>Functions:</strong> \${fileData.metadata.functions ? fileData.metadata.functions.length : 0}
+                </div>
+                <div class="info-section">
+                    <strong>Classes:</strong> \${fileData.metadata.classes ? fileData.metadata.classes.length : 0}
+                </div>
+                \` : ''}
+            \`;
+            
+            modal.style.display = 'block';
+        }
+        
+        // Close module info modal
+        function closeModuleInfo() {
+            const modal = document.getElementById('moduleInfoPanel');
+            modal.style.display = 'none';
+        }
+        
+        // Export code graph JSON
+        function exportCodeGraphJson() {
+            if (!analysisData || !analysisData.modules) {
+                alert('No code graph data available to export');
+                return;
+            }
+            
+            const codeGraphData = {
+                modules: analysisData.modules,
+                functions: analysisData.functions,
+                metadata: {
+                    totalModules: analysisData.modules.nodes ? analysisData.modules.nodes.length : 0,
+                    totalFunctions: analysisData.functions && analysisData.functions.nodes ? analysisData.functions.nodes.length : 0,
+                    exportTimestamp: new Date().toISOString()
+                }
+            };
+            
+            const jsonString = JSON.stringify(codeGraphData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'code-graph-data.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // Copy code graph JSON to clipboard
+        function copyCodeGraphJson() {
+            const jsonDisplay = document.getElementById('codegraph-json-display');
+            if (!jsonDisplay || !jsonDisplay.textContent) {
+                alert('No JSON data available to copy');
+                return;
+            }
+            
+            navigator.clipboard.writeText(jsonDisplay.textContent).then(() => {
+                // Show temporary success message
+                const originalText = jsonDisplay.textContent;
+                jsonDisplay.textContent = 'JSON copied to clipboard!';
+                setTimeout(() => {
+                    jsonDisplay.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy JSON:', err);
+                alert('Failed to copy JSON to clipboard');
+            });
+        }
+
         // Create elements for module cards
         function createModuleCardElements() {
             const elements = [];

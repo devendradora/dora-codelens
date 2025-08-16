@@ -135,22 +135,10 @@
         "icon": "$(json)"
       },
       {
-        "command": "doracodebird.fullAnalysisTechStack",
-        "title": "Tech Stack",
+        "command": "doracodebird.fullCodeAnalysis",
+        "title": "Full Code Analysis",
         "category": "DoraCodeBirdView",
-        "icon": "$(library)"
-      },
-      {
-        "command": "doracodebird.fullAnalysisGraphView",
-        "title": "Graph View",
-        "category": "DoraCodeBirdView",
-        "icon": "$(type-hierarchy)"
-      },
-      {
-        "command": "doracodebird.fullAnalysisJsonView",
-        "title": "JSON View",
-        "category": "DoraCodeBirdView",
-        "icon": "$(json)"
+        "icon": "$(graph)"
       },
       {
         "command": "doracodebird.currentFileAnalysis",
@@ -216,11 +204,7 @@
         "label": "DoraCodeBirdView",
         "icon": "$(type-hierarchy)"
       },
-      {
-        "id": "doracodebird.fullAnalysis",
-        "label": "Full Code Analysis",
-        "icon": "$(graph)"
-      },
+
       {
         "id": "doracodebird.gitCommits",
         "label": "Git Commits",
@@ -247,7 +231,7 @@
       ],
       "doracodebird.contextMenu": [
         {
-          "submenu": "doracodebird.fullAnalysis",
+          "command": "doracodebird.fullCodeAnalysis",
           "group": "doracodebird@1"
         },
         {
@@ -271,20 +255,7 @@
           "group": "doracodebird@6"
         }
       ],
-      "doracodebird.fullAnalysis": [
-        {
-          "command": "doracodebird.fullAnalysisTechStack",
-          "group": "fullAnalysis@1"
-        },
-        {
-          "command": "doracodebird.fullAnalysisGraphView",
-          "group": "fullAnalysis@2"
-        },
-        {
-          "command": "doracodebird.fullAnalysisJsonView",
-          "group": "fullAnalysis@3"
-        }
-      ],
+
       "doracodebird.gitCommits": [
         {
           "command": "doracodebird.gitAuthorStatistics",
@@ -495,6 +466,7 @@
     "typescript": "^4.9.4"
   },
   "dependencies": {
+    "chart.js": "^4.5.0",
     "cytoscape": "^3.33.1",
     "cytoscape-dagre": "^2.5.0",
     "dagre": "^0.8.5"
