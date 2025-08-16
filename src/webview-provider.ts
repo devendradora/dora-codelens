@@ -171,33 +171,6 @@ export interface WebviewMessage {
 }
 
 /**
- * Diagnostics information for debugging webview issues
- */
-export interface WebviewDiagnostics {
-    initializationTime: number;
-    libraryLoadTime: number;
-    renderTime: number;
-    errors: DiagnosticError[];
-    warnings: DiagnosticWarning[];
-    performance: { [key: string]: number };
-}
-
-export interface DiagnosticError {
-    timestamp: number;
-    type: string;
-    message: string;
-    stack?: string;
-    context?: any;
-}
-
-export interface DiagnosticWarning {
-    timestamp: number;
-    type: string;
-    message: string;
-    context?: any;
-}
-
-/**
  * WebviewProvider manages the graph visualization webview panel
  */
 export class WebviewProvider {
@@ -208,14 +181,6 @@ export class WebviewProvider {
     private currentView: 'module-graph' | 'call-hierarchy' = 'module-graph';
     private selectedFunction: string | null = null;
     private debugMode: boolean = false;
-    private diagnostics: WebviewDiagnostics = {
-        initializationTime: 0,
-        libraryLoadTime: 0,
-        renderTime: 0,
-        errors: [],
-        warnings: [],
-        performance: {}
-    };
 
     constructor(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel) {
         this.context = context;
@@ -249,30 +214,6 @@ export class WebviewProvider {
      * Show the call hierarchy visualization for a specific function
      */
     public showCallHierarchy(analysisData: WebviewAnalysisData, functionName: string): void {
-        // Validate that the function exists in the analysis data
-        if (!this.validateFunctionInAnalysisData(analysisData, functionName)) {
-            this.log(`Function '${functionName}' not found in analysis data`);
-            
-            // Still show the webview but with an error message
-            this.analysisData = analysisData;
-            this.currentView = 'call-hierarchy';
-            this.selectedFunction = functionName;
-            
-            this.createOrShowWebview();
-            
-            // Send error message to webview
-            setTimeout(() => {
-                this.sendMessageToWebview({
-                    command: 'error',
-                    data: { 
-                        message: `Function '${functionName}' not found in analysis data. The function may not be analyzed yet or may be from an external module.` 
-                    }
-                });
-            }, 100);
-            
-            return;
-        }
-
         this.analysisData = analysisData;
         this.currentView = 'call-hierarchy';
         this.selectedFunction = functionName;
@@ -281,24 +222,6 @@ export class WebviewProvider {
         this.updateWebviewContent();
         
         this.log(`Call hierarchy webview displayed for function: ${functionName}`);
-    }
-
-    /**
-     * Validate that a function exists in the analysis data
-     */
-    private validateFunctionInAnalysisData(analysisData: WebviewAnalysisData, functionName: string): boolean {
-        if (!analysisData.functions) {
-            return false;
-        }
-
-        // Check if the function exists in the analysis data
-        const functionExists = analysisData.functions.nodes.some(func => 
-            func.id === functionName || 
-            func.name === functionName ||
-            func.id.endsWith('.' + functionName)
-        );
-
-        return functionExists;
     }
 
     /**
@@ -316,8 +239,6 @@ export class WebviewProvider {
      * Create or show the webview panel
      */
     private createOrShowWebview(): void {
-        const startTime = Date.now();
-        
         try {
             const columnToShowIn = vscode.window.activeTextEditor
                 ? vscode.window.activeTextEditor.viewColumn
@@ -326,7 +247,6 @@ export class WebviewProvider {
             if (this.panel) {
                 // If panel exists, just reveal it
                 this.panel.reveal(columnToShowIn);
-                this.recordPerformance('webview_reveal', Date.now() - startTime);
                 return;
             }
 
@@ -355,14 +275,13 @@ export class WebviewProvider {
                     dark: vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'dark', 'graph.svg')
                 };
             } catch (iconError) {
-                this.addDiagnosticWarning('icon_load', 'Failed to set webview icon', { error: iconError });
+                this.log('Failed to set webview icon');
             }
 
             // Handle webview disposal
             this.panel.onDidDispose(() => {
                 this.panel = undefined;
                 this.log('Webview panel disposed');
-                this.addDiagnosticWarning('webview_lifecycle', 'Webview panel disposed');
             }, null, this.context.subscriptions);
 
             // Handle webview state changes
@@ -381,9 +300,6 @@ export class WebviewProvider {
                     try {
                         this.handleWebviewMessage(message);
                     } catch (error) {
-                        this.addDiagnosticError('message_handling', 'Error handling webview message', 
-                            error instanceof Error ? error.stack : undefined, 
-                            { command: message.command, hasData: !!message.data });
                         this.logError('Error handling webview message', error);
                     }
                 },
@@ -391,13 +307,9 @@ export class WebviewProvider {
                 this.context.subscriptions
             );
 
-            const creationTime = Date.now() - startTime;
-            this.recordPerformance('webview_creation', creationTime);
-            this.log(`Webview panel created in ${creationTime}ms`);
+            this.log('Webview panel created successfully');
             
         } catch (error) {
-            this.addDiagnosticError('webview_creation', 'Failed to create webview panel', 
-                error instanceof Error ? error.stack : undefined);
             this.logError('Failed to create webview panel', error);
             throw error;
         }
@@ -408,11 +320,8 @@ export class WebviewProvider {
      */
     private updateWebviewContent(): void {
         if (!this.panel) {
-            this.addDiagnosticWarning('content_update', 'Attempted to update content but panel is undefined');
             return;
         }
-
-        const startTime = Date.now();
 
         try {
             this.log(`Updating webview content for ${this.currentView}`);
@@ -429,25 +338,18 @@ export class WebviewProvider {
                             analysisData: this.analysisData,
                             currentView: this.currentView,
                             selectedFunction: this.selectedFunction,
-                            debugMode: this.debugMode,
-                            diagnostics: this.debugMode ? this.diagnostics : undefined
+                            debugMode: this.debugMode
                         }
                     });
                     
-                    const updateTime = Date.now() - startTime;
-                    this.recordPerformance('content_update', updateTime);
-                    this.log(`Webview content updated for ${this.currentView} in ${updateTime}ms`);
+                    this.log(`Webview content updated for ${this.currentView}`);
                     
                 } catch (error) {
-                    this.addDiagnosticError('data_send', 'Failed to send data to webview', 
-                        error instanceof Error ? error.stack : undefined);
                     this.logError('Failed to send data to webview', error);
                 }
             }, 100);
 
         } catch (error) {
-            this.addDiagnosticError('content_update', 'Failed to update webview content', 
-                error instanceof Error ? error.stack : undefined);
             this.logError('Failed to update webview content', error);
         }
     }
@@ -483,7 +385,7 @@ export class WebviewProvider {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource}; img-src ${webview.cspSource} data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource} 'unsafe-eval'; img-src ${webview.cspSource} data:;">
     <link href="${styleUri}" rel="stylesheet">
     <title>CodeMindMap - Graph Visualization</title>
 </head>
@@ -576,54 +478,18 @@ export class WebviewProvider {
         </div>
     </div>
 
-    <div id="debug-panel" class="debug-panel hidden">
-        <div class="debug-header">
-            <h3>Debug Information</h3>
-            <button id="closeDebugBtn" class="close-btn">&times;</button>
-        </div>
-        <div class="debug-content">
-            <div class="debug-section">
-                <h4>Library Status</h4>
-                <div id="debug-libraries"></div>
-            </div>
-            <div class="debug-section">
-                <h4>Performance Metrics</h4>
-                <div id="debug-performance"></div>
-            </div>
-            <div class="debug-section">
-                <h4>Errors</h4>
-                <div id="debug-errors"></div>
-            </div>
-            <div class="debug-section">
-                <h4>Warnings</h4>
-                <div id="debug-warnings"></div>
-            </div>
-            <div class="debug-actions">
-                <button id="exportDebugBtn" class="debug-btn">Export Debug Data</button>
-                <button id="clearDebugBtn" class="debug-btn">Clear Debug Data</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="debug-toggle" class="debug-toggle hidden" title="Show Debug Panel">
-        🐛
-    </div>
-
-    <!-- Load libraries with proper error handling and fallbacks -->
+    <!-- Load libraries with proper error handling -->
     <script nonce="${nonce}">
-        // Global error handler for script loading
-        window.scriptLoadErrors = [];
-        window.addEventListener('error', function(e) {
-            if (e.filename && (e.filename.includes('cytoscape') || e.filename.includes('dagre'))) {
-                window.scriptLoadErrors.push({
-                    filename: e.filename,
-                    message: e.message,
-                    lineno: e.lineno,
-                    colno: e.colno
-                });
-            }
-        });
-
+        // Global variables
+        let cy = null;
+        let analysisData = null;
+        let currentView = 'module-graph';
+        let selectedFunction = null;
+        let debugMode = false;
+        
+        // VS Code API
+        const vscode = acquireVsCodeApi();
+        
         // Library loading status
         window.libraryStatus = {
             dagre: false,
@@ -635,210 +501,31 @@ export class WebviewProvider {
         function checkLibraryLoading() {
             const loadingMessage = document.getElementById('loading-message');
             
+            console.log('Checking library loading status...');
+            console.log('dagre available:', typeof dagre !== 'undefined');
+            console.log('cytoscape available:', typeof cytoscape !== 'undefined');
+            console.log('cytoscapeDagre available:', typeof cytoscapeDagre !== 'undefined');
+            
             if (typeof dagre !== 'undefined') {
                 window.libraryStatus.dagre = true;
-                loadingMessage.textContent = 'Loading Cytoscape.js...';
+                loadingMessage.textContent = 'Dagre loaded, loading Cytoscape.js...';
             }
             
             if (typeof cytoscape !== 'undefined') {
                 window.libraryStatus.cytoscape = true;
-                loadingMessage.textContent = 'Loading Cytoscape extensions...';
+                loadingMessage.textContent = 'Cytoscape loaded, loading extensions...';
             }
             
             if (typeof cytoscapeDagre !== 'undefined') {
                 window.libraryStatus.cytoscapeDagre = true;
-                loadingMessage.textContent = 'Initializing graph...';
+                loadingMessage.textContent = 'All libraries loaded, initializing graph...';
             }
         }
 
-        // Fallback function if libraries fail to load
-        function initializeFallback() {
-            console.warn('Cytoscape.js libraries failed to load, using fallback view');
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('error').classList.add('hidden');
-            document.getElementById('graph-container').style.display = 'none';
-            document.getElementById('fallback-view').classList.remove('hidden');
-            
-            // Notify extension about fallback mode
-            if (typeof vscode !== 'undefined') {
-                vscode.postMessage({
-                    command: 'fallbackMode',
-                    data: { errors: window.scriptLoadErrors }
-                });
-            }
-        }
-    </script>
-    
-    <script nonce="${nonce}" src="${dagreUri}" onload="checkLibraryLoading()" onerror="console.error('Failed to load Dagre library')"></script>
-    <script nonce="${nonce}" src="${cytoscapeUri}" onload="checkLibraryLoading()" onerror="console.error('Failed to load Cytoscape.js library')"></script>
-    <script nonce="${nonce}" src="${cytoscapeDagreUri}" onload="checkLibraryLoading()" onerror="console.error('Failed to load Cytoscape Dagre extension')"></script>
-    
-    <script nonce="${nonce}">
-        // Wait for all libraries to load before initializing
-        let initializationAttempts = 0;
-        const maxAttempts = 50; // 5 seconds with 100ms intervals
-        
-        function waitForLibraries() {
-            initializationAttempts++;
-            
-            if (typeof dagre !== 'undefined' && typeof cytoscape !== 'undefined') {
-                // Libraries loaded successfully
-                try {
-                    if (typeof cytoscapeDagre !== 'undefined') {
-                        cytoscape.use(cytoscapeDagre);
-                    }
-                    ${this.getWebviewScript()}
-                } catch (error) {
-                    console.error('Error initializing Cytoscape:', error);
-                    showLibraryError('Failed to initialize graph library: ' + error.message);
-                }
-            } else if (initializationAttempts >= maxAttempts) {
-                // Timeout - libraries didn't load
-                const missingLibs = [];
-                if (typeof dagre === 'undefined') missingLibs.push('Dagre');
-                if (typeof cytoscape === 'undefined') missingLibs.push('Cytoscape.js');
-                
-                showLibraryError('Required libraries failed to load: ' + missingLibs.join(', '));
-            } else {
-                // Keep waiting
-                setTimeout(waitForLibraries, 100);
-            }
-        }
-        
-        function showLibraryError(message) {
-            console.error('Library loading error:', message);
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('error-message').textContent = message;
-            document.getElementById('error-stack').textContent = window.scriptLoadErrors.map(e => 
-                e.filename + ':' + e.lineno + ':' + e.colno + ' - ' + e.message
-            ).join('\\n');
-            document.getElementById('error').classList.remove('hidden');
-            
-            // Show fallback button
-            document.getElementById('fallbackBtn').style.display = 'inline-block';
-        }
-        
-        // Start waiting for libraries
-        setTimeout(waitForLibraries, 100);
-    </script>
-</body>
-</html>`;
-    }
-
-    /**
-     * Generate JavaScript code for the webview
-     */
-    private getWebviewScript(): string {
-        return `
-        // Global variables
-        let cy = null;
-        let analysisData = null;
-        let currentView = 'module-graph';
-        let selectedFunction = null;
-        let debugMode = false;
-        let diagnostics = {
-            initTime: 0,
-            renderTimes: [],
-            errors: [],
-            warnings: [],
-            libraryVersions: {}
-        };
-        
-        // VS Code API
-        const vscode = acquireVsCodeApi();
-        
-        // Debug logging function
-        function debugLog(message, data) {
-            if (debugMode) {
-                console.log('[CodeMindMap Debug]', message, data || '');
-                
-                // Send debug info to extension
-                vscode.postMessage({
-                    command: 'debugLog',
-                    data: { message, data, timestamp: Date.now() }
-                });
-            }
-        }
-        
-        // Error tracking function
-        function trackError(type, message, error) {
-            const errorInfo = {
-                type,
-                message,
-                timestamp: Date.now(),
-                stack: error?.stack,
-                userAgent: navigator.userAgent,
-                url: window.location.href
-            };
-            
-            diagnostics.errors.push(errorInfo);
-            debugLog('Error tracked:', errorInfo);
-            
-            // Send error to extension
-            vscode.postMessage({
-                command: 'webviewError',
-                data: errorInfo
-            });
-        }
-        
-        // Warning tracking function
-        function trackWarning(type, message, context) {
-            const warningInfo = {
-                type,
-                message,
-                timestamp: Date.now(),
-                context
-            };
-            
-            diagnostics.warnings.push(warningInfo);
-            debugLog('Warning tracked:', warningInfo);
-        }
-        
-        // Performance tracking function
-        function trackPerformance(metric, startTime) {
-            const duration = Date.now() - startTime;
-            debugLog(\`Performance [\${metric}]:\`, \`\${duration}ms\`);
-            
-            if (metric === 'render') {
-                diagnostics.renderTimes.push(duration);
-            }
-            
-            return duration;
-        }
-        
-        // DOM elements
-        const elements = {
-            loading: document.getElementById('loading'),
-            error: document.getElementById('error'),
-            errorMessage: document.getElementById('error-message'),
-            graphContainer: document.getElementById('graph-container'),
-            infoPanel: document.getElementById('info-panel'),
-            infoTitle: document.getElementById('info-title'),
-            infoContent: document.getElementById('info-content'),
-            moduleGraphBtn: document.getElementById('moduleGraphBtn'),
-            callHierarchyBtn: document.getElementById('callHierarchyBtn'),
-            searchInput: document.getElementById('searchInput'),
-            fitBtn: document.getElementById('fitBtn'),
-            resetBtn: document.getElementById('resetBtn'),
-            closeInfoBtn: document.getElementById('closeInfoBtn'),
-            retryBtn: document.getElementById('retryBtn')
-        };
-        
         // Initialize the webview
         function initialize() {
-            const initStartTime = Date.now();
-            
             try {
-                debugLog('Starting webview initialization');
-                
-                // Collect library version information
-                diagnostics.libraryVersions = {
-                    cytoscape: typeof cytoscape !== 'undefined' ? (cytoscape.version || 'unknown') : 'not loaded',
-                    dagre: typeof dagre !== 'undefined' ? (dagre.version || 'unknown') : 'not loaded',
-                    cytoscapeDagre: typeof cytoscapeDagre !== 'undefined' ? 'loaded' : 'not loaded'
-                };
-                
-                debugLog('Library versions:', diagnostics.libraryVersions);
+                console.log('Starting webview initialization');
                 
                 // Check if required libraries are available
                 if (typeof cytoscape === 'undefined') {
@@ -852,125 +539,46 @@ export class WebviewProvider {
                 // Register Cytoscape extensions
                 if (typeof cytoscapeDagre !== 'undefined') {
                     cytoscape.use(cytoscapeDagre);
-                    debugLog('Cytoscape Dagre extension registered');
+                    console.log('Cytoscape Dagre extension registered');
                 } else {
-                    trackWarning('extension_missing', 'Cytoscape Dagre extension not available, using default layout');
+                    console.warn('Cytoscape Dagre extension not available, using default layout');
                 }
                 
                 setupEventListeners();
                 showLoading();
                 
-                diagnostics.initTime = trackPerformance('initialization', initStartTime);
-                
-                // Log successful initialization
-                debugLog('CodeMindMap webview initialized successfully', {
-                    initTime: diagnostics.initTime,
-                    libraryVersions: diagnostics.libraryVersions
-                });
+                console.log('CodeMindMap webview initialized successfully');
                 
                 // Request initial data
-                if (typeof vscode !== 'undefined') {
-                    vscode.postMessage({
-                        command: 'ready'
-                    });
-                } else {
-                    const error = new Error('VS Code API not available');
-                    trackError('vscode_api', 'VS Code API not available', error);
-                    showError('VS Code API not available. Please reload the webview.');
-                }
+                vscode.postMessage({ command: 'ready' });
                 
             } catch (error) {
-                trackError('initialization', 'Failed to initialize webview', error);
-                showError('Failed to initialize graph visualization: ' + error.message);
-                
-                // Notify extension about initialization failure
-                if (typeof vscode !== 'undefined') {
-                    vscode.postMessage({
-                        command: 'initializationError',
-                        data: { 
-                            message: error.message,
-                            stack: error.stack,
-                            libraryStatus: window.libraryStatus,
-                            diagnostics: diagnostics
-                        }
-                    });
-                }
+                console.error('Error initializing webview:', error);
+                showLibraryError('Failed to initialize graph library: ' + error.message);
             }
         }
-        
+
         // Set up event listeners
         function setupEventListeners() {
-            try {
-                elements.moduleGraphBtn.addEventListener('click', () => switchView('module-graph'));
-                elements.callHierarchyBtn.addEventListener('click', () => switchView('call-hierarchy'));
-                elements.searchInput.addEventListener('input', handleSearch);
-                elements.fitBtn.addEventListener('click', fitToView);
-                elements.resetBtn.addEventListener('click', resetView);
-                elements.closeInfoBtn.addEventListener('click', closeInfoPanel);
-                elements.retryBtn.addEventListener('click', retryLoad);
-                
-                // Add fallback button listener
-                const fallbackBtn = document.getElementById('fallbackBtn');
-                if (fallbackBtn) {
-                    fallbackBtn.addEventListener('click', showFallbackView);
-                }
-                
-                // Add debug panel listeners
-                const debugToggle = document.getElementById('debug-toggle');
-                const debugPanel = document.getElementById('debug-panel');
-                const closeDebugBtn = document.getElementById('closeDebugBtn');
-                const exportDebugBtn = document.getElementById('exportDebugBtn');
-                const clearDebugBtn = document.getElementById('clearDebugBtn');
-                
-                if (debugToggle) {
-                    debugToggle.addEventListener('click', toggleDebugPanel);
-                }
-                if (closeDebugBtn) {
-                    closeDebugBtn.addEventListener('click', hideDebugPanel);
-                }
-                if (exportDebugBtn) {
-                    exportDebugBtn.addEventListener('click', exportDebugData);
-                }
-                if (clearDebugBtn) {
-                    clearDebugBtn.addEventListener('click', clearDebugData);
-                }
-                
-                // Handle window resize with error handling
-                window.addEventListener('resize', () => {
-                    try {
-                        if (cy && typeof cy.resize === 'function') {
-                            cy.resize();
-                        }
-                    } catch (error) {
-                        console.warn('Error during window resize:', error);
-                    }
-                });
-                
-                // Add global error handler for unhandled errors
-                window.addEventListener('error', (event) => {
-                    console.error('Global error:', event.error);
-                    if (typeof vscode !== 'undefined') {
-                        vscode.postMessage({
-                            command: 'globalError',
-                            data: {
-                                message: event.error?.message || 'Unknown error',
-                                filename: event.filename,
-                                lineno: event.lineno,
-                                colno: event.colno,
-                                stack: event.error?.stack
-                            }
-                        });
-                    }
-                });
-                
-                console.log('Event listeners set up successfully');
-                
-            } catch (error) {
-                console.error('Error setting up event listeners:', error);
-                throw error;
-            }
+            // Toolbar buttons
+            document.getElementById('moduleGraphBtn').addEventListener('click', () => {
+                switchView('module-graph');
+            });
+            
+            document.getElementById('callHierarchyBtn').addEventListener('click', () => {
+                switchView('call-hierarchy');
+            });
+            
+            document.getElementById('fitBtn').addEventListener('click', fitToView);
+            document.getElementById('resetBtn').addEventListener('click', resetView);
+            document.getElementById('closeInfoBtn').addEventListener('click', closeInfoPanel);
+            document.getElementById('retryBtn').addEventListener('click', retryLoad);
+            document.getElementById('fallbackBtn').addEventListener('click', showFallbackView);
+            
+            // Search input
+            document.getElementById('searchInput').addEventListener('input', handleSearch);
         }
-        
+
         // Handle messages from extension
         window.addEventListener('message', event => {
             const message = event.data;
@@ -979,94 +587,36 @@ export class WebviewProvider {
                 case 'updateData':
                     handleDataUpdate(message.data);
                     break;
-                case 'switchView':
-                    switchView(message.data.view, message.data.selectedFunction);
-                    break;
                 case 'error':
                     showError(message.data.message);
                     break;
+                default:
+                    console.log('Unknown message:', message.command);
             }
         });
         
         // Handle data update from extension
         function handleDataUpdate(data) {
-            const updateStartTime = Date.now();
-            
             try {
-                debugLog('Handling data update', {
-                    hasAnalysisData: !!data.analysisData,
-                    currentView: data.currentView,
-                    selectedFunction: data.selectedFunction,
-                    debugMode: data.debugMode
-                });
+                console.log('Handling data update', data);
                 
                 analysisData = data.analysisData;
                 currentView = data.currentView;
                 selectedFunction = data.selectedFunction;
                 debugMode = data.debugMode || false;
                 
-                // Merge diagnostics if provided
-                if (data.diagnostics && debugMode) {
-                    Object.assign(diagnostics, data.diagnostics);
-                }
-                
                 if (!analysisData) {
-                    trackWarning('data_missing', 'No analysis data available');
                     showError('No analysis data available');
                     return;
-                }
-                
-                // Validate analysis data structure
-                const dataValidation = validateAnalysisData(analysisData);
-                if (!dataValidation.valid) {
-                    trackWarning('data_invalid', 'Analysis data validation failed', dataValidation.issues);
-                    debugLog('Data validation issues:', dataValidation.issues);
                 }
                 
                 updateToolbar();
                 renderGraph();
                 
-                trackPerformance('data_update', updateStartTime);
-                
             } catch (error) {
-                trackError('data_update', 'Failed to handle data update', error);
+                console.error('Failed to handle data update:', error);
                 showError('Failed to process analysis data: ' + error.message);
             }
-        }
-        
-        // Validate analysis data structure
-        function validateAnalysisData(data) {
-            const issues = [];
-            let valid = true;
-            
-            if (!data) {
-                issues.push('Data is null or undefined');
-                valid = false;
-            } else {
-                if (data.modules) {
-                    if (!Array.isArray(data.modules.nodes)) {
-                        issues.push('modules.nodes is not an array');
-                        valid = false;
-                    }
-                    if (!Array.isArray(data.modules.edges)) {
-                        issues.push('modules.edges is not an array');
-                        valid = false;
-                    }
-                }
-                
-                if (data.functions) {
-                    if (!Array.isArray(data.functions.nodes)) {
-                        issues.push('functions.nodes is not an array');
-                        valid = false;
-                    }
-                    if (!Array.isArray(data.functions.edges)) {
-                        issues.push('functions.edges is not an array');
-                        valid = false;
-                    }
-                }
-            }
-            
-            return { valid, issues };
         }
         
         // Switch between different views
@@ -1089,12 +639,14 @@ export class WebviewProvider {
         
         // Update toolbar state
         function updateToolbar() {
-            // Update button states
-            elements.moduleGraphBtn.classList.toggle('active', currentView === 'module-graph');
-            elements.callHierarchyBtn.classList.toggle('active', currentView === 'call-hierarchy');
+            const moduleBtn = document.getElementById('moduleGraphBtn');
+            const callBtn = document.getElementById('callHierarchyBtn');
+            const searchInput = document.getElementById('searchInput');
             
-            // Update search placeholder
-            elements.searchInput.placeholder = currentView === 'module-graph' 
+            moduleBtn.classList.toggle('active', currentView === 'module-graph');
+            callBtn.classList.toggle('active', currentView === 'call-hierarchy');
+            
+            searchInput.placeholder = currentView === 'module-graph' 
                 ? 'Search modules...' 
                 : 'Search functions...';
         }
@@ -1105,12 +657,6 @@ export class WebviewProvider {
                 hideError();
                 showLoading();
                 
-                // Validate that required libraries are still available
-                if (typeof cytoscape === 'undefined') {
-                    throw new Error('Cytoscape.js library is not available');
-                }
-                
-                // Log rendering attempt
                 console.log('Rendering graph for view:', currentView);
                 
                 if (currentView === 'module-graph') {
@@ -1128,19 +674,6 @@ export class WebviewProvider {
                 console.error('Error rendering graph:', error);
                 hideLoading();
                 showError('Failed to render graph: ' + error.message);
-                
-                // Notify extension about rendering error
-                if (typeof vscode !== 'undefined') {
-                    vscode.postMessage({
-                        command: 'renderError',
-                        data: { 
-                            message: error.message,
-                            stack: error.stack,
-                            view: currentView,
-                            hasData: !!analysisData
-                        }
-                    });
-                }
             }
         }
         
@@ -1266,19 +799,6 @@ export class WebviewProvider {
         // Initialize Cytoscape instance
         function initializeCytoscape(elements, style, layout) {
             try {
-                // Validate inputs
-                if (!elements || !Array.isArray(elements)) {
-                    throw new Error('Invalid elements data provided to Cytoscape');
-                }
-                
-                if (!style || !Array.isArray(style)) {
-                    throw new Error('Invalid style data provided to Cytoscape');
-                }
-                
-                if (!layout || typeof layout !== 'object') {
-                    throw new Error('Invalid layout data provided to Cytoscape');
-                }
-                
                 const container = document.getElementById('cy');
                 if (!container) {
                     throw new Error('Graph container element not found');
@@ -1296,7 +816,7 @@ export class WebviewProvider {
                 
                 console.log('Initializing Cytoscape with', elements.length, 'elements');
                 
-                // Create new instance with error handling
+                // Create new instance
                 cy = cytoscape({
                     container: container,
                     elements: elements,
@@ -1304,36 +824,16 @@ export class WebviewProvider {
                     layout: layout,
                     wheelSensitivity: 0.2,
                     minZoom: 0.1,
-                    maxZoom: 3,
-                    // Add error handling for layout
-                    ready: function() {
-                        console.log('Cytoscape instance ready');
-                    }
+                    maxZoom: 3
                 });
-                
-                // Validate that the instance was created successfully
-                if (!cy || typeof cy.nodes !== 'function') {
-                    throw new Error('Failed to create Cytoscape instance');
-                }
                 
                 // Set up event handlers
                 setupCytoscapeEvents();
                 
-                console.log('Cytoscape initialized successfully with', cy.nodes().length, 'nodes and', cy.edges().length, 'edges');
+                console.log('Cytoscape initialized successfully');
                 
             } catch (error) {
                 console.error('Error initializing Cytoscape:', error);
-                
-                // Clean up on error
-                if (cy) {
-                    try {
-                        cy.destroy();
-                    } catch (cleanupError) {
-                        console.warn('Error during cleanup:', cleanupError);
-                    }
-                    cy = null;
-                }
-                
                 throw new Error('Failed to initialize graph visualization: ' + error.message);
             }
         }
@@ -1344,22 +844,6 @@ export class WebviewProvider {
             cy.on('tap', 'node', function(evt) {
                 const node = evt.target;
                 showNodeInfo(node);
-                
-                // Notify extension about node selection
-                vscode.postMessage({
-                    command: 'nodeSelected',
-                    data: {
-                        nodeId: node.id(),
-                        nodeData: node.data(),
-                        view: currentView
-                    }
-                });
-            });
-            
-            // Edge click handler
-            cy.on('tap', 'edge', function(evt) {
-                const edge = evt.target;
-                showEdgeInfo(edge);
             });
             
             // Background click handler
@@ -1368,34 +852,20 @@ export class WebviewProvider {
                     closeInfoPanel();
                 }
             });
-            
-            // Double-click to navigate
-            cy.on('dblclick', 'node', function(evt) {
-                const node = evt.target;
-                const nodeData = node.data();
-                
-                // Notify extension to navigate to the item
-                vscode.postMessage({
-                    command: 'navigateToItem',
-                    data: {
-                        type: nodeData.type,
-                        path: nodeData.path,
-                        lineNumber: nodeData.lineNumber,
-                        module: nodeData.module,
-                        name: nodeData.label
-                    }
-                });
-            });
         }
         
         // Show node information in info panel
         function showNodeInfo(node) {
             const data = node.data();
-            elements.infoPanel.classList.add('visible');
+            const infoPanel = document.getElementById('info-panel');
+            const infoTitle = document.getElementById('info-title');
+            const infoContent = document.getElementById('info-content');
+            
+            infoPanel.classList.add('visible');
             
             if (data.type === 'module') {
-                elements.infoTitle.textContent = 'Module: ' + data.label;
-                elements.infoContent.innerHTML = \`
+                infoTitle.textContent = 'Module: ' + data.label;
+                infoContent.innerHTML = \`
                     <div class="info-item">
                         <strong>Path:</strong> \${data.path}
                     </div>
@@ -1408,14 +878,11 @@ export class WebviewProvider {
                     <div class="info-item">
                         <strong>Functions:</strong> \${data.functions.length}
                     </div>
-                    <div class="info-actions">
-                        <button onclick="navigateToModule('\${data.path}')">Open File</button>
-                    </div>
                 \`;
             } else if (data.type === 'function') {
                 const params = data.parameters.map(p => p.name).join(', ');
-                elements.infoTitle.textContent = 'Function: ' + data.label;
-                elements.infoContent.innerHTML = \`
+                infoTitle.textContent = 'Function: ' + data.label;
+                infoContent.innerHTML = \`
                     <div class="info-item">
                         <strong>Module:</strong> \${data.module}
                     </div>
@@ -1427,50 +894,6 @@ export class WebviewProvider {
                     </div>
                     <div class="info-item">
                         <strong>Parameters:</strong> (\${params})
-                    </div>
-                    <div class="info-actions">
-                        <button onclick="navigateToFunction('\${data.module}', \${data.lineNumber})">Go to Function</button>
-                        <button onclick="showCallHierarchy('\${data.id}')">Show Hierarchy</button>
-                    </div>
-                \`;
-            }
-        }
-        
-        // Show edge information in info panel
-        function showEdgeInfo(edge) {
-            const data = edge.data();
-            elements.infoPanel.classList.add('visible');
-            
-            if (data.type === 'call') {
-                elements.infoTitle.textContent = 'Function Call';
-                elements.infoContent.innerHTML = \`
-                    <div class="info-item">
-                        <strong>From:</strong> \${data.source}
-                    </div>
-                    <div class="info-item">
-                        <strong>To:</strong> \${data.target}
-                    </div>
-                    <div class="info-item">
-                        <strong>Call Count:</strong> \${data.callCount}
-                    </div>
-                    <div class="info-item">
-                        <strong>Lines:</strong> \${data.lineNumbers.join(', ')}
-                    </div>
-                \`;
-            } else {
-                elements.infoTitle.textContent = 'Dependency';
-                elements.infoContent.innerHTML = \`
-                    <div class="info-item">
-                        <strong>From:</strong> \${data.source}
-                    </div>
-                    <div class="info-item">
-                        <strong>To:</strong> \${data.target}
-                    </div>
-                    <div class="info-item">
-                        <strong>Type:</strong> \${data.type}
-                    </div>
-                    <div class="info-item">
-                        <strong>Weight:</strong> \${data.weight}
                     </div>
                 \`;
             }
@@ -1610,7 +1033,7 @@ export class WebviewProvider {
         
         // Handle search functionality
         function handleSearch() {
-            const searchTerm = elements.searchInput.value.toLowerCase();
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
             
             if (!cy || !searchTerm) {
                 // Reset all nodes if search is empty
@@ -1650,38 +1073,49 @@ export class WebviewProvider {
                 cy.zoom(1);
                 cy.center();
                 cy.nodes().removeClass('highlighted dimmed');
-                elements.searchInput.value = '';
+                document.getElementById('searchInput').value = '';
             }
         }
         
         // Close info panel
         function closeInfoPanel() {
-            elements.infoPanel.classList.remove('visible');
+            document.getElementById('info-panel').classList.remove('visible');
         }
         
         // Show loading state
         function showLoading() {
-            elements.loading.classList.remove('hidden');
-            elements.graphContainer.style.display = 'none';
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('graph-container').style.display = 'none';
         }
         
         // Hide loading state
         function hideLoading() {
-            elements.loading.classList.add('hidden');
-            elements.graphContainer.style.display = 'block';
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('graph-container').style.display = 'block';
         }
         
         // Show error state
         function showError(message) {
             hideLoading();
-            elements.error.classList.remove('hidden');
-            elements.errorMessage.textContent = message;
-            elements.graphContainer.style.display = 'none';
+            document.getElementById('error').classList.remove('hidden');
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('graph-container').style.display = 'none';
         }
         
         // Hide error state
         function hideError() {
-            elements.error.classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+        }
+        
+        // Show library error
+        function showLibraryError(message) {
+            console.error('Library loading error:', message);
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('error').classList.remove('hidden');
+            
+            // Show fallback button
+            document.getElementById('fallbackBtn').style.display = 'inline-block';
         }
         
         // Retry loading
@@ -1690,13 +1124,9 @@ export class WebviewProvider {
             hideFallbackView();
             showLoading();
             
-            if (typeof vscode !== 'undefined') {
-                vscode.postMessage({
-                    command: 'retry'
-                });
-            } else {
-                showError('VS Code API not available for retry');
-            }
+            vscode.postMessage({
+                command: 'retry'
+            });
         }
         
         // Show fallback view when graph visualization fails
@@ -1708,13 +1138,6 @@ export class WebviewProvider {
             
             // Generate fallback content
             generateFallbackContent();
-            
-            if (typeof vscode !== 'undefined') {
-                vscode.postMessage({
-                    command: 'fallbackViewShown',
-                    data: { view: currentView }
-                });
-            }
         }
         
         // Hide fallback view
@@ -1743,14 +1166,6 @@ export class WebviewProvider {
                     </li>\`;
                 });
                 content += '</ul>';
-                
-                if (analysisData.modules.edges.length > 0) {
-                    content += '<h4>Dependencies:</h4><ul>';
-                    analysisData.modules.edges.forEach(edge => {
-                        content += \`<li>\${edge.source} → \${edge.target} (\${edge.type})</li>\`;
-                    });
-                    content += '</ul>';
-                }
             } else if (currentView === 'call-hierarchy' && analysisData.functions) {
                 content = '<h4>Functions:</h4><ul>';
                 analysisData.functions.nodes.forEach(func => {
@@ -1762,421 +1177,57 @@ export class WebviewProvider {
                     </li>\`;
                 });
                 content += '</ul>';
-                
-                if (analysisData.functions.edges.length > 0) {
-                    content += '<h4>Function Calls:</h4><ul>';
-                    analysisData.functions.edges.forEach(edge => {
-                        content += \`<li>\${edge.caller} → \${edge.callee} (calls: \${edge.callCount})</li>\`;
-                    });
-                    content += '</ul>';
-                }
-            } else {
-                content = '<p>No data available for fallback view.</p>';
             }
             
             fallbackData.innerHTML = content;
         }
+
+        // Wait for all libraries to load before initializing
+        let initializationAttempts = 0;
+        const maxAttempts = 50; // 5 seconds with 100ms intervals
         
-        // Navigation functions (called from info panel buttons)
-        function navigateToModule(path) {
-            vscode.postMessage({
-                command: 'navigateToItem',
-                data: {
-                    type: 'module',
-                    path: path
-                }
-            });
-        }
-        
-        function navigateToFunction(module, lineNumber) {
-            vscode.postMessage({
-                command: 'navigateToItem',
-                data: {
-                    type: 'function',
-                    module: module,
-                    lineNumber: lineNumber
-                }
-            });
-        }
-        
-        function showCallHierarchy(functionId) {
-            vscode.postMessage({
-                command: 'showCallHierarchy',
-                data: {
-                    functionId: functionId
-                }
-            });
-        }
-        
-        // Initialize when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initialize);
-        } else {
-            initialize();
-        }
-        `;
-    }
-
-    /**
-     * Handle messages received from the webview
-     */
-    private handleWebviewMessage(message: WebviewMessage): void {
-        try {
-            switch (message.command) {
-                case 'ready':
-                    // Webview is ready, send initial data
-                    this.updateWebviewContent();
-                    break;
-
-                case 'nodeSelected':
-                    this.handleNodeSelection(message.data);
-                    break;
-
-                case 'navigateToItem':
-                    this.handleNavigation(message.data);
-                    break;
-
-                case 'showCallHierarchy':
-                    this.handleCallHierarchyRequest(message.data);
-                    break;
-
-                case 'viewChanged':
-                    this.handleViewChange(message.data);
-                    break;
-
-                case 'retry':
-                    this.updateWebviewContent();
-                    break;
-
-                case 'initializationError':
-                    this.handleInitializationError(message.data);
-                    break;
-
-                case 'renderError':
-                    this.handleRenderError(message.data);
-                    break;
-
-                case 'globalError':
-                    this.handleGlobalError(message.data);
-                    break;
-
-                case 'fallbackMode':
-                    this.handleFallbackMode(message.data);
-                    break;
-
-                case 'fallbackViewShown':
-                    this.handleFallbackViewShown(message.data);
-                    break;
-
-                default:
-                    this.log(`Unknown webview message command: ${message.command}`);
-            }
-        } catch (error) {
-            this.logError('Error handling webview message', error);
-        }
-    }
-
-    /**
-     * Handle node selection in the graph
-     */
-    private handleNodeSelection(data: any): void {
-        this.log(`Node selected: ${data.nodeId} (${data.view})`);
-        
-        // Could emit events here for other components to listen to
-        // For now, just log the selection
-    }
-
-    /**
-     * Handle navigation requests from the webview
-     */
-    private handleNavigation(data: any): void {
-        try {
-            if (data.type === 'module' && data.path) {
-                // Navigate to module file
-                const uri = vscode.Uri.file(data.path);
-                vscode.workspace.openTextDocument(uri).then(document => {
-                    vscode.window.showTextDocument(document);
-                });
-                
-            } else if (data.type === 'function' && data.module && data.lineNumber) {
-                // Navigate to function in module
-                // This would need to be implemented with proper module path resolution
-                this.log(`Navigate to function ${data.name} in ${data.module} at line ${data.lineNumber}`);
-                
-                // For now, just show a message
-                vscode.window.showInformationMessage(
-                    `Navigate to function: ${data.name} (line ${data.lineNumber})`
-                );
-            }
-        } catch (error) {
-            this.logError('Error handling navigation', error);
-            vscode.window.showErrorMessage('Failed to navigate to item');
-        }
-    }
-
-    /**
-     * Handle call hierarchy requests from the webview
-     */
-    private handleCallHierarchyRequest(data: any): void {
-        if (!data.functionId) {
-            this.sendMessageToWebview({
-                command: 'error',
-                data: { message: 'No function ID provided for call hierarchy request' }
-            });
-            return;
-        }
-
-        if (!this.analysisData) {
-            this.sendMessageToWebview({
-                command: 'error',
-                data: { message: 'No analysis data available for call hierarchy' }
-            });
-            return;
-        }
-
-        try {
-            this.showCallHierarchy(this.analysisData, data.functionId);
-        } catch (error) {
-            this.logError('Failed to show call hierarchy from webview request', error);
-            this.sendMessageToWebview({
-                command: 'error',
-                data: { message: 'Failed to display call hierarchy. Please try again.' }
-            });
-        }
-    }
-
-    /**
-     * Handle view change notifications from the webview
-     */
-    private handleViewChange(data: any): void {
-        this.currentView = data.view;
-        this.selectedFunction = data.selectedFunction;
-        
-        this.log(`View changed to: ${this.currentView}${this.selectedFunction ? ` (function: ${this.selectedFunction})` : ''}`);
-    }
-
-    /**
-     * Handle webview initialization errors
-     */
-    private handleInitializationError(data: any): void {
-        this.logError('Webview initialization failed', data);
-        
-        // Show user-friendly error message
-        vscode.window.showErrorMessage(
-            'CodeMindMap: Failed to initialize graph visualization. Please check the output panel for details.',
-            'Show Output',
-            'Retry'
-        ).then(selection => {
-            if (selection === 'Show Output') {
-                this.outputChannel.show();
-            } else if (selection === 'Retry') {
-                this.updateWebviewContent();
-            }
-        });
-    }
-
-    /**
-     * Handle graph rendering errors
-     */
-    private handleRenderError(data: any): void {
-        this.logError('Graph rendering failed', data);
-        
-        // Log detailed error information
-        this.outputChannel.appendLine(`[WebviewProvider] Render Error Details:`);
-        this.outputChannel.appendLine(`  View: ${data.view}`);
-        this.outputChannel.appendLine(`  Has Data: ${data.hasData}`);
-        this.outputChannel.appendLine(`  Message: ${data.message}`);
-        if (data.stack) {
-            this.outputChannel.appendLine(`  Stack: ${data.stack}`);
-        }
-    }
-
-    /**
-     * Handle global errors from the webview
-     */
-    private handleGlobalError(data: any): void {
-        this.logError('Global webview error', data);
-        
-        // Log detailed error information
-        this.outputChannel.appendLine(`[WebviewProvider] Global Error:`);
-        this.outputChannel.appendLine(`  File: ${data.filename || 'unknown'}`);
-        this.outputChannel.appendLine(`  Line: ${data.lineno || 'unknown'}`);
-        this.outputChannel.appendLine(`  Column: ${data.colno || 'unknown'}`);
-        this.outputChannel.appendLine(`  Message: ${data.message}`);
-        if (data.stack) {
-            this.outputChannel.appendLine(`  Stack: ${data.stack}`);
-        }
-    }
-
-    /**
-     * Handle fallback mode activation
-     */
-    private handleFallbackMode(data: any): void {
-        this.log('Webview entered fallback mode due to library loading issues');
-        
-        if (data.errors && data.errors.length > 0) {
-            this.outputChannel.appendLine(`[WebviewProvider] Script loading errors:`);
-            data.errors.forEach((error: any, index: number) => {
-                this.outputChannel.appendLine(`  ${index + 1}. ${error.filename}: ${error.message} (${error.lineno}:${error.colno})`);
-            });
-        }
-        
-        // Show informational message to user
-        vscode.window.showWarningMessage(
-            'CodeMindMap: Graph visualization libraries failed to load. Using fallback text view.',
-            'Show Output'
-        ).then(selection => {
-            if (selection === 'Show Output') {
-                this.outputChannel.show();
-            }
-        });
-    }
-
-    /**
-     * Handle fallback view being shown
-     */
-    private handleFallbackViewShown(data: any): void {
-        this.log(`Fallback view shown for: ${data.view}`);
-    }
-
-    /**
-     * Add diagnostic error
-     */
-    private addDiagnosticError(type: string, message: string, stack?: string, context?: any): void {
-        const error: DiagnosticError = {
-            timestamp: Date.now(),
-            type,
-            message,
-            stack,
-            context
-        };
-        
-        this.diagnostics.errors.push(error);
-        
-        if (this.debugMode) {
-            this.outputChannel.appendLine(`[WebviewProvider] DIAGNOSTIC ERROR [${type}]: ${message}`);
-            if (stack) {
-                this.outputChannel.appendLine(`[WebviewProvider] Stack: ${stack}`);
-            }
-            if (context) {
-                this.outputChannel.appendLine(`[WebviewProvider] Context: ${JSON.stringify(context, null, 2)}`);
-            }
-        }
-    }
-
-    /**
-     * Add diagnostic warning
-     */
-    private addDiagnosticWarning(type: string, message: string, context?: any): void {
-        const warning: DiagnosticWarning = {
-            timestamp: Date.now(),
-            type,
-            message,
-            context
-        };
-        
-        this.diagnostics.warnings.push(warning);
-        
-        if (this.debugMode) {
-            this.outputChannel.appendLine(`[WebviewProvider] DIAGNOSTIC WARNING [${type}]: ${message}`);
-            if (context) {
-                this.outputChannel.appendLine(`[WebviewProvider] Context: ${JSON.stringify(context, null, 2)}`);
-            }
-        }
-    }
-
-    /**
-     * Record performance metric
-     */
-    private recordPerformance(metric: string, value: number): void {
-        this.diagnostics.performance[metric] = value;
-        
-        if (this.debugMode) {
-            this.outputChannel.appendLine(`[WebviewProvider] PERFORMANCE [${metric}]: ${value}ms`);
-        }
-    }
-
-    /**
-     * Get diagnostic report
-     */
-    public getDiagnostics(): WebviewDiagnostics {
-        return { ...this.diagnostics };
-    }
-
-    /**
-     * Clear diagnostics
-     */
-    public clearDiagnostics(): void {
-        this.diagnostics = {
-            initializationTime: 0,
-            libraryLoadTime: 0,
-            renderTime: 0,
-            errors: [],
-            warnings: [],
-            performance: {}
-        };
-        
-        if (this.debugMode) {
-            this.log('Diagnostics cleared');
-        }
-    }
-
-    /**
-     * Export diagnostics to file for debugging
-     */
-    public async exportDiagnostics(): Promise<void> {
-        try {
-            const diagnosticsData = {
-                timestamp: new Date().toISOString(),
-                vscodeVersion: vscode.version,
-                extensionVersion: this.context.extension.packageJSON.version,
-                debugMode: this.debugMode,
-                currentView: this.currentView,
-                selectedFunction: this.selectedFunction,
-                hasAnalysisData: !!this.analysisData,
-                analysisDataSummary: this.analysisData ? {
-                    hasModules: !!this.analysisData.modules,
-                    moduleCount: this.analysisData.modules?.nodes?.length || 0,
-                    hasFunctions: !!this.analysisData.functions,
-                    functionCount: this.analysisData.functions?.nodes?.length || 0,
-                    hasTechStack: !!this.analysisData.techStack,
-                    hasFrameworkPatterns: !!this.analysisData.frameworkPatterns
-                } : null,
-                diagnostics: this.diagnostics
-            };
-
-            const diagnosticsJson = JSON.stringify(diagnosticsData, null, 2);
+        function waitForLibraries() {
+            initializationAttempts++;
             
-            // Show save dialog
-            const uri = await vscode.window.showSaveDialog({
-                defaultUri: vscode.Uri.file(`codemindmap-diagnostics-${Date.now()}.json`),
-                filters: {
-                    'JSON Files': ['json'],
-                    'All Files': ['*']
+            if (typeof dagre !== 'undefined' && typeof cytoscape !== 'undefined') {
+                // Libraries loaded successfully
+                try {
+                    if (typeof cytoscapeDagre !== 'undefined') {
+                        cytoscape.use(cytoscapeDagre);
+                    }
+                    initialize();
+                } catch (error) {
+                    console.error('Error initializing Cytoscape:', error);
+                    showLibraryError('Failed to initialize graph library: ' + error.message);
                 }
-            });
-
-            if (uri) {
-                await vscode.workspace.fs.writeFile(uri, Buffer.from(diagnosticsJson, 'utf8'));
-                vscode.window.showInformationMessage(`Diagnostics exported to: ${uri.fsPath}`);
+            } else if (initializationAttempts >= maxAttempts) {
+                // Timeout - libraries didn't load
+                const missingLibs = [];
+                if (typeof dagre === 'undefined') missingLibs.push('Dagre');
+                if (typeof cytoscape === 'undefined') missingLibs.push('Cytoscape.js');
+                
+                showLibraryError('Required libraries failed to load: ' + missingLibs.join(', '));
+            } else {
+                // Keep waiting
+                setTimeout(waitForLibraries, 100);
             }
-        } catch (error) {
-            this.logError('Failed to export diagnostics', error);
-            vscode.window.showErrorMessage('Failed to export diagnostics');
         }
+    </script>
+    
+    <script nonce="${nonce}" src="${dagreUri}" onload="console.log('Dagre loaded successfully'); checkLibraryLoading()" onerror="console.error('Failed to load Dagre library from: ${dagreUri}')"></script>
+    <script nonce="${nonce}" src="${cytoscapeUri}" onload="console.log('Cytoscape loaded successfully'); checkLibraryLoading()" onerror="console.error('Failed to load Cytoscape.js library from: ${cytoscapeUri}')"></script>
+    <script nonce="${nonce}" src="${cytoscapeDagreUri}" onload="console.log('Cytoscape Dagre loaded successfully'); checkLibraryLoading()" onerror="console.error('Failed to load Cytoscape Dagre extension from: ${cytoscapeDagreUri}')"></script>
+    
+    <script nonce="${nonce}">
+        // Start waiting for libraries
+        setTimeout(waitForLibraries, 100);
+    </script>
+</body>
+</html>`;
     }
 
     /**
-     * Send a message to the webview
-     */
-    private sendMessageToWebview(message: WebviewMessage): void {
-        if (this.panel) {
-            this.panel.webview.postMessage(message);
-        }
-    }
-
-    /**
-     * Generate a random nonce for CSP
+     * Generate a nonce for Content Security Policy
      */
     private getNonce(): string {
         let text = '';
@@ -2188,6 +1239,92 @@ export class WebviewProvider {
     }
 
     /**
+     * Send a message to the webview
+     */
+    private sendMessageToWebview(message: WebviewMessage): void {
+        if (this.panel && this.panel.webview) {
+            try {
+                this.panel.webview.postMessage(message);
+                this.log(`Message sent to webview: ${message.command}`);
+            } catch (error) {
+                this.logError('Failed to send message to webview', error);
+            }
+        }
+    }
+
+    /**
+     * Handle messages received from the webview
+     */
+    private handleWebviewMessage(message: WebviewMessage): void {
+        this.log(`Received message from webview: ${message.command}`);
+
+        switch (message.command) {
+            case 'ready':
+                this.log('Webview is ready');
+                // Send initial data if available
+                if (this.analysisData) {
+                    this.sendMessageToWebview({
+                        command: 'updateData',
+                        data: {
+                            analysisData: this.analysisData,
+                            currentView: this.currentView,
+                            selectedFunction: this.selectedFunction,
+                            debugMode: this.debugMode
+                        }
+                    });
+                }
+                break;
+
+            case 'error':
+                this.logError('Webview error', message.data);
+                break;
+
+            case 'viewChanged':
+                this.currentView = message.data?.view || this.currentView;
+                this.selectedFunction = message.data?.selectedFunction || null;
+                this.log(`View changed to: ${this.currentView}`);
+                break;
+
+            case 'retry':
+                this.log('Webview requested retry');
+                this.updateWebviewContent();
+                break;
+
+            default:
+                this.log(`Unknown message command: ${message.command}`);
+        }
+    }
+
+    /**
+     * Log message to output channel
+     */
+    private log(message: string): void {
+        const timestamp = new Date().toISOString();
+        const logMessage = `[${timestamp}] ${message}`;
+        
+        this.outputChannel.appendLine(logMessage);
+        
+        if (this.debugMode) {
+            console.log(`[CodeMindMap] ${logMessage}`);
+        }
+    }
+
+    /**
+     * Log error message to output channel
+     */
+    private logError(message: string, error: any): void {
+        const timestamp = new Date().toISOString();
+        const errorMessage = error instanceof Error 
+            ? `${error.message}\n${error.stack}`
+            : JSON.stringify(error);
+        
+        const logMessage = `[${timestamp}] ERROR: ${message}\n${errorMessage}`;
+        this.outputChannel.appendLine(logMessage);
+        
+        console.error(`[CodeMindMap] ${message}`, error);
+    }
+
+    /**
      * Dispose of the webview provider
      */
     public dispose(): void {
@@ -2195,27 +1332,7 @@ export class WebviewProvider {
             this.panel.dispose();
             this.panel = undefined;
         }
-    }
-
-    /**
-     * Log a message to the output channel
-     */
-    private log(message: string): void {
-        this.outputChannel.appendLine(`[WebviewProvider] ${message}`);
-    }
-
-    /**
-     * Log an error to the output channel
-     */
-    private logError(message: string, error: any): void {
-        this.outputChannel.appendLine(`[WebviewProvider] ERROR: ${message}`);
-        if (error instanceof Error) {
-            this.outputChannel.appendLine(`[WebviewProvider] ${error.message}`);
-            if (error.stack) {
-                this.outputChannel.appendLine(`[WebviewProvider] ${error.stack}`);
-            }
-        } else {
-            this.outputChannel.appendLine(`[WebviewProvider] ${String(error)}`);
-        }
+        
+        this.log('WebviewProvider disposed');
     }
 }

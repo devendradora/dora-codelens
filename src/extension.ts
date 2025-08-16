@@ -329,11 +329,40 @@ export class CodeMindMapExtension {
             // Store the result
             this.lastAnalysisResult = result;
 
-            if (result.success) {
-                this.log(`Analysis completed successfully in ${result.executionTime}ms`);
+            // Always update UI components if we have valid data, regardless of success flag
+            this.log(`Analysis result received - success: ${result.success}, hasData: ${!!result.data}`);
 
+            if (result.data) {
+                this.log(`Analysis result data structure: ${JSON.stringify({
+                    hasData: !!result.data,
+                    hasModules: !!(result.data && result.data.modules),
+                    moduleNodes: result.data && result.data.modules ? result.data.modules.nodes?.length || 0 : 0,
+                    hasFunctions: !!(result.data && result.data.functions),
+                    functionNodes: result.data && result.data.functions ? result.data.functions.nodes?.length || 0 : 0
+                })}`);
+            } else {
+                this.log('No data in analysis result');
+            }
+
+            const hasValidData = result.data && (
+                (result.data.modules && result.data.modules.nodes && result.data.modules.nodes.length > 0) ||
+                (result.data.functions && result.data.functions.nodes && result.data.functions.nodes.length > 0)
+            );
+
+            this.log(`hasValidData: ${hasValidData}`);
+
+            if (hasValidData) {
                 // Update sidebar with analysis data
                 this.updateSidebar(result);
+            } else {
+                // Clear sidebar, CodeLens, and webview if no valid data
+                this.sidebarProvider.updateAnalysisData(null);
+                this.codeLensProvider.updateAnalysisData(null);
+                this.webviewProvider.updateAnalysisData(null);
+            }
+
+            if (result.success) {
+                this.log(`Analysis completed successfully in ${result.executionTime}ms`);
 
                 // Show success message with options
                 const action = await vscode.window.showInformationMessage(
@@ -348,13 +377,30 @@ export class CodeMindMapExtension {
                     this.outputChannel.show();
                 }
             } else {
-                // Handle analysis errors
+                // Handle analysis errors but still show graph if we have data
                 this.handleAnalysisErrors(result);
 
-                // Clear sidebar, CodeLens, and webview on error
-                this.sidebarProvider.updateAnalysisData(null);
-                this.codeLensProvider.updateAnalysisData(null);
-                this.webviewProvider.updateAnalysisData(null);
+                if (hasValidData) {
+                    this.log(`Analysis completed with errors but produced valid data in ${result.executionTime}ms`);
+
+                    // Show warning message with options to view results
+                    const action = await vscode.window.showWarningMessage(
+                        'Project analysis completed with errors, but data is available.',
+                        'Show Module Graph',
+                        'View Output',
+                        'View Errors'
+                    );
+
+                    if (action === 'Show Module Graph') {
+                        this.showModuleGraph();
+                    } else if (action === 'View Output') {
+                        this.outputChannel.show();
+                    } else if (action === 'View Errors') {
+                        this.outputChannel.show();
+                    }
+                } else {
+                    this.log(`Analysis failed - no valid data produced in ${result.executionTime}ms`);
+                }
             }
 
         } catch (error) {
@@ -534,12 +580,30 @@ For more help, check the extension documentation or report an issue.`;
      * Show module graph visualization
      */
     private showModuleGraph(): void {
-        if (!this.lastAnalysisResult || !this.lastAnalysisResult.success) {
+        if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
             vscode.window.showWarningMessage(
                 'No analysis data available. Please run analysis first.',
                 'Run Analysis'
             ).then(action => {
                 if (action === 'Run Analysis') {
+                    this.analyzeProject();
+                }
+            });
+            return;
+        }
+
+        // Check if we have valid data for visualization
+        const hasValidData = this.lastAnalysisResult.data && (
+            (this.lastAnalysisResult.data.modules && this.lastAnalysisResult.data.modules.nodes && this.lastAnalysisResult.data.modules.nodes.length > 0) ||
+            (this.lastAnalysisResult.data.functions && this.lastAnalysisResult.data.functions.nodes && this.lastAnalysisResult.data.functions.nodes.length > 0)
+        );
+
+        if (!hasValidData) {
+            vscode.window.showWarningMessage(
+                'No valid data available for visualization. The analysis may have failed or found no modules/functions.',
+                'Run Analysis Again'
+            ).then(action => {
+                if (action === 'Run Analysis Again') {
                     this.analyzeProject();
                 }
             });
@@ -592,7 +656,7 @@ For more help, check the extension documentation or report an issue.`;
      * Show call hierarchy for function at cursor or selection
      */
     private showCallHierarchy(uri?: vscode.Uri, position?: vscode.Position): void {
-        if (!this.lastAnalysisResult || !this.lastAnalysisResult.success) {
+        if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
             vscode.window.showWarningMessage(
                 'No analysis data available. Please run analysis first.',
                 'Run Analysis'
@@ -992,7 +1056,7 @@ Complexity Guidelines:
     private showGraphViewFromContext(uri?: vscode.Uri, position?: vscode.Position): void {
         this.log('Graph View requested from context menu');
 
-        if (!this.lastAnalysisResult || !this.lastAnalysisResult.success) {
+        if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
             vscode.window.showWarningMessage(
                 'No analysis data available. Please run analysis first.',
                 'Run Analysis'
@@ -1000,7 +1064,7 @@ Complexity Guidelines:
                 if (action === 'Run Analysis') {
                     this.analyzeProject().then(() => {
                         // After analysis completes, show the graph view
-                        if (this.lastAnalysisResult && this.lastAnalysisResult.success) {
+                        if (this.lastAnalysisResult && this.lastAnalysisResult.data) {
                             this.showModuleGraph();
                         }
                     });
@@ -1019,7 +1083,7 @@ Complexity Guidelines:
     private showJsonViewFromContext(uri?: vscode.Uri, position?: vscode.Position): void {
         this.log('JSON View requested from context menu');
 
-        if (!this.lastAnalysisResult || !this.lastAnalysisResult.success) {
+        if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
             vscode.window.showWarningMessage(
                 'No analysis data available. Please run analysis first.',
                 'Run Analysis'
@@ -1027,7 +1091,7 @@ Complexity Guidelines:
                 if (action === 'Run Analysis') {
                     this.analyzeProject().then(() => {
                         // After analysis completes, show the JSON view
-                        if (this.lastAnalysisResult && this.lastAnalysisResult.success) {
+                        if (this.lastAnalysisResult && this.lastAnalysisResult.data) {
                             this.showJsonView();
                         }
                     });
@@ -1044,7 +1108,7 @@ Complexity Guidelines:
      * Show raw analysis data in JSON format
      */
     private async showJsonView(): Promise<void> {
-        if (!this.lastAnalysisResult || !this.lastAnalysisResult.success) {
+        if (!this.lastAnalysisResult || !this.lastAnalysisResult.data) {
             vscode.window.showErrorMessage('No analysis data available');
             return;
         }
@@ -1366,7 +1430,7 @@ Complexity Guidelines:
      * Update sidebar with analysis data
      */
     private updateSidebar(result: AnalysisResult): void {
-        if (result.success && result.data) {
+        if (result.data) {
             const analysisData: AnalysisData = {
                 tech_stack: result.data.tech_stack,
                 modules: result.data.modules,

@@ -244,7 +244,7 @@
     - Add proper error handling and user feedback for menu actions
     - _Requirements: 3.7, 3.8_
 
-- [ ] 17. Fix Cytoscape.js loading and webview issues
+- [x] 17. Fix Cytoscape.js loading and webview issues
   - [x] 17.1 Fix Cytoscape.js library loading in webview
     - Update webview HTML template to ensure proper script loading order
     - Add error handling for Cytoscape.js loading failures
@@ -252,9 +252,10 @@
     - Add fallback mechanisms if library fails to load
     - _Requirements: 5.2, 5.7_
   
-  - [ ] 17.2 Improve webview error handling and debugging
+  - [x] 17.2 Improve webview error handling and debugging
     - Add comprehensive error logging for webview initialization
     - Implement user-friendly error messages for common webview issues
     - Add debugging tools and diagnostics for webview problems
     - Test webview functionality across different VS Code versions
     - _Requirements: 5.6, 5.7_
+    

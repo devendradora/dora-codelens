@@ -322,11 +322,17 @@ export class AnalyzerRunner {
                 clearTimeout(timeoutId);
                 this.currentProcess = null;
                 
-                if (code === 0) {
+                if (code === 0 || (code === 1 && stdout.trim())) {
+                    // Accept exit code 1 if there's valid JSON output (analyzer may report errors but still produce results)
                     try {
                         // Validate and parse JSON output
                         const result = this.parseAndValidateAnalyzerOutput(stdout);
                         progress?.report({ message: 'Analysis complete', increment: 100 });
+                        
+                        if (code === 1) {
+                            this.log(`Analyzer completed with warnings/errors but produced valid output`);
+                        }
+                        
                         resolve(result);
                     } catch (parseError) {
                         this.logError('Failed to parse analyzer output', parseError);
