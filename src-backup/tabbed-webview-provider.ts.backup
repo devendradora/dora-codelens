@@ -1,0 +1,2466 @@
+import * as vscode from "vscode";
+import {
+  WebviewAnalysisData,
+  convertAnalysisDataForWebview,
+  convertCurrentFileAnalysisData,
+  convertGitAnalyticsData,
+  generateNonce,
+  getResourceUris,
+} from "./core/webview-utils";
+import { DedicatedAnalysisViewManager } from "./core/dedicated-analysis-view-manager";
+import {
+  DedicatedAnalysisView,
+  AnalysisViewState,
+  EnhancedGraphData,
+} from "./types/dedicated-analysis-types";
+
+export class TabbedWebviewProvider {
+  private panel?: vscode.WebviewPanel;
+  private context: vscode.ExtensionContext;
+  private outputChannel: vscode.OutputChannel;
+  private analysisData: any = null;
+  private currentTab = "techstack"; // Default to Tech Stack for code analysis
+  private webviewReady = false;
+  private messageQueue: any[] = [];
+  private dedicatedViewManager: DedicatedAnalysisViewManager;
+  private performanceOptimizations = {
+    virtualization: true,
+    lazyLoading: true,
+    memoryManagement: true,
+    maxNodes: 1000,
+    maxEdges: 2000,
+  };
+
+  constructor(
+    context: vscode.ExtensionContext,
+    outputChannel: vscode.OutputChannel
+  ) {
+    this.context = context;
+    this.outputChannel = outputChannel;
+    this.dedicatedViewManager = new DedicatedAnalysisViewManager(
+      context,
+      outputChannel
+    );
+
+    // Set panel title
+    if (this.panel) {
+      this.panel.title = "DoraCodeBirdView Analysis";
+    }
+
+    this.writeToLog(
+      "TabbedWebviewProvider constructed with dedicated view manager",
+      "INFO"
+    );
+  }
+
+  public showFullAnalysis(analysisData: any) {
+    this.writeToLog("Starting full analysis view", "INFO");
+
+    try {
+      // Immediately create a safe data structure to avoid any circular reference issues
+      this.analysisData = this.createSafeDataStructure(analysisData);
+
+      const safeLogData = {
+        hasData: !!this.analysisData,
+        keys: this.analysisData ? Object.keys(this.analysisData).slice(0, 10) : [],
+        hasTechStack: !!this.analysisData?.techStack,
+        hasTech_stack: !!this.analysisData?.tech_stack,
+        dataType: typeof this.analysisData,
+      };
+      this.writeToLog("Created safe analysis data structure", "DEBUG", safeLogData);
+    } catch (error) {
+      this.writeToLog("Failed to create safe analysis data", "ERROR", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Create minimal fallback data
+      this.analysisData = {
+        isEmpty: true,
+        error: "Failed to process analysis data",
+        message: "Analysis data could not be processed due to circular references"
+      };
+    }
+
+    this.currentTab = "techstack"; // Full Code Analysis starts with Tech Stack
+    this.writeToLog(`Setting initial tab: ${this.currentTab}`, "INFO");
+    this.createOrShowWebview();
+    this.postUpdateData();
+  }
+
+  public showTab(tabId: string, analysisData?: any) {
+    if (analysisData) {
+      this.analysisData = this.createSafeDataStructure(analysisData);
+    }
+    this.currentTab = tabId;
+    this.log(
+      `Switching to tab: ${tabId}${analysisData ? " with new data" : ""}`
+    );
+    this.createOrShowWebview();
+    this.postUpdateData();
+  }
+
+  public showDBSchema(data: any) {
+    this.log("Showing DB Schema view");
+    this.analysisData = data;
+    this.currentTab = "dbschema"; // Database Schema starts with ER Diagram
+    this.createOrShowWebview();
+    this.postUpdateData();
+  }
+
+  /**
+   * Show Database Schema ER Diagram
+   */
+  public showDatabaseSchemaGraph(data: any) {
+    this.log("Showing Database Schema ER Diagram");
+    this.analysisData = data;
+    this.currentTab = "dbschema";
+    this.createOrShowWebview();
+    this.postUpdateData();
+  }
+
+  /**
+   * Show Database Schema Raw SQL
+   */
+  public showDatabaseSchemaSQL(data: any) {
+    this.log("Showing Database Schema Raw SQL");
+    this.analysisData = data;
+    this.currentTab = "dbschemasql";
+    this.createOrShowWebview();
+    this.postUpdateData();
+  }
+
+  public switchToTab(tabId: string, view?: string) {
+    const newTab = view ? (view === "json" ? `${tabId}json` : tabId) : tabId;
+
+    // Only switch if it's a different tab
+    if (this.currentTab !== newTab) {
+      this.log(`Switching view from ${this.currentTab} to: ${newTab}`);
+      this.currentTab = newTab;
+      if (this.panel) {
+        this.postUpdateData();
+      }
+    }
+  }
+
+  public showTabLoadingState(tabId: string, message?: string) {
+    this.currentTab = tabId;
+    const loadingMessage = message || "Loading...";
+    this.log(`Setting loading state for tab ${tabId}: ${loadingMessage}`);
+    this.enqueueMessage({
+      command: "updateLoading",
+      tabId,
+      message: loadingMessage,
+    });
+  }
+
+  public showTabErrorState(tabId: string, error: string, showRetry = false) {
+    this.currentTab = tabId;
+    this.enqueueMessage({
+      command: "updateError",
+      tabId,
+      error,
+      showRetry,
+    });
+  }
+
+  public showCurrentFileAnalysis(
+    analysisData: any,
+    view: "graph" | "json" = "graph"
+  ) {
+    // Convert the analysis data to the proper webview format
+    this.analysisData = convertCurrentFileAnalysisData(analysisData);
+    // Current File Analysis uses same 3 tabs as Full Code Analysis
+    this.currentTab = view === "json" ? "codegraphjson" : "codegraph";
+    this.log(`Showing current file analysis in ${this.currentTab} view`);
+    this.createOrShowWebview();
+    this.postUpdateData();
+  }
+
+  public showTechStackGraph(analysisData: any): void {
+    this.log("Showing tech stack graph in tabbed view");
+    // Convert the analysis data to the proper webview format
+    this.analysisData = convertAnalysisDataForWebview(analysisData);
+    this.currentTab = "techstack";
+    this.createOrShowWebview();
+    this.postUpdateData();
+  }
+
+  public showModuleGraph(analysisData: WebviewAnalysisData): void {
+    this.log("Showing module graph in tabbed view");
+    // Data is already in WebviewAnalysisData format, no conversion needed
+    this.analysisData = analysisData;
+    this.currentTab = "codegraph";
+    this.createOrShowWebview();
+    this.postUpdateData();
+  }
+
+  public showCallHierarchy(
+    analysisData: WebviewAnalysisData,
+    functionName: string
+  ): void {
+    this.log(`Showing call hierarchy for function: ${functionName}`);
+    this.analysisData = { ...analysisData, selectedFunction: functionName };
+    this.currentTab = "codegraph";
+    this.createOrShowWebview();
+    this.postUpdateData();
+  }
+
+  public showGitAnalytics(analysisData: any, analysisType: string): void {
+    this.log(`Showing Git analytics for ${analysisType}`);
+    const webviewData = convertGitAnalyticsData(analysisData, analysisType);
+    this.analysisData = webviewData;
+
+    // Set appropriate tab based on analysis type
+    switch (analysisType) {
+      case "contributors":
+      case "author_statistics":
+        this.currentTab = "gitcontributors";
+        break;
+      case "commits":
+      case "commit_timeline":
+        this.currentTab = "gitcommits";
+        break;
+      case "hotspots":
+      case "file_changes":
+        this.currentTab = "githotspots";
+        break;
+      default:
+        this.currentTab = "gitanalytics"; // Overview tab
+    }
+
+    this.createOrShowWebview();
+    this.postUpdateData();
+  }
+
+  public updateAnalysisData(analysisData: WebviewAnalysisData | null): void {
+    this.analysisData = analysisData;
+    if (this.panel && this.panel.visible) {
+      this.postUpdateData();
+    }
+  }
+
+  /**
+   * Show dedicated analysis view
+   */
+  public async showDedicatedAnalysisView(
+    viewType: "fullCode" | "currentFile" | "gitAnalytics",
+    analysisData?: any
+  ): Promise<void> {
+    this.log(`Showing dedicated analysis view: ${viewType}`);
+
+    try {
+      // Update view data if provided
+      if (analysisData) {
+        await this.dedicatedViewManager.updateViewData(viewType, analysisData);
+      }
+
+      // Set active view
+      this.dedicatedViewManager.setActiveView(viewType);
+
+      // Set appropriate initial tab based on view type
+      switch (viewType) {
+        case "fullCode":
+        case "currentFile":
+          this.currentTab = "techstack"; // Code analysis starts with Tech Stack
+          break;
+        case "gitAnalytics":
+          this.currentTab = "gitanalytics"; // Git analytics starts with Overview
+          break;
+        default:
+          this.currentTab = viewType;
+      }
+
+      // Create or show webview
+      this.createOrShowWebview();
+      this.postUpdateData();
+
+      this.log(`Dedicated analysis view ${viewType} displayed successfully`);
+    } catch (error) {
+      this.logError(
+        `Failed to show dedicated analysis view ${viewType}`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Update dedicated view state
+   */
+  public updateDedicatedViewState(
+    viewType: string,
+    stateUpdate: Partial<AnalysisViewState>
+  ): void {
+    this.dedicatedViewManager.updateViewState(viewType, stateUpdate);
+
+    // If this is the current view, refresh the display
+    if (this.currentTab === viewType && this.panel && this.panel.visible) {
+      this.postUpdateData();
+    }
+  }
+
+  /**
+   * Handle dedicated view interaction
+   */
+  public async handleDedicatedViewInteraction(
+    viewType: string,
+    interaction: any
+  ): Promise<void> {
+    try {
+      await this.dedicatedViewManager.handleViewInteraction(
+        viewType,
+        interaction
+      );
+    } catch (error) {
+      this.logError(`Failed to handle interaction for view ${viewType}`, error);
+    }
+  }
+
+  /**
+   * Get available dedicated views
+   */
+  public getDedicatedViews(): DedicatedAnalysisView[] {
+    return this.dedicatedViewManager.getViews();
+  }
+
+  private createOrShowWebview() {
+    const column =
+      vscode.window.activeTextEditor?.viewColumn || vscode.ViewColumn.One;
+    if (this.panel) {
+      try {
+        this.panel.reveal(column, false);
+        this.log(`Revealing existing webview panel in column ${column}`);
+      } catch (e) {
+        this.logError("Failed to reveal panel", e as Error);
+      }
+      return;
+    }
+
+    this.log("Creating new webview panel");
+    this.panel = vscode.window.createWebviewPanel(
+      "doracodebirdTabbedView",
+      "DoraCodeBirdView",
+      column,
+      { enableScripts: true, retainContextWhenHidden: true }
+    );
+
+    this.panel.onDidDispose(
+      () => {
+        this.panel = undefined;
+        this.webviewReady = false;
+        this.log("Panel disposed");
+      },
+      null,
+      this.context.subscriptions
+    );
+
+    this.panel.onDidChangeViewState(
+      (e) => {
+        if (e.webviewPanel.visible) {
+          this.log(`Panel became visible, current tab: ${this.currentTab}`);
+          this.flushMessageQueue();
+        }
+      },
+      null,
+      this.context.subscriptions
+    );
+
+    this.panel.webview.onDidReceiveMessage(
+      (msg) => this.handleMessage(msg),
+      null,
+      this.context.subscriptions
+    );
+    this.panel.webview.html = this.getHtml();
+
+    try {
+      this.panel.reveal(column, false);
+    } catch (e) {
+      this.logError("Failed to reveal new panel", e as Error);
+    }
+  }
+
+  private handleMessage(msg: any) {
+    if (!msg || !msg.command) {
+      this.writeToLog("Received invalid message", "WARN", { msg });
+      return;
+    }
+
+    try {
+      switch (msg.command) {
+        case "ready":
+          this.webviewReady = true;
+          this.writeToLog("Webview initialized and ready", "INFO", {
+            currentTab: this.currentTab,
+            queueLength: this.messageQueue.length,
+          });
+          this.flushMessageQueue();
+          // Also send initial data if we have it
+          if (this.analysisData) {
+            this.writeToLog("Sending initial data after webview ready", "INFO");
+            this.postUpdateData();
+          }
+          break;
+
+        case "requestData":
+          if (msg.tabId) {
+            this.currentTab = msg.tabId;
+          }
+          this.writeToLog("Data request received", "INFO", {
+            currentTab: this.currentTab,
+            dataAvailable: !!this.analysisData,
+          });
+          this.postUpdateData();
+          break;
+
+        case "dedicatedViewInteraction":
+          this.handleDedicatedViewMessage(msg);
+          break;
+
+        case "updateViewState":
+          this.handleViewStateUpdate(msg);
+          break;
+
+        case "performanceOptimization":
+          this.handlePerformanceOptimization(msg);
+          break;
+
+        case "errorReport":
+          this.handleErrorReport(msg);
+          break;
+
+        case "log":
+          this.writeToLog(`Webview message: ${msg.text || ""}`, "DEBUG", {
+            currentTab: this.currentTab,
+            messageType: msg.type || "unknown",
+          });
+          break;
+
+        default:
+          this.writeToLog("Unknown command received", "WARN", {
+            command: msg.command,
+            currentTab: this.currentTab,
+          });
+      }
+    } catch (error) {
+      this.handleWebviewError("Message handling failed", error as Error, msg);
+    }
+  }
+
+  /**
+   * Handle dedicated view specific messages
+   */
+  private async handleDedicatedViewMessage(msg: any): Promise<void> {
+    try {
+      const { viewType, interaction } = msg;
+      if (!viewType || !interaction) {
+        throw new Error("Invalid dedicated view message format");
+      }
+
+      await this.dedicatedViewManager.handleViewInteraction(
+        viewType,
+        interaction
+      );
+
+      // Send acknowledgment back to webview
+      this.enqueueMessage({
+        command: "interactionHandled",
+        viewType,
+        success: true,
+      });
+    } catch (error) {
+      this.handleWebviewError(
+        `Dedicated view interaction failed for ${msg.viewType}`,
+        error as Error,
+        msg
+      );
+    }
+  }
+
+  /**
+   * Handle view state updates
+   */
+  private handleViewStateUpdate(msg: any): void {
+    try {
+      const { viewType, stateUpdate } = msg;
+      if (!viewType || !stateUpdate) {
+        throw new Error("Invalid view state update message format");
+      }
+
+      this.dedicatedViewManager.updateViewState(viewType, stateUpdate);
+
+      this.writeToLog(`View state updated for ${viewType}`, "INFO", {
+        stateUpdate,
+      });
+    } catch (error) {
+      this.handleWebviewError(
+        `View state update failed for ${msg.viewType}`,
+        error as Error,
+        msg
+      );
+    }
+  }
+
+  /**
+   * Handle performance optimization requests
+   */
+  private handlePerformanceOptimization(msg: any): void {
+    try {
+      const { optimization, enabled } = msg;
+      if (optimization && typeof enabled === "boolean") {
+        if (optimization in this.performanceOptimizations) {
+          (this.performanceOptimizations as any)[optimization] = enabled;
+          this.writeToLog(
+            `Performance optimization ${optimization} ${
+              enabled ? "enabled" : "disabled"
+            }`,
+            "INFO"
+          );
+        }
+      }
+    } catch (error) {
+      this.handleWebviewError(
+        "Performance optimization update failed",
+        error as Error,
+        msg
+      );
+    }
+  }
+
+  /**
+   * Handle error reports from webview
+   */
+  private handleErrorReport(msg: any): void {
+    const { error, context, stack } = msg;
+    this.writeToLog(`Webview error reported: ${error}`, "ERROR", {
+      context,
+      stack,
+    });
+
+    // Show user-friendly error message
+    vscode.window
+      .showErrorMessage(
+        `Analysis view error: ${error}`,
+        "Retry",
+        "Report Issue"
+      )
+      .then((choice) => {
+        if (choice === "Retry") {
+          this.postUpdateData();
+        } else if (choice === "Report Issue") {
+          // Open issue reporting
+          vscode.env.openExternal(
+            vscode.Uri.parse("https://github.com/your-repo/issues/new")
+          );
+        }
+      });
+  }
+
+  /**
+   * Handle webview errors with fallback options
+   */
+  private handleWebviewError(
+    message: string,
+    error: Error,
+    context?: any
+  ): void {
+    this.writeToLog(message, "ERROR", {
+      error: error.message,
+      stack: error.stack,
+      context,
+    });
+
+    // Send error state to webview
+    this.enqueueMessage({
+      command: "showError",
+      error: {
+        message: error.message,
+        type: "webview_error",
+        recoverable: true,
+        fallbackAvailable: true,
+      },
+    });
+  }
+
+  private enqueueMessage(m: any) {
+    this.messageQueue.push(m);
+    this.writeToLog("Message queued", "DEBUG", {
+      command: m.command,
+      targetTab: m.tabId || this.currentTab,
+      queueLength: this.messageQueue.length,
+    });
+    this.flushMessageQueue();
+  }
+
+  private flushMessageQueue() {
+    if (!this.panel) {
+      this.writeToLog("Queue flush aborted - no panel exists", "WARN");
+      return;
+    }
+
+    if (!this.webviewReady) {
+      this.writeToLog("Queue flush deferred - webview not ready", "DEBUG", {
+        currentTab: this.currentTab,
+        queueLength: this.messageQueue.length,
+      });
+      return;
+    }
+
+    if (!this.panel.visible) {
+      this.writeToLog("Queue flush deferred - panel not visible", "DEBUG", {
+        currentTab: this.currentTab,
+        queueLength: this.messageQueue.length,
+      });
+      return;
+    }
+
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    while (this.messageQueue.length > 0 && retryCount < maxRetries) {
+      const m = this.messageQueue.shift();
+      try {
+        // Ensure the message is serializable before sending
+        const serializedMessage = this.ensureSerializable(m);
+        this.panel.webview.postMessage(serializedMessage);
+
+        this.writeToLog("Message sent successfully", "INFO", {
+          command: m.command,
+          targetTab: m.tabId || this.currentTab,
+          remainingQueue: this.messageQueue.length,
+          messageType: typeof serializedMessage,
+        });
+      } catch (err) {
+        this.writeToLog("Failed to post message", "ERROR", {
+          error: err,
+          command: m.command,
+          targetTab: m.tabId || this.currentTab,
+          retryCount,
+        });
+
+        retryCount++;
+        if (retryCount < maxRetries) {
+          // Put the message back and try again
+          this.messageQueue.unshift(m);
+        } else {
+          // Give up on this message and continue with others
+          this.writeToLog("Giving up on message after max retries", "ERROR", {
+            command: m.command,
+            maxRetries,
+          });
+        }
+        break;
+      }
+    }
+  }
+
+  /**
+   * Ensure a message is serializable by removing circular references
+   */
+  private ensureSerializable(message: any): any {
+    try {
+      // Test if it's already serializable
+      JSON.stringify(message);
+      return message;
+    } catch (error) {
+      // If not, create a safe version
+      return this.safeDeepCopy(message);
+    }
+  }
+
+  private async postUpdateData() {
+    this.writeToLog("Preparing data update", "INFO", {
+      currentTab: this.currentTab,
+      hasData: !!this.analysisData,
+    });
+
+    try {
+      let dataToSend = this.analysisData;
+
+      // If no analysis data, send empty structure to allow webview to show empty state
+      if (!dataToSend) {
+        dataToSend = {
+          isEmpty: true,
+          message: "No analysis data available",
+        };
+      }
+
+      // Check if this is a dedicated view
+      const dedicatedView = this.dedicatedViewManager.getView(this.currentTab);
+      if (dedicatedView) {
+        try {
+          // Render dedicated view content
+          const renderedContent = await this.dedicatedViewManager.renderView(
+            this.currentTab
+          );
+          dataToSend = {
+            ...dataToSend,
+            dedicatedViewContent: renderedContent,
+            viewType: this.currentTab,
+            isDedicatedView: true,
+          };
+        } catch (error) {
+          this.writeToLog("Failed to render dedicated view", "ERROR", {
+            error,
+          });
+          // Continue with regular data
+        }
+      }
+
+      // Apply performance optimizations only if we have real data
+      if (
+        this.performanceOptimizations.memoryManagement &&
+        !dataToSend.isEmpty
+      ) {
+        dataToSend = this.optimizeDataForTransfer(dataToSend);
+      }
+
+      // Final safety check - ensure data is serializable
+      try {
+        JSON.stringify(dataToSend);
+      } catch (error) {
+        this.writeToLog(
+          "Data still not serializable after optimization, creating safe version",
+          "WARN"
+        );
+        dataToSend = this.createSafeDataStructure(dataToSend);
+      }
+
+      const messageData = {
+        command: "updateData",
+        data: {
+          analysisData: dataToSend,
+          currentTab: this.currentTab,
+          performanceOptimizations: this.performanceOptimizations,
+        },
+      };
+
+      // Safe logging without trying to serialize the entire message
+      this.writeToLog("Sending data update message", "INFO", {
+        currentTab: this.currentTab,
+        hasAnalysisData: !dataToSend.isEmpty,
+        messageCommand: messageData.command,
+        hasPerformanceOptimizations:
+          !!messageData.data.performanceOptimizations,
+      });
+
+      this.enqueueMessage(messageData);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
+      this.writeToLog("Failed to prepare data update", "ERROR", {
+        error: errorMessage,
+        stack: errorStack,
+      });
+
+      // Send a fallback message to prevent webview from being stuck
+      this.enqueueMessage({
+        command: "updateData",
+        data: {
+          analysisData: {
+            isEmpty: true,
+            error: "Failed to load analysis data: " + errorMessage,
+          },
+          currentTab: this.currentTab,
+          performanceOptimizations: this.performanceOptimizations,
+        },
+      });
+    }
+  }
+
+  /**
+   * Optimize data for transfer to reduce memory usage
+   */
+  private optimizeDataForTransfer(data: any): any {
+    if (!data || typeof data !== "object") {
+      return data;
+    }
+
+    try {
+      // Create a safe deep copy that handles circular references
+      const optimizedData = this.safeDeepCopy(data);
+
+      // Apply optimizations based on current settings
+      if (this.performanceOptimizations.virtualization) {
+        return this.applyVirtualization(optimizedData);
+      }
+
+      if (this.performanceOptimizations.lazyLoading) {
+        return this.applyLazyLoading(optimizedData);
+      }
+
+      return optimizedData;
+    } catch (error) {
+      this.writeToLog("Failed to optimize data for transfer", "ERROR", {
+        error,
+      });
+      // Return a minimal safe version of the data
+      return this.createSafeDataStructure(data);
+    }
+  }
+
+  /**
+   * Safe deep copy that handles circular references
+   */
+  private safeDeepCopy(obj: any, seen = new WeakSet()): any {
+    if (obj === null || typeof obj !== "object") {
+      return obj;
+    }
+
+    // Handle circular references
+    if (seen.has(obj)) {
+      return "[Circular Reference]";
+    }
+
+    seen.add(obj);
+
+    try {
+      // Handle arrays
+      if (Array.isArray(obj)) {
+        const result = obj.map((item) => this.safeDeepCopy(item, seen));
+        seen.delete(obj);
+        return result;
+      }
+
+      // Handle objects
+      const copy: any = {};
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          // Skip known problematic properties that might contain circular references
+          if (this.shouldSkipProperty(key, obj[key])) {
+            continue;
+          }
+          try {
+            copy[key] = this.safeDeepCopy(obj[key], seen);
+          } catch (error) {
+            // Skip properties that cause issues, but don't log here to avoid recursion
+            copy[key] = `[Error copying property: ${key}]`;
+          }
+        }
+      }
+
+      seen.delete(obj);
+      return copy;
+    } catch (error) {
+      seen.delete(obj);
+      // If all else fails, return a simple representation
+      return `[Object: ${obj.constructor?.name || "Unknown"}]`;
+    }
+  }
+
+  /**
+   * Check if a property should be skipped during serialization
+   */
+  private shouldSkipProperty(key: string, value: any): boolean {
+    // Skip known problematic properties
+    const skipKeys = [
+      "doracodebirdExtensionManager",
+      "context",
+      "globalState",
+      "extensionContext",
+      "outputChannel",
+      "panel",
+      "webview",
+      "__proto__",
+      "constructor",
+      "dedicatedViewManager",
+      "analyzerRunner",
+      "sidebarProvider",
+      "codeLensProvider",
+      "jsonUtilities",
+      "configurationManager",
+      "analysisManager",
+      "workspaceService",
+      "uiManager",
+      "commandManager",
+      "gitService",
+      "tabbedWebviewProvider",
+    ];
+
+    if (skipKeys.includes(key)) {
+      return true;
+    }
+
+    // Skip functions
+    if (typeof value === "function") {
+      return true;
+    }
+
+    // Skip objects that look like VS Code API objects or extension managers
+    if (
+      value &&
+      typeof value === "object" &&
+      (value.constructor?.name?.includes("Proxy") ||
+        value.constructor?.name?.includes("ExtensionContext") ||
+        value.constructor?.name?.includes("OutputChannel") ||
+        value.constructor?.name?.includes("ExtensionManager") ||
+        value.constructor?.name?.includes("Manager") ||
+        value.constructor?.name?.includes("Provider") ||
+        value.constructor?.name?.includes("Service"))
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Create a safe data structure with only essential analysis data
+   */
+  private createSafeDataStructure(data: any): any {
+    const safeData: any = {};
+
+    // Extract only the essential analysis data properties
+    const essentialKeys = [
+      "tech_stack",
+      "techStack",
+      "modules",
+      "functions",
+      "dependencies",
+      "contributors",
+      "commits",
+      "fileChanges",
+      "hotspots",
+      "tables",
+      "sql",
+      "rawSQL",
+      "gitAnalytics",
+      "totalCommits",
+      "totalContributors",
+      "totalFiles",
+      "frameworkPatterns",
+      "framework_patterns",
+    ];
+
+    for (const key of essentialKeys) {
+      if (data && data[key] !== undefined) {
+        try {
+          // Try to safely copy the essential data
+          safeData[key] = JSON.parse(JSON.stringify(data[key]));
+        } catch (error) {
+          // If it still fails, create a minimal representation
+          safeData[key] = this.createMinimalRepresentation(data[key]);
+        }
+      }
+    }
+
+    return safeData;
+  }
+
+  /**
+   * Create minimal representation of complex objects
+   */
+  private createMinimalRepresentation(obj: any): any {
+    if (obj === null || obj === undefined) {
+      return obj;
+    }
+
+    if (typeof obj !== "object") {
+      return obj;
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map((item) => this.createMinimalRepresentation(item));
+    }
+
+    // For objects, only include primitive values and simple arrays
+    const minimal: any = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        const value = obj[key];
+        if (
+          typeof value === "string" ||
+          typeof value === "number" ||
+          typeof value === "boolean"
+        ) {
+          minimal[key] = value;
+        } else if (Array.isArray(value) && value.length < 100) {
+          minimal[key] = value.slice(0, 50); // Limit array size
+        }
+      }
+    }
+
+    return minimal;
+  }
+
+  /**
+   * Apply virtualization to large datasets
+   */
+  private applyVirtualization(data: any): any {
+    if (
+      data.modules?.nodes &&
+      data.modules.nodes.length > this.performanceOptimizations.maxNodes
+    ) {
+      // Keep only the most important nodes
+      data.modules.nodes = data.modules.nodes
+        .sort((a: any, b: any) => (b.complexity || 0) - (a.complexity || 0))
+        .slice(0, this.performanceOptimizations.maxNodes);
+    }
+
+    if (
+      data.functions?.nodes &&
+      data.functions.nodes.length > this.performanceOptimizations.maxNodes
+    ) {
+      data.functions.nodes = data.functions.nodes
+        .sort((a: any, b: any) => (b.complexity || 0) - (a.complexity || 0))
+        .slice(0, this.performanceOptimizations.maxNodes);
+    }
+
+    if (
+      data.dependencies?.edges &&
+      data.dependencies.edges.length > this.performanceOptimizations.maxEdges
+    ) {
+      data.dependencies.edges = data.dependencies.edges
+        .sort((a: any, b: any) => (b.weight || 0) - (a.weight || 0))
+        .slice(0, this.performanceOptimizations.maxEdges);
+    }
+
+    return data;
+  }
+
+  /**
+   * Apply lazy loading by removing detailed metadata
+   */
+  private applyLazyLoading(data: any): any {
+    // Remove heavy metadata that can be loaded on demand
+    if (data.modules?.nodes) {
+      data.modules.nodes = data.modules.nodes.map((node: any) => ({
+        ...node,
+        metadata: node.metadata
+          ? { id: node.id, hasMetadata: true }
+          : undefined,
+      }));
+    }
+
+    if (data.functions?.nodes) {
+      data.functions.nodes = data.functions.nodes.map((node: any) => ({
+        ...node,
+        sourceCode: undefined, // Remove source code for initial load
+        metadata: node.metadata
+          ? { id: node.id, hasMetadata: true }
+          : undefined,
+      }));
+    }
+
+    return data;
+  }
+
+  private getHtml(): string {
+    const nonce = generateNonce();
+    const webview = this.panel?.webview;
+
+    if (!webview) {
+      return this.generateFallbackHtml("Webview not available");
+    }
+
+    try {
+      const resourceUris = getResourceUris(this.context, webview);
+      const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource} 'unsafe-eval'; img-src ${webview.cspSource} data:`;
+
+      return this.generateSimpleHtml(nonce, csp, resourceUris);
+    } catch (error) {
+      this.writeToLog("Failed to generate HTML", "ERROR", { error });
+      return this.generateFallbackHtml("Failed to load analysis view");
+    }
+  }
+
+  /**
+   * Generate simple working HTML
+   */
+  private generateSimpleHtml(nonce: string, csp: string, resourceUris: any): string {
+    return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta http-equiv="Content-Security-Policy" content="${csp}"/>
+    <title>DoraCodeBirdView Analysis</title>
+    <style>
+        body { 
+            font-family: var(--vscode-font-family);
+            margin: 0;
+            padding: 20px;
+            color: var(--vscode-editor-foreground);
+            background: var(--vscode-editor-background);
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 50vh;
+            font-size: 16px;
+            color: var(--vscode-descriptionForeground);
+        }
+        .content {
+            padding: 20px;
+        }
+        .error {
+            color: var(--vscode-errorForeground);
+            padding: 20px;
+            background: var(--vscode-inputValidation-errorBackground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading">
+        Initializing analysis view...
+    </div>
+    <div id="content" class="content" style="display: none;">
+        <h2>Analysis Results</h2>
+        <div id="analysisContent"></div>
+    </div>
+    
+    <script nonce="${nonce}">
+        const vscode = acquireVsCodeApi();
+        let currentData = null;
+        
+        // Initialize the webview
+        function initialize() {
+            console.log('Webview initializing...');
+            vscode.postMessage({ command: 'ready' });
+        }
+        
+        // Handle messages from extension
+        window.addEventListener('message', event => {
+            const message = event.data;
+            console.log('Received message:', message.command);
+            
+            switch (message.command) {
+                case 'updateData':
+                    handleDataUpdate(message.data);
+                    break;
+                case 'showError':
+                    showError(message.error);
+                    break;
+                default:
+                    console.log('Unknown message command:', message.command);
+            }
+        });
+        
+        function handleDataUpdate(data) {
+            console.log('Handling data update');
+            currentData = data.analysisData;
+            
+            hideLoading();
+            renderContent();
+        }
+        
+        function hideLoading() {
+            const loading = document.getElementById('loading');
+            const content = document.getElementById('content');
+            if (loading) loading.style.display = 'none';
+            if (content) content.style.display = 'block';
+        }
+        
+        function showError(error) {
+            const content = document.getElementById('analysisContent');
+            if (content) {
+                content.innerHTML = \`
+                    <div class="error">
+                        <h3>Error</h3>
+                        <p>\${error.message || 'An error occurred'}</p>
+                        <button onclick="retry()">Retry</button>
+                    </div>
+                \`;
+            }
+            hideLoading();
+        }
+        
+        function renderContent() {
+            const content = document.getElementById('analysisContent');
+            if (content) {
+                if (!currentData || currentData.isEmpty) {
+                    content.innerHTML = \`
+                        <div class="error">
+                            <h3>No Data Available</h3>
+                            <p>\${currentData?.message || 'No analysis data available'}</p>
+                            <button onclick="retry()">Retry</button>
+                        </div>
+                    \`;
+                } else {
+                    content.innerHTML = \`
+                        <div>
+                            <h3>Analysis Data Loaded</h3>
+                            <p>Data keys: \${Object.keys(currentData).join(', ')}</p>
+                            <pre>\${JSON.stringify(currentData, null, 2)}</pre>
+                        </div>
+                    \`;
+                }
+            }
+        }
+        
+        function retry() {
+            vscode.postMessage({ command: 'requestData' });
+        }
+        
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initialize);
+        } else {
+            initialize();
+        }
+    </script>
+</body>
+</html>`;
+  }
+
+  /**
+   * Generate enhanced HTML with dedicated analysis tabs
+   */
+  private generateEnhancedHtml(
+    nonce: string,
+    csp: string,
+    resourceUris: any
+  ): string {
+    return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta http-equiv="Content-Security-Policy" content="${csp}"/>
+    <title>DoraCodeBirdView Analysis</title>
+    <link rel="stylesheet" href="${resourceUris.webviewCss}"/>
+    <link rel="stylesheet" href="${resourceUris.enhancedGraphStyles}"/>
+    <style>
+        body { 
+            font-family: var(--vscode-font-family);
+            margin: 0;
+            padding: 0;
+            color: var(--vscode-editor-foreground);
+            background: var(--vscode-editor-background);
+            overflow: hidden;
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-size: 16px;
+            color: var(--vscode-descriptionForeground);
+        }
+        .error {
+            color: var(--vscode-errorForeground);
+            padding: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading">
+        Initializing analysis view...
+    </div>
+    <div id="content" style="display: none;">
+        <div id="tabContainer"></div>
+        <div id="analysisContent"></div>
+    </div>
+    
+    <script nonce="${nonce}">
+        const vscode = acquireVsCodeApi();
+        let currentData = null;
+        let currentTab = 'techstack';
+        
+        // Initialize the webview
+        function initialize() {
+            console.log('Initializing webview...');
+            vscode.postMessage({ command: 'ready' });
+        }
+        
+        // Handle messages from extension
+        window.addEventListener('message', event => {
+            const message = event.data;
+            console.log('Received message:', message.command);
+            
+            switch (message.command) {
+                case 'updateData':
+                    handleDataUpdate(message.data);
+                    break;
+                case 'showError':
+                    showError(message.error);
+                    break;
+                case 'updateLoading':
+                    updateLoading(message.message);
+                    break;
+                default:
+                    console.log('Unknown message command:', message.command);
+            }
+        });
+        
+        function handleDataUpdate(data) {
+            console.log('Handling data update:', data);
+            currentData = data.analysisData;
+            currentTab = data.currentTab || 'techstack';
+            
+            hideLoading();
+            renderContent();
+        }
+        
+        function hideLoading() {
+            const loading = document.getElementById('loading');
+            const content = document.getElementById('content');
+            if (loading) loading.style.display = 'none';
+            if (content) content.style.display = 'block';
+        }
+        
+        function showError(error) {
+            const content = document.getElementById('analysisContent');
+            if (content) {
+                content.innerHTML = \`
+                    <div class="error">
+                        <h3>Error</h3>
+                        <p>\${error.message || 'An error occurred'}</p>
+                        <button onclick="retry()">Retry</button>
+                    </div>
+                \`;
+            }
+            hideLoading();
+        }
+        
+        function updateLoading(message) {
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.textContent = message || 'Loading...';
+            }
+        }
+        
+        function renderContent() {
+            if (!currentData) {
+                showError({ message: 'No data available' });
+                return;
+            }
+            
+            const content = document.getElementById('analysisContent');
+            if (content) {
+                if (currentData.isEmpty) {
+                    content.innerHTML = \`
+                        <div class="empty-state">
+                            <h3>No Analysis Data</h3>
+                            <p>\${currentData.message || 'No analysis data available'}</p>
+                        </div>
+                    \`;
+                } else {
+                    content.innerHTML = \`
+                        <div class="analysis-view">
+                            <h3>Analysis Results</h3>
+                            <p>Tab: \${currentTab}</p>
+                            <p>Data available: \${Object.keys(currentData).length} properties</p>
+                        </div>
+                    \`;
+                }
+            }
+        }
+        
+        function retry() {
+            vscode.postMessage({ command: 'requestData', tabId: currentTab });
+        }
+        
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initialize);
+        } else {
+            initialize();
+        }
+    </script>
+</body>
+</html>`;
+  }
+
+  /**
+   * Generate dedicated tabs HTML based on analysis type
+   */
+  private generateDedicatedTabs(views: DedicatedAnalysisView[]): string {
+    return `<div class="tabs">${this.getTabsForCurrentAnalysis()}</div>`;
+  }
+
+  /**
+   * Get tabs for current analysis type
+   */
+  private getTabsForCurrentAnalysis(): string {
+    // Return basic tabs for now
+    return `
+      <div class="tab active" data-tab="techstack">
+        <span class="tab-icon">🔧</span>
+        <span>Tech Stack</span>
+      </div>
+      <div class="tab" data-tab="codegraph">
+        <span class="tab-icon">🔗</span>
+        <span>Code Graph</span>
+      </div>
+      <div class="tab" data-tab="codegraphjson">
+        <span class="tab-icon">📄</span>
+        <span>Code JSON</span>
+      </div>
+    `;
+  }
+
+  /**
+   * Generate fallback HTML for error cases
+   */
+  private generateFallbackHtml(errorMessage: string): string {
+    return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    ${csp ? `<meta http-equiv="Content-Security-Policy" content="${csp}">` : ""}
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <style>
+        body { 
+            font-family: var(--vscode-font-family);
+            margin: 0;
+            color: var(--vscode-editor-foreground);
+            background: var(--vscode-editor-background);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 2px;
+            padding: 8px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+            background: var(--vscode-tab-inactiveBackground);
+        }
+        
+        .tab {
+            padding: 10px 16px;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            border: 1px solid transparent;
+            min-width: 120px;
+            justify-content: center;
+        }
+        
+        .tab:hover {
+            opacity: 1;
+            background: var(--vscode-tab-hoverBackground);
+            transform: translateY(-2px);
+        }
+        
+        .tab.active {
+            opacity: 1;
+            background: var(--vscode-tab-activeBackground);
+            color: var(--vscode-tab-activeForeground);
+            border-color: var(--vscode-focusBorder);
+            border-width: 2px;
+            border-bottom: none;
+            font-weight: 600;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+            z-index: 10;
+        }
+        
+        .tab-icon {
+            font-size: 16px;
+        }
+        
+        .content {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: var(--vscode-editor-background);
+        }
+        
+        .loading {
+            color: var(--vscode-descriptionForeground);
+            text-align: center;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--vscode-progressBar-background);
+            border-top: 3px solid var(--vscode-progressBar-foreground);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            color: var(--vscode-errorForeground);
+            padding: 20px;
+            margin: 20px;
+            background: var(--vscode-inputValidation-errorBackground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+            border-radius: 6px;
+            border-left: 4px solid var(--vscode-errorForeground);
+        }
+        
+        /* Content area styles */
+        .tech-stack-container, .graph-container, .json-container, 
+        .db-schema-container, .sql-container, .git-analytics-container,
+        .contributors-container, .commits-container, .hotspots-container {
+            padding: 20px;
+            height: 100%;
+            overflow-y: auto;
+        }
+        
+        .tech-section {
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--vscode-editor-inactiveSelectionBackground);
+            border-radius: 8px;
+            border-left: 4px solid var(--vscode-focusBorder);
+        }
+        
+        .tech-section h3 {
+            margin: 0 0 12px 0;
+            color: var(--vscode-foreground);
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .tech-item {
+            padding: 8px 12px;
+            margin: 4px 0;
+            background: var(--vscode-input-background);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 4px;
+            font-family: var(--vscode-editor-font-family);
+            font-size: 13px;
+        }
+        
+        .graph-toolbar, .json-toolbar {
+            padding: 10px;
+            background: var(--vscode-panel-background);
+            border-bottom: 1px solid var(--vscode-panel-border);
+            display: flex;
+            gap: 8px;
+        }
+        
+        .graph-toolbar button, .json-toolbar button {
+            padding: 6px 12px;
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .graph-toolbar button:hover, .json-toolbar button:hover {
+            background: var(--vscode-button-hoverBackground);
+        }
+        
+        .json-content {
+            padding: 16px;
+            background: var(--vscode-editor-background);
+            color: var(--vscode-editor-foreground);
+            font-family: var(--vscode-editor-font-family);
+            font-size: 12px;
+            line-height: 1.4;
+            overflow: auto;
+            white-space: pre-wrap;
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+            margin: 0;
+        }
+        
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        
+        .metric-card {
+            padding: 20px;
+            background: var(--vscode-editor-inactiveSelectionBackground);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .metric-card h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: var(--vscode-descriptionForeground);
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--vscode-foreground);
+        }
+        
+        .contributors-list, .hotspots-list {
+            margin-top: 16px;
+        }
+        
+        .contributor-item, .hotspot-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            background: var(--vscode-editor-inactiveSelectionBackground);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 6px;
+        }
+        
+        .contributor-rank {
+            background: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            min-width: 24px;
+            text-align: center;
+        }
+        
+        .contributor-name, .hotspot-file {
+            flex: 1;
+            margin: 0 12px;
+            font-family: var(--vscode-editor-font-family);
+        }
+        
+        .contributor-commits, .hotspot-changes {
+            color: var(--vscode-descriptionForeground);
+            font-size: 12px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--vscode-descriptionForeground);
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 16px;
+            color: var(--vscode-foreground);
+        }
+        
+        .empty-state button {
+            margin-top: 16px;
+            padding: 8px 16px;
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .empty-state button:hover {
+            background: var(--vscode-button-hoverBackground);
+        }
+    </style>
+</head>
+<body>
+    ${this.generateDedicatedTabs(dedicatedViews)}
+    <div class="content" id="content">
+        <div class="loading">
+            <div class="spinner"></div>
+            <div>Initializing analysis view...</div>
+        </div>
+    </div>
+    
+    <!-- Load libraries -->
+    <script nonce="${nonce}" src="${resourceUris.dagre}"></script>
+    <script nonce="${nonce}" src="${resourceUris.cytoscape}"></script>
+    <script nonce="${nonce}" src="${resourceUris.cytoscapeDagre}"></script>
+    
+    <script nonce="${nonce}">
+        const vscode = acquireVsCodeApi();
+        const tabs = document.querySelectorAll('.tab');
+        const content = document.getElementById('content');
+        
+        // Initialize the view state
+        const state = vscode.getState() || { currentTab: '${this.currentTab}' };
+        let current = state.currentTab;
+        let analysisData = null;
+
+        function setActive(t) {
+            tabs.forEach(x => x.classList.remove('active'));
+            const activeTab = Array.from(tabs).find(x => x.dataset.tab === t);
+            if (activeTab) {
+                activeTab.classList.add('active');
+            }
+            current = t;
+            vscode.setState({ currentTab: t });
+        }
+
+        // Set initial active tab
+        setActive(current);
+
+        // Tab click handlers
+        tabs.forEach(t => t.addEventListener('click', () => {
+            const tabId = t.dataset.tab;
+            if (tabId !== current) {
+                setActive(tabId);
+                vscode.postMessage({ 
+                    command: 'requestData',
+                    tabId: tabId 
+                });
+            }
+        }));
+
+        // Message handling from extension
+        window.addEventListener('message', event => {
+            const message = event.data;
+            console.log('Webview received message:', message.command, message);
+            
+            switch (message.command) {
+                case 'updateData':
+                    console.log('Handling updateData message');
+                    handleDataUpdate(message.data);
+                    break;
+                case 'showError':
+                    console.log('Handling showError message');
+                    handleErrorMessage(message.error);
+                    break;
+                case 'updateLoading':
+                    console.log('Handling updateLoading message');
+                    showLoadingState(message.tabId, message.message);
+                    break;
+                case 'updateError':
+                    console.log('Handling updateError message');
+                    showErrorState(message.tabId, message.error, message.showRetry);
+                    break;
+                default:
+                    console.log('Unknown message command:', message.command);
+            }
+        });
+
+        // Handle data updates and render content
+        function handleDataUpdate(data) {
+            try {
+                console.log('Received data update:', data);
+                
+                if (data && data.analysisData) {
+                    analysisData = data.analysisData;
+                    current = data.currentTab || current;
+                    setActive(current);
+                    
+                    // Check if the analysis data indicates an empty state or error
+                    if (analysisData.isEmpty) {
+                        if (analysisData.error) {
+                            showErrorState(current, analysisData.error, true);
+                        } else {
+                            showEmptyState(current, analysisData.message);
+                        }
+                    } else {
+                        renderTabContent(current, analysisData);
+                    }
+                } else {
+                    console.log('No analysis data in update, showing empty state');
+                    showEmptyState(current, 'No data received from extension');
+                }
+            } catch (error) {
+                console.error('Failed to handle data update:', error);
+                showErrorState(current, 'Failed to render content: ' + error.message, true);
+            }
+        }
+
+        // Render content based on current tab
+        function renderTabContent(tabId, data) {
+            console.log('Rendering tab content for:', tabId, 'with data:', data);
+            
+            if (!data) {
+                console.log('No data provided, showing empty state');
+                showEmptyState(tabId);
+                return;
+            }
+
+            try {
+                switch (tabId) {
+                    case 'techstack':
+                        renderTechStack(data);
+                        break;
+                    case 'codegraph':
+                        renderCodeGraph(data);
+                        break;
+                    case 'codegraphjson':
+                        renderCodeGraphJSON(data);
+                        break;
+                    case 'dbschema':
+                        renderDatabaseSchema(data);
+                        break;
+                    case 'dbschemasql':
+                        renderDatabaseSQL(data);
+                        break;
+                    case 'gitanalytics':
+                        renderGitAnalytics(data);
+                        break;
+                    case 'gitcontributors':
+                        renderGitContributors(data);
+                        break;
+                    case 'gitcommits':
+                        renderGitCommits(data);
+                        break;
+                    case 'githotspots':
+                        renderGitHotspots(data);
+                        break;
+                    default:
+                        console.log('Unknown tab ID:', tabId);
+                        showEmptyState(tabId);
+                }
+                console.log('Tab content rendered successfully for:', tabId);
+            } catch (error) {
+                console.error('Error rendering tab content:', error);
+                showErrorState(tabId, 'Failed to render ' + tabId + ': ' + error.message, true);
+            }
+        }
+
+        // Tech Stack rendering
+        function renderTechStack(data) {
+            console.log('Rendering tech stack with data:', data);
+            // After conversion, the tech stack should be in data.techStack
+            const techStack = data.techStack || data.tech_stack || {};
+            
+            console.log('Tech stack object:', techStack);
+            
+            if (!techStack || Object.keys(techStack).length === 0) {
+                console.log('No tech stack data found');
+                content.innerHTML = '<div class="error">No tech stack information available</div>';
+                return;
+            }
+
+            let html = '<div class="tech-stack-container">';
+            html += '<h2>🔧 Technology Stack</h2>';
+
+            // Python Version
+            if (techStack.pythonVersion || techStack.python_version) {
+                const version = techStack.pythonVersion || techStack.python_version;
+                html += \`<div class="tech-section">
+                    <h3>🐍 Python Runtime</h3>
+                    <div class="tech-item">Python \${version}</div>
+                </div>\`;
+            }
+
+            // Package Manager
+            if (techStack.packageManager || techStack.package_manager) {
+                const pm = techStack.packageManager || techStack.package_manager;
+                html += \`<div class="tech-section">
+                    <h3>📦 Package Manager</h3>
+                    <div class="tech-item">\${pm}</div>
+                </div>\`;
+            }
+
+            // Frameworks
+            if (techStack.frameworks && techStack.frameworks.length > 0) {
+                html += '<div class="tech-section"><h3>🏗️ Frameworks</h3>';
+                techStack.frameworks.forEach(fw => {
+                    const name = fw.name || fw;
+                    const version = fw.version ? \` v\${fw.version}\` : '';
+                    html += \`<div class="tech-item">\${name}\${version}</div>\`;
+                });
+                html += '</div>';
+            }
+
+            // Libraries
+            if (techStack.libraries && techStack.libraries.length > 0) {
+                html += '<div class="tech-section"><h3>📚 Libraries</h3>';
+                techStack.libraries.slice(0, 20).forEach(lib => {
+                    const name = lib.name || lib;
+                    const version = lib.version ? \` v\${lib.version}\` : '';
+                    html += \`<div class="tech-item">\${name}\${version}</div>\`;
+                });
+                if (techStack.libraries.length > 20) {
+                    html += \`<div class="tech-item">... and \${techStack.libraries.length - 20} more</div>\`;
+                }
+                html += '</div>';
+            }
+
+            html += '</div>';
+            console.log('Setting tech stack HTML:', html);
+            content.innerHTML = html;
+            console.log('Tech stack content set, content element:', content);
+        }
+
+        // Code Graph rendering
+        function renderCodeGraph(data) {
+            content.innerHTML = \`
+                <div class="graph-container">
+                    <div class="graph-toolbar">
+                        <button onclick="fitGraph()">Fit to View</button>
+                        <button onclick="resetGraph()">Reset</button>
+                    </div>
+                    <div id="cy" style="width: 100%; height: 500px; border: 1px solid var(--vscode-panel-border);"></div>
+                </div>
+            \`;
+
+            // Initialize Cytoscape graph
+            if (typeof cytoscape !== 'undefined') {
+                initializeCytoscapeGraph(data);
+            } else {
+                content.innerHTML = '<div class="error">Graph library not loaded. Please refresh the view.</div>';
+            }
+        }
+
+        // Code Graph JSON rendering
+        function renderCodeGraphJSON(data) {
+            const jsonData = JSON.stringify(data, null, 2);
+            content.innerHTML = \`
+                <div class="json-container">
+                    <div class="json-toolbar">
+                        <button onclick="copyToClipboard()">Copy JSON</button>
+                        <button onclick="downloadJSON()">Download</button>
+                    </div>
+                    <pre class="json-content">\${jsonData}</pre>
+                </div>
+            \`;
+        }
+
+        // Database Schema rendering
+        function renderDatabaseSchema(data) {
+            content.innerHTML = \`
+                <div class="db-schema-container">
+                    <h2>🗄️ Database Schema - ER Diagram</h2>
+                    <div class="schema-placeholder">
+                        <p>Database schema visualization will be implemented here.</p>
+                        <p>Data available: \${data.tables ? data.tables.length + ' tables' : 'No table data'}</p>
+                    </div>
+                </div>
+            \`;
+        }
+
+        // Database SQL rendering
+        function renderDatabaseSQL(data) {
+            const sqlContent = data.sql || data.rawSQL || 'No SQL content available';
+            content.innerHTML = \`
+                <div class="sql-container">
+                    <h2>📝 Raw SQL Schema</h2>
+                    <pre class="sql-content">\${sqlContent}</pre>
+                </div>
+            \`;
+        }
+
+        // Git Analytics rendering
+        function renderGitAnalytics(data) {
+            content.innerHTML = \`
+                <div class="git-analytics-container">
+                    <h2>📊 Git Analytics Overview</h2>
+                    <div class="analytics-grid">
+                        <div class="metric-card">
+                            <h3>Total Commits</h3>
+                            <div class="metric-value">\${data.totalCommits || 0}</div>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Contributors</h3>
+                            <div class="metric-value">\${data.totalContributors || 0}</div>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Active Files</h3>
+                            <div class="metric-value">\${data.totalFiles || 0}</div>
+                        </div>
+                    </div>
+                </div>
+            \`;
+        }
+
+        // Git Contributors rendering
+        function renderGitContributors(data) {
+            const contributors = data.contributors || data.authorContributions || [];
+            let html = '<div class="contributors-container"><h2>👥 Contributors</h2>';
+            
+            if (contributors.length === 0) {
+                html += '<p>No contributor data available</p>';
+            } else {
+                html += '<div class="contributors-list">';
+                contributors.slice(0, 10).forEach((contributor, index) => {
+                    const name = contributor.name || contributor.author || 'Unknown';
+                    const commits = contributor.commits || contributor.total_commits || 0;
+                    html += \`
+                        <div class="contributor-item">
+                            <span class="contributor-rank">\${index + 1}</span>
+                            <span class="contributor-name">\${name}</span>
+                            <span class="contributor-commits">\${commits} commits</span>
+                        </div>
+                    \`;
+                });
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            content.innerHTML = html;
+        }
+
+        // Git Commits rendering
+        function renderGitCommits(data) {
+            content.innerHTML = \`
+                <div class="commits-container">
+                    <h2>📈 Commit Timeline</h2>
+                    <p>Commit timeline visualization will be implemented here.</p>
+                    <p>Total commits: \${data.commits ? data.commits.length : 0}</p>
+                </div>
+            \`;
+        }
+
+        // Git Hotspots rendering
+        function renderGitHotspots(data) {
+            const hotspots = data.fileChanges || data.hotspots || [];
+            let html = '<div class="hotspots-container"><h2>🔥 File Hotspots</h2>';
+            
+            if (hotspots.length === 0) {
+                html += '<p>No hotspot data available</p>';
+            } else {
+                html += '<div class="hotspots-list">';
+                hotspots.slice(0, 15).forEach(hotspot => {
+                    const file = hotspot.file || hotspot.path || 'Unknown';
+                    const changes = hotspot.changes || hotspot.commits || 0;
+                    html += \`
+                        <div class="hotspot-item">
+                            <span class="hotspot-file">\${file}</span>
+                            <span class="hotspot-changes">\${changes} changes</span>
+                        </div>
+                    \`;
+                });
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            content.innerHTML = html;
+        }
+
+        // Utility functions
+        function showEmptyState(tabId, customMessage) {
+            const message = customMessage || \`No data available for \${tabId} tab.\`;
+            content.innerHTML = \`
+                <div class="empty-state">
+                    <h3>No Data Available</h3>
+                    <p>\${message}</p>
+                    <button onclick="vscode.postMessage({command: 'requestData', tabId: '\${tabId}'})">
+                        Refresh
+                    </button>
+                </div>
+            \`;
+        }
+
+        function showLoadingState(tabId, message) {
+            content.innerHTML = \`
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <div>\${message || 'Loading...'}</div>
+                </div>
+            \`;
+        }
+
+        function showErrorState(tabId, error, showRetry) {
+            let html = \`
+                <div class="error">
+                    <h3>Error</h3>
+                    <p>\${error}</p>
+            \`;
+            
+            if (showRetry) {
+                html += \`<button onclick="vscode.postMessage({command: 'requestData', tabId: '\${tabId}'})">Retry</button>\`;
+            }
+            
+            html += '</div>';
+            content.innerHTML = html;
+        }
+
+        function handleErrorMessage(error) {
+            showErrorState(current, error.message, error.recoverable);
+        }
+
+        // Initialize Cytoscape graph
+        function initializeCytoscapeGraph(data) {
+            try {
+                const elements = convertDataToCytoscapeElements(data);
+                
+                const cy = cytoscape({
+                    container: document.getElementById('cy'),
+                    elements: elements,
+                    style: getCytoscapeStyle(),
+                    layout: { name: 'dagre', rankDir: 'TB' }
+                });
+
+                // Add event listeners
+                cy.on('tap', 'node', function(evt) {
+                    const node = evt.target;
+                    console.log('Node clicked:', node.data());
+                });
+
+                window.cytoscapeInstance = cy;
+            } catch (error) {
+                console.error('Failed to initialize Cytoscape:', error);
+                document.getElementById('cy').innerHTML = '<div class="error">Failed to render graph: ' + error.message + '</div>';
+            }
+        }
+
+        function convertDataToCytoscapeElements(data) {
+            const elements = [];
+            
+            // Add nodes from modules
+            if (data.modules && data.modules.nodes) {
+                data.modules.nodes.forEach(module => {
+                    elements.push({
+                        group: 'nodes',
+                        data: {
+                            id: module.id,
+                            label: module.name,
+                            type: 'module'
+                        }
+                    });
+                });
+            }
+
+            // Add nodes from functions
+            if (data.functions && data.functions.nodes) {
+                data.functions.nodes.forEach(func => {
+                    elements.push({
+                        group: 'nodes',
+                        data: {
+                            id: func.id,
+                            label: func.name,
+                            type: 'function'
+                        }
+                    });
+                });
+            }
+
+            // Add edges
+            if (data.modules && data.modules.edges) {
+                data.modules.edges.forEach(edge => {
+                    elements.push({
+                        group: 'edges',
+                        data: {
+                            source: edge.source,
+                            target: edge.target
+                        }
+                    });
+                });
+            }
+
+            if (data.functions && data.functions.edges) {
+                data.functions.edges.forEach(edge => {
+                    elements.push({
+                        group: 'edges',
+                        data: {
+                            source: edge.source,
+                            target: edge.target
+                        }
+                    });
+                });
+            }
+
+            return elements;
+        }
+
+        function getCytoscapeStyle() {
+            return [
+                {
+                    selector: 'node',
+                    style: {
+                        'background-color': 'var(--vscode-button-background)',
+                        'label': 'data(label)',
+                        'color': 'var(--vscode-button-foreground)',
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'font-size': '12px'
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 2,
+                        'line-color': 'var(--vscode-panel-border)',
+                        'target-arrow-color': 'var(--vscode-panel-border)',
+                        'target-arrow-shape': 'triangle'
+                    }
+                }
+            ];
+        }
+
+        // Graph utility functions
+        function fitGraph() {
+            if (window.cytoscapeInstance) {
+                window.cytoscapeInstance.fit();
+            }
+        }
+
+        function resetGraph() {
+            if (window.cytoscapeInstance) {
+                window.cytoscapeInstance.reset();
+            }
+        }
+
+        function copyToClipboard() {
+            const jsonContent = document.querySelector('.json-content');
+            if (jsonContent) {
+                navigator.clipboard.writeText(jsonContent.textContent);
+            }
+        }
+
+        function downloadJSON() {
+            const jsonContent = document.querySelector('.json-content');
+            if (jsonContent) {
+                const blob = new Blob([jsonContent.textContent], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'analysis-data.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        // Initialize
+        console.log('Webview initializing, sending ready message');
+        vscode.postMessage({ command: 'ready' });
+        
+        // Request initial data
+        setTimeout(() => {
+            console.log('Requesting initial data for current tab:', current);
+            vscode.postMessage({ 
+                command: 'requestData',
+                tabId: current 
+            });
+        }, 100);
+
+        // Fallback timeout to prevent indefinite loading
+        setTimeout(() => {
+            if (content.querySelector('.loading')) {
+                console.log('Webview still loading after timeout, showing fallback message');
+                showEmptyState(current, 'Analysis view took too long to load. Please try refreshing.');
+            }
+        }, 10000); // 10 second timeout
+    </script>
+</body>
+</html>`;
+  }
+
+  /**
+   * Generate dedicated tabs HTML based on analysis type
+   */
+  private generateDedicatedTabs(views: DedicatedAnalysisView[]): string {
+    return `<div class="tabs">${this.getTabsForCurrentAnalysis()}</div>`;
+  }
+
+  /**
+   * Get tabs based on current analysis type
+   */
+  private getTabsForCurrentAnalysis(): string {
+    // Determine analysis type based on current tab or analysis data
+    const analysisType = this.determineAnalysisType();
+
+    switch (analysisType) {
+      case "fullCode":
+      case "currentFile":
+        return this.getCodeAnalysisTabs();
+      case "dbschema":
+        return this.getDatabaseSchemaTabs();
+      case "gitanalytics":
+        return this.getGitAnalyticsTabs();
+      default:
+        return this.getCodeAnalysisTabs(); // Default to code analysis tabs
+    }
+  }
+
+  /**
+   * Determine the current analysis type
+   */
+  private determineAnalysisType(): string {
+    // Check if current tab indicates analysis type
+    if (this.currentTab === "dbschema" || this.currentTab === "dbschemasql") {
+      return "dbschema";
+    }
+    if (
+      this.currentTab === "gitanalytics" ||
+      this.currentTab === "gitcontributors" ||
+      this.currentTab === "gitcommits"
+    ) {
+      return "gitanalytics";
+    }
+    if (this.currentTab === "fullCode" || this.currentTab === "currentFile") {
+      return this.currentTab;
+    }
+
+    // Check analysis data for type hints
+    if (this.analysisData) {
+      if (this.analysisData.isDedicatedView) {
+        return this.analysisData.viewType;
+      }
+      if (this.analysisData.gitAnalytics || this.analysisData.contributors) {
+        return "gitanalytics";
+      }
+      if (this.analysisData.dbSchema || this.analysisData.tables) {
+        return "dbschema";
+      }
+    }
+
+    // Default to code analysis for legacy compatibility
+    return "fullCode";
+  }
+
+  /**
+   * Get tabs for Full Code Analysis and Current File Analysis (3 tabs only)
+   */
+  private getCodeAnalysisTabs(): string {
+    return `
+            <div class="tab ${
+              this.currentTab === "techstack" ? "active" : ""
+            }" data-tab="techstack">
+                <span class="tab-icon">🔧</span>
+                <span class="tab-label">Tech Stack</span>
+            </div>
+            <div class="tab ${
+              this.currentTab === "codegraph" ? "active" : ""
+            }" data-tab="codegraph">
+                <span class="tab-icon">🔗</span>
+                <span class="tab-label">Code Graph</span>
+            </div>
+            <div class="tab ${
+              this.currentTab === "codegraphjson" ? "active" : ""
+            }" data-tab="codegraphjson">
+                <span class="tab-icon">{ }</span>
+                <span class="tab-label">Code Graph JSON</span>
+            </div>
+        `;
+  }
+
+  /**
+   * Get tabs for Database Schema analysis
+   */
+  private getDatabaseSchemaTabs(): string {
+    return `
+            <div class="tab ${
+              this.currentTab === "dbschema" ? "active" : ""
+            }" data-tab="dbschema">
+                <span class="tab-icon">🗄️</span>
+                <span class="tab-label">ER Diagram</span>
+            </div>
+            <div class="tab ${
+              this.currentTab === "dbschemasql" ? "active" : ""
+            }" data-tab="dbschemasql">
+                <span class="tab-icon">📝</span>
+                <span class="tab-label">Raw SQL</span>
+            </div>
+        `;
+  }
+
+  /**
+   * Get tabs for Git Analytics
+   */
+  private getGitAnalyticsTabs(): string {
+    return `
+            <div class="tab ${
+              this.currentTab === "gitanalytics" ? "active" : ""
+            }" data-tab="gitanalytics">
+                <span class="tab-icon">📊</span>
+                <span class="tab-label">Overview</span>
+            </div>
+            <div class="tab ${
+              this.currentTab === "gitcontributors" ? "active" : ""
+            }" data-tab="gitcontributors">
+                <span class="tab-icon">👥</span>
+                <span class="tab-label">Contributors</span>
+            </div>
+            <div class="tab ${
+              this.currentTab === "gitcommits" ? "active" : ""
+            }" data-tab="gitcommits">
+                <span class="tab-icon">📈</span>
+                <span class="tab-label">Commit Timeline</span>
+            </div>
+            <div class="tab ${
+              this.currentTab === "githotspots" ? "active" : ""
+            }" data-tab="githotspots">
+                <span class="tab-icon">🔥</span>
+                <span class="tab-label">File Hotspots</span>
+            </div>
+        `;
+  }
+
+  /**
+   * Generate fallback HTML for error cases
+   */
+  private generateFallbackHtml(errorMessage: string): string {
+    return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <style>
+        body { 
+            font-family: var(--vscode-font-family);
+            margin: 0;
+            padding: 20px;
+            color: var(--vscode-editor-foreground);
+            background: var(--vscode-editor-background);
+        }
+        .error {
+            color: var(--vscode-errorForeground);
+            padding: 20px;
+            background: var(--vscode-inputValidation-errorBackground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+            border-radius: 6px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="error">
+        <h3>Analysis View Error</h3>
+        <p>${errorMessage}</p>
+        <p>Please try refreshing the view or contact support if the issue persists.</p>
+    </div>
+</body>
+</html>`;
+  }
+
+  private writeToLog(
+    message: string,
+    level: "INFO" | "ERROR" | "DEBUG" | "WARN",
+    details?: any
+  ) {
+    const timestamp = new Date().toISOString();
+    const tabInfo = this.currentTab ? `[${this.currentTab}]` : "";
+    let logMessage = `[${timestamp}] TabbedWebviewProvider${tabInfo} ${level}: ${message}`;
+
+    if (details) {
+      try {
+        // Try normal JSON.stringify first
+        logMessage += ` | Details: ${JSON.stringify(details)}`;
+      } catch (error) {
+        // If it fails due to circular references, use safe serialization
+        try {
+          const safeDetails = this.safeDeepCopy(details);
+          logMessage += ` | Details: ${JSON.stringify(safeDetails)}`;
+        } catch (safeError) {
+          // If even safe serialization fails, just show the type and keys
+          logMessage += ` | Details: [Object with ${
+            typeof details === "object" && details
+              ? Object.keys(details).length
+              : 0
+          } properties]`;
+        }
+      }
+    }
+
+    this.outputChannel.appendLine(logMessage);
+  }
+
+  private log(message: string): void {
+    this.writeToLog(message, "INFO");
+  }
+
+  private logError(message: string, error: any): void {
+    this.writeToLog(message, "ERROR", {
+      error: error?.message || error,
+      stack: error?.stack,
+    });
+  }
+}

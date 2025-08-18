@@ -1,0 +1,488 @@
+/**
+ * Enhanced Graph Styles for Dedicated Analysis Views
+ */
+
+/* Container Styles */
+.enhanced-graph-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background: var(--vscode-editor-background);
+    color: var(--vscode-editor-foreground);
+    font-family: var(--vscode-font-family);
+}
+
+/* Graph Viewport */
+.graph-viewport {
+    flex: 1;
+    position: relative;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 6px;
+    background: var(--vscode-editor-background);
+    overflow: hidden;
+}
+
+#enhanced-graph {
+    width: 100%;
+    height: 100%;
+    border-radius: 6px;
+}
+
+/* Toolbar Styles */
+.graph-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--vscode-editor-inactiveSelectionBackground);
+    border-radius: 6px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    border: 1px solid var(--vscode-panel-border);
+}
+
+.toolbar-section {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.toolbar-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--vscode-button-border);
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: var(--vscode-font-family);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.toolbar-btn:hover {
+    background: var(--vscode-button-hoverBackground);
+    transform: translateY(-1px);
+}
+
+.toolbar-btn:active {
+    transform: translateY(0);
+}
+
+.search-input {
+    padding: 6px 8px;
+    border: 1px solid var(--vscode-input-border);
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: var(--vscode-font-family);
+    min-width: 200px;
+    transition: border-color 0.2s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--vscode-focusBorder);
+    box-shadow: 0 0 0 1px var(--vscode-focusBorder);
+}
+
+.filter-select,
+.layout-select {
+    padding: 6px 8px;
+    border: 1px solid var(--vscode-dropdown-border);
+    background: var(--vscode-dropdown-background);
+    color: var(--vscode-dropdown-foreground);
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: var(--vscode-font-family);
+    cursor: pointer;
+    min-width: 120px;
+}
+
+.filter-select:focus,
+.layout-select:focus {
+    outline: none;
+    border-color: var(--vscode-focusBorder);
+}
+
+/* Complexity Legend */
+.complexity-legend {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: var(--vscode-editor-inactiveSelectionBackground);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 11px;
+    z-index: 10;
+    min-width: 150px;
+}
+
+.complexity-legend h4 {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+}
+
+.legend-items,
+.legend-shapes {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.legend-shapes {
+    margin-bottom: 0;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.legend-shape {
+    width: 16px;
+    height: 12px;
+    border: 1px solid var(--vscode-panel-border);
+}
+
+.module-shape {
+    background: var(--vscode-editor-inactiveSelectionBackground);
+    border-radius: 2px;
+}
+
+.file-shape {
+    background: var(--vscode-button-background);
+    border-radius: 50%;
+    width: 12px;
+    height: 12px;
+}
+
+.legend-label {
+    color: var(--vscode-foreground);
+    font-size: 10px;
+}
+
+/* Tooltip Styles */
+.graph-tooltip {
+    position: absolute;
+    background: var(--vscode-hover-background);
+    border: 1px solid var(--vscode-hover-border);
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 11px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-hover-foreground);
+    z-index: 1000;
+    max-width: 300px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+}
+
+.tooltip-header {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--vscode-foreground);
+    border-bottom: 1px solid var(--vscode-panel-border);
+    padding-bottom: 4px;
+}
+
+.tooltip-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.tooltip-body div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tooltip-body strong {
+    margin-right: 8px;
+    color: var(--vscode-foreground);
+}
+
+/* Empty View Styles */
+.empty-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    color: var(--vscode-descriptionForeground);
+    padding: 40px;
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.7;
+}
+
+.empty-view h3 {
+    margin: 0 0 8px 0;
+    color: var(--vscode-foreground);
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.empty-view p {
+    margin: 0 0 20px 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.refresh-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--vscode-button-border);
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    transition: all 0.2s ease;
+}
+
+.refresh-btn:hover {
+    background: var(--vscode-button-hoverBackground);
+}
+
+/* Error View Styles */
+.error-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    color: var(--vscode-errorForeground);
+    padding: 40px;
+}
+
+.error-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.8;
+}
+
+.error-view h3 {
+    margin: 0 0 8px 0;
+    color: var(--vscode-errorForeground);
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.error-view p {
+    margin: 0 0 20px 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--vscode-foreground);
+}
+
+.retry-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--vscode-button-border);
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    transition: all 0.2s ease;
+}
+
+.retry-btn:hover {
+    background: var(--vscode-button-hoverBackground);
+}
+
+/* Graph Error Styles */
+.graph-error {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: var(--vscode-errorForeground);
+    background: var(--vscode-inputValidation-errorBackground);
+    padding: 20px;
+    border-radius: 6px;
+    border: 1px solid var(--vscode-inputValidation-errorBorder);
+    z-index: 100;
+}
+
+.graph-error .error-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+}
+
+.graph-error .error-message {
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
+/* Loading Styles */
+.graph-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: var(--vscode-descriptionForeground);
+    z-index: 100;
+}
+
+.spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--vscode-progressBar-background);
+    border-top: 2px solid var(--vscode-progressBar-foreground);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 12px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Cytoscape Node Styles (applied via JavaScript) */
+.cy-node-highlighted {
+    border-width: 4px !important;
+    border-color: var(--vscode-focusBorder) !important;
+    z-index: 10 !important;
+}
+
+.cy-node-search-result {
+    border-width: 3px !important;
+    border-color: var(--vscode-editor-findMatchHighlightBackground) !important;
+    box-shadow: 0 0 10px var(--vscode-editor-findMatchHighlightBackground) !important;
+}
+
+.cy-node-dependency-highlighted {
+    opacity: 1 !important;
+    border-width: 2px !important;
+    border-color: var(--vscode-button-background) !important;
+}
+
+.cy-edge-highlighted {
+    opacity: 1 !important;
+    width: 4px !important;
+    z-index: 5 !important;
+}
+
+.cy-edge-path-highlighted {
+    opacity: 1 !important;
+    width: 6px !important;
+    z-index: 8 !important;
+    line-color: var(--vscode-focusBorder) !important;
+    target-arrow-color: var(--vscode-focusBorder) !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .graph-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    
+    .toolbar-section {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .search-input {
+        min-width: 150px;
+    }
+    
+    .filter-select,
+    .layout-select {
+        min-width: 100px;
+    }
+    
+    .complexity-legend {
+        position: relative;
+        top: auto;
+        right: auto;
+        margin-bottom: 12px;
+    }
+}
+
+/* High Contrast Theme Support */
+@media (prefers-contrast: high) {
+    .toolbar-btn,
+    .search-input,
+    .filter-select,
+    .layout-select {
+        border-width: 2px;
+    }
+    
+    .graph-tooltip {
+        border-width: 2px;
+    }
+    
+    .complexity-legend {
+        border-width: 2px;
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    .toolbar-btn,
+    .search-input,
+    .refresh-btn,
+    .retry-btn {
+        transition: none;
+    }
+    
+    .spinner {
+        animation: none;
+        border-top-color: transparent;
+    }
+}
+
+/* Focus Styles for Accessibility */
+.toolbar-btn:focus,
+.search-input:focus,
+.filter-select:focus,
+.layout-select:focus,
+.refresh-btn:focus,
+.retry-btn:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+/* Print Styles */
+@media print {
+    .graph-toolbar,
+    .complexity-legend {
+        display: none;
+    }
+    
+    .enhanced-graph-container {
+        height: auto;
+        min-height: 500px;
+    }
+    
+    .graph-tooltip {
+        display: none !important;
+    }
+}

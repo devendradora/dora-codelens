@@ -1,0 +1,559 @@
+{
+  "name": "doracodebird-view",
+  "displayName": "DoraCodeBirdView",
+  "description": "Advanced VS Code extension for comprehensive Python project analysis with Git analytics, enhanced visualizations, JSON utilities, and database schema analysis",
+  "version": "0.1.0",
+  "publisher": "doracodebird",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "enabledApiProposals": [
+    "treeViewActiveItem"
+  ],
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "python",
+    "visualization",
+    "graph",
+    "complexity",
+    "analysis",
+    "git-analytics",
+    "database-schema",
+    "json-utilities",
+    "django",
+    "flask",
+    "fastapi"
+  ],
+  "activationEvents": [
+    "onLanguage:python",
+    "onLanguage:json",
+    "workspaceContains:**/*.py",
+    "workspaceContains:requirements.txt",
+    "workspaceContains:pyproject.toml",
+    "workspaceContains:Pipfile",
+    "onCommand:doracodebird.fullCodeAnalysis",
+    "onCommand:doracodebird.currentFileAnalysis",
+    "onCommand:doracodebird.callHierarchy",
+    "onCommand:doracodebird.dbSchema",
+    "onCommand:doracodebird.gitAnalytics",
+    "onCommand:doracodebird.jsonFormat",
+    "onCommand:doracodebird.jsonTreeView",
+    "onView:doracodebirdSidebar"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "doracodebird",
+          "title": "DoraCodeBirdView",
+        }
+      ]
+    },
+    "views": {
+      "doracodebird-explorer": [
+        {
+          "id": "doracodebirdSidebar",
+          "name": "Project Analysis",
+          "icon": "resources/light/doracodebird.svg",
+          "contextualTitle": "Project Analysis"
+        }
+      ]
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "doracodebird.currentFileAnalysis",
+          "group": "navigation@1",
+          "when": "resourceLangId == python"
+        },
+        {
+          "command": "doracodebird.callHierarchy",
+          "group": "navigation@2",
+          "when": "resourceLangId == python"
+        },
+        {
+          "command": "doracodebird.dbSchema",
+          "group": "navigation@3",
+          "when": "resourceLangId == python"
+        },
+        {
+          "command": "doracodebird.gitAnalytics",
+          "group": "navigation@4"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "doracodebird.fullCodeAnalysis",
+          "group": "navigation@1",
+          "when": "resourceLangId == python"
+        },
+        {
+          "command": "doracodebird.dbSchema",
+          "group": "navigation@2",
+          "when": "resourceLangId == python"
+        },
+        {
+          "command": "doracodebird.gitAnalytics",
+          "group": "navigation@3"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "doracodebird.refreshSidebar",
+          "when": "view == doracodebirdSidebar",
+          "group": "navigation"
+        },
+        {
+          "command": "doracodebird.openSettings",
+          "when": "view == doracodebirdSidebar",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "doracodebird.showDependencies",
+          "when": "view == doracodebirdSidebar && viewItem == module",
+          "group": "inline"
+        },
+        {
+          "command": "doracodebird.showFunctionComplexityDetails",
+          "when": "view == doracodebirdSidebar && viewItem == function",
+          "group": "inline"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "doracodebird.fullCodeAnalysis",
+        "title": "Full Code Analysis (Tech Stack, Code Graph, Code JSON)",
+        "category": "DoraCodeBirdView",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "doracodebird.currentFileAnalysis",
+        "title": "Current File Analysis (Code Graph, Code JSON)",
+        "category": "DoraCodeBirdView",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "doracodebird.callHierarchy",
+        "title": "Call Hierarchy (Code Graph, Code JSON)",
+        "category": "DoraCodeBirdView",
+        "icon": "$(call-hierarchy)"
+      },
+      {
+        "command": "doracodebird.dbSchema",
+        "title": "Database Schema (ER Diagram, Raw SQL)",
+        "category": "DoraCodeBirdView",
+        "icon": "$(database)"
+      },
+      {
+        "command": "doracodebird.gitAnalytics",
+        "title": "Git Analytics",
+        "category": "DoraCodeBirdView",
+        "icon": "$(git-compare)"
+      },
+      {
+        "command": "doracodebird.jsonFormat",
+        "title": "JSON Format",
+        "category": "DoraCodeBirdView",
+        "icon": "$(json)"
+      },
+      {
+        "command": "doracodebird.jsonTreeView",
+        "title": "JSON Tree View",
+        "category": "DoraCodeBirdView",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "doracodebird.refreshSidebar",
+        "title": "Refresh",
+        "category": "DoraCodeBirdView",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "doracodebird.openSettings",
+        "title": "Settings",
+        "category": "DoraCodeBirdView",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "doracodebird.clearCache",
+        "title": "Clear Cache",
+        "category": "DoraCodeBirdView",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "doracodebird.cancelAnalysis",
+        "title": "Cancel Analysis",
+        "category": "DoraCodeBirdView",
+        "icon": "$(stop)"
+      }
+        "title": "Cancel Analysis",
+        "category": "DoraCodeBirdView",
+        "icon": "$(stop)"
+      },
+      {
+        "command": "doracodebird.navigateToItem",
+        "title": "Navigate to Item",
+        "category": "DoraCodeBirdView"
+      },
+      {
+        "command": "doracodebird.filterSidebar",
+        "title": "Filter",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "doracodebird.selectModule",
+        "title": "Select Module",
+        "category": "DoraCodeBirdView"
+      },
+      {
+        "command": "doracodebird.clearSelection",
+        "title": "Clear Selection",
+        "category": "DoraCodeBirdView",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "doracodebird.showDependencies",
+        "title": "Show Dependencies",
+        "category": "DoraCodeBirdView",
+        "icon": "$(references)"
+      },
+      {
+        "command": "doracodebird.showFunctionComplexityDetails",
+        "title": "Show Function Complexity Details",
+        "category": "DoraCodeBirdView"
+      },
+      {
+        "command": "doracodebird.showGraphView",
+        "title": "Graph View",
+        "category": "DoraCodeBirdView",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "doracodebird.showJsonView",
+        "title": "JSON View",
+        "category": "DoraCodeBirdView",
+        "icon": "$(json)"
+      },
+      {
+        "command": "doracodebird.fullCodeAnalysis",
+        "title": "Full Code Analysis",
+        "category": "DoraCodeBirdView",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "doracodebird.currentFileAnalysis",
+        "title": "Current File Analysis",
+        "category": "DoraCodeBirdView",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "doracodebird.gitAuthorStatistics",
+        "title": "Author Statistics",
+        "category": "DoraCodeBirdView",
+        "icon": "$(person)"
+      },
+      {
+        "command": "doracodebird.gitModuleContributions",
+        "title": "Module Contributions",
+        "category": "DoraCodeBirdView",
+        "icon": "$(git-branch)"
+      },
+      {
+        "command": "doracodebird.gitCommitTimeline",
+        "title": "Commit Timeline",
+        "category": "DoraCodeBirdView",
+        "icon": "$(history)"
+      },
+      {
+        "command": "doracodebird.jsonFormat",
+        "title": "JSON Format",
+        "category": "DoraCodeBirdView",
+        "icon": "$(symbol-property)"
+      },
+      {
+        "command": "doracodebird.jsonTreeView",
+        "title": "JSON Tree View",
+        "category": "DoraCodeBirdView",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "doracodebird.dbSchema",
+        "title": "DB Schema",
+        "category": "DoraCodeBirdView",
+        "icon": "$(database)"
+      },
+      {
+        "command": "doracodebird.gitAnalytics",
+        "title": "Git Analytics",
+        "category": "DoraCodeBirdView",
+        "icon": "$(git-commit)"
+      },
+      {
+        "command": "doracodebird.diagnoseIssues",
+        "title": "Diagnose Issues",
+        "category": "DoraCodeBirdView",
+        "icon": "$(search-view-icon)"
+      }
+    ],
+    "views": {
+      "doracodebird": [
+        {
+          "id": "doracodebirdSidebar",
+          "name": "Project Analysis"
+        }
+      ]
+    },
+    "submenus": [
+      {
+        "id": "doracodebird.contextMenu",
+        "label": "DoraCodeBirdView",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "id": "doracodebird.jsonUtils",
+        "label": "JSON Utils",
+        "icon": "$(json)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "submenu": "doracodebird.contextMenu",
+          "when": "resourceExtname =~ /\\.(py|json|sql|md|txt|js|ts|html|css|yml|yaml)$/ || editorLangId == python",
+          "group": "navigation@1"
+        }
+      ],
+      "explorer/context": [
+        {
+          "submenu": "doracodebird.contextMenu",
+          "when": "explorerResourceIsFolder || resourceExtname =~ /\\.(py|json|sql|md|txt|js|ts|html|css|yml|yaml)$/",
+          "group": "navigation@1"
+        }
+      ],
+      "doracodebird.contextMenu": [
+        {
+          "command": "doracodebird.fullCodeAnalysis",
+          "group": "doracodebird@1"
+        },
+        {
+          "command": "doracodebird.currentFileAnalysis",
+          "group": "doracodebird@2"
+        },
+        {
+          "command": "doracodebird.showCallHierarchy",
+          "group": "doracodebird@3"
+        },
+        {
+          "command": "doracodebird.gitAnalytics",
+          "group": "doracodebird@4"
+        },
+        {
+          "submenu": "doracodebird.jsonUtils",
+          "group": "doracodebird@5"
+        },
+        {
+          "command": "doracodebird.dbSchema",
+          "group": "doracodebird@6"
+        }
+      ],
+      "doracodebird.jsonUtils": [
+        {
+          "command": "doracodebird.jsonFormat",
+          "group": "jsonUtils@1"
+        },
+        {
+          "command": "doracodebird.jsonTreeView",
+          "group": "jsonUtils@2"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "doracodebird.refreshSidebar",
+          "when": "view == doracodebirdSidebar",
+          "group": "navigation@1"
+        },
+        {
+          "command": "doracodebird.filterSidebar",
+          "when": "view == doracodebirdSidebar",
+          "group": "navigation@2"
+        },
+        {
+          "command": "doracodebird.clearSelection",
+          "when": "view == doracodebirdSidebar",
+          "group": "navigation@3"
+        },
+        {
+          "command": "doracodebird.clearCache",
+          "when": "view == doracodebirdSidebar",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "doracodebird.navigateToItem",
+          "when": "view == doracodebirdSidebar && viewItem == module",
+          "group": "navigation@1"
+        },
+        {
+          "command": "doracodebird.selectModule",
+          "when": "view == doracodebirdSidebar && viewItem == module",
+          "group": "navigation@2"
+        },
+        {
+          "command": "doracodebird.showDependencies",
+          "when": "view == doracodebirdSidebar && viewItem == module",
+          "group": "navigation@3"
+        },
+        {
+          "command": "doracodebird.navigateToItem",
+          "when": "view == doracodebirdSidebar && viewItem == function",
+          "group": "navigation@1"
+        },
+        {
+          "command": "doracodebird.navigateToItem",
+          "when": "view == doracodebirdSidebar && viewItem == class",
+          "group": "navigation@1"
+        },
+        {
+          "command": "doracodebird.navigateToItem",
+          "when": "view == doracodebirdSidebar && viewItem == method",
+          "group": "navigation@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "doracodebird.analyzeProject",
+          "when": "workspaceContains:**/*.py"
+        },
+        {
+          "command": "doracodebird.showModuleGraph",
+          "when": "workspaceContains:**/*.py"
+        },
+        {
+          "command": "doracodebird.showCallHierarchy",
+          "when": "editorLangId == python"
+        },
+        {
+          "command": "doracodebird.openSettings",
+          "when": "workspaceContains:**/*.py"
+        },
+        {
+          "command": "doracodebird.clearCache",
+          "when": "workspaceContains:**/*.py"
+        },
+        {
+          "command": "doracodebird.showOutput",
+          "when": "workspaceContains:**/*.py"
+        },
+        {
+          "command": "doracodebird.cancelAnalysis",
+          "when": "workspaceContains:**/*.py"
+        },
+        {
+          "command": "doracodebird.showGraphView",
+          "when": "editorLangId == python"
+        },
+        {
+          "command": "doracodebird.showJsonView",
+          "when": "editorLangId == python"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "DoraCodeBirdView",
+      "properties": {
+        "doracodebird.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Path to Python executable"
+        },
+        "doracodebird.showComplexityCodeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show complexity scores as CodeLens annotations"
+        },
+        "doracodebird.complexityThresholds": {
+          "type": "object",
+          "default": {
+            "low": 5,
+            "medium": 10,
+            "high": 20
+          },
+          "description": "Complexity thresholds for color coding"
+        },
+        "doracodebird.enableCaching": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable caching of analysis results"
+        },
+        "doracodebird.jsonFormatting.indent": {
+          "type": "number",
+          "default": 2,
+          "description": "Number of spaces for JSON indentation"
+        },
+        "doracodebird.jsonFormatting.sortKeys": {
+          "type": "boolean",
+          "default": false,
+          "description": "Sort object keys when formatting JSON"
+        },
+        "doracodebird.jsonFormatting.removeComments": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remove comments when formatting JSON"
+        },
+        "doracodebird.jsonFormatting.removeTrailingCommas": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remove trailing commas when formatting JSON"
+        },
+        "doracodebird.jsonFormatting.insertFinalNewline": {
+          "type": "boolean",
+          "default": true,
+          "description": "Insert final newline when formatting JSON"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "test:comprehensive": "npm run compile && node ./out/test/run-comprehensive-tests.js",
+    "test:unit": "npm run compile && node ./out/test/runTest.js",
+    "test:performance": "npm run compile && TEST_PATTERN='**/performance.test.js' node ./out/test/runTest.js",
+    "test:e2e": "npm run compile && TEST_PATTERN='**/e2e-workflow.test.js' node ./out/test/runTest.js",
+    "test:watch": "npm run compile && npm run watch & npm run test",
+    "test:coverage": "npm run test:comprehensive && echo 'Coverage report would be generated here'"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.0.0",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "16.x",
+    "@types/sinon": "^17.0.4",
+    "@types/vscode": "^1.74.0",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "@vscode/test-electron": "^2.2.0",
+    "eslint": "^8.28.0",
+    "glob": "^8.0.3",
+    "mocha": "^10.2.0",
+    "sinon": "^21.0.0",
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.0",
+    "cytoscape": "^3.33.1",
+    "cytoscape-dagre": "^2.5.0",
+    "dagre": "^0.8.5"
+  }
+}

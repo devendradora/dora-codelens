@@ -93,10 +93,9 @@ def create_task(request, list_id):
         'todo_list': todo_list
     })
 
-@lo
-gin_required
+@login_required
 @require_http_methods(["POST"])
-def toggle_task(request, task_id):
+def update_task_status(request, task_id):
     """Toggle task completion status via AJAX."""
     task = get_object_or_404(Task, id=task_id, todo_list__owner=request.user)
     task.completed = not task.completed

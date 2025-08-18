@@ -1838,3 +1838,1436 @@ body[data-vscode-theme-name*="dark"] .module-card-stat-value {
         transition: none;
     }
 }
+/* 
+Enhanced Modal System Styles */
+
+/* Modal Container - Uses CSS Grid for full-screen layout */
+.modal-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    display: none;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.modal-container.active {
+    display: grid;
+    grid-template-rows: 1fr;
+    grid-template-columns: 1fr;
+    place-items: center;
+}
+
+/* Modal Base Styles */
+.modal {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    max-width: 100vw;
+    max-height: 100vh;
+    background: transparent;
+    border: none;
+    outline: none;
+}
+
+.modal-fullscreen {
+    width: 100vw;
+    height: 100vh;
+}
+
+/* Modal Backdrop */
+.modal-backdrop {
+    display: grid;
+    grid-template-rows: 1fr;
+    grid-template-columns: 1fr;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    cursor: pointer;
+}
+
+/* Modal Content - Uses CSS Grid for layout */
+.modal-content {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    grid-template-columns: 1fr;
+    width: 100%;
+    height: 100%;
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: 0;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    cursor: default;
+    overflow: hidden;
+}
+
+.modal-fullscreen .modal-content {
+    border-radius: 0;
+    border: none;
+    width: 100vw;
+    height: 100vh;
+}
+
+/* Modal Header - Uses CSS Grid for control layout */
+.modal-header {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    grid-template-areas: "title controls close";
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    background-color: var(--vscode-titleBar-activeBackground);
+    border-bottom: 1px solid var(--vscode-widget-border);
+    min-height: 48px;
+}
+
+.modal-title-section {
+    grid-area: title;
+    display: flex;
+    align-items: center;
+    min-width: 0; /* Allow text truncation */
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--vscode-titleBar-activeForeground);
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.modal-controls {
+    grid-area: controls;
+    display: grid;
+    grid-auto-flow: column;
+    gap: 12px;
+    align-items: center;
+}
+
+.modal-control-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.modal-control-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: 1px solid var(--vscode-button-border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.modal-control-btn:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+    transform: scale(1.05);
+}
+
+.modal-control-btn:active {
+    transform: scale(0.95);
+}
+
+.modal-search-input {
+    width: 200px;
+    padding: 6px 8px;
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+}
+
+.modal-search-input:focus {
+    outline: none;
+    border-color: var(--vscode-focusBorder);
+    box-shadow: 0 0 0 1px var(--vscode-focusBorder);
+}
+
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
+    border-radius: 4px;
+}
+
+.zoom-level {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    min-width: 40px;
+    text-align: center;
+}
+
+.modal-reset-btn {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+}
+
+.modal-reset-btn:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.modal-close-section {
+    grid-area: close;
+    display: flex;
+    align-items: center;
+}
+
+.modal-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: none;
+    border: none;
+    color: var(--vscode-titleBar-activeForeground);
+    font-size: 20px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+    background-color: var(--vscode-toolbar-hoverBackground);
+    color: var(--vscode-errorForeground);
+}
+
+.modal-close-btn:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+/* Modal Body - Scrollable content area */
+.modal-body {
+    grid-row: 2;
+    overflow: auto;
+    padding: 16px;
+    background-color: var(--vscode-editor-background);
+    color: var(--vscode-editor-foreground);
+    position: relative;
+    transform-origin: top left;
+    transition: transform 0.2s ease;
+}
+
+.modal-body::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: var(--vscode-scrollbarSlider-background);
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: var(--vscode-scrollbarSlider-hoverBackground);
+    border-radius: 6px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: var(--vscode-scrollbarSlider-activeBackground);
+}
+
+.modal-body::-webkit-scrollbar-corner {
+    background: var(--vscode-scrollbarSlider-background);
+}
+
+/* Search Highlighting */
+.search-highlight {
+    background-color: var(--vscode-editor-findMatchHighlightBackground);
+    color: var(--vscode-editor-findMatchHighlightForeground);
+    border-radius: 2px;
+    padding: 1px 2px;
+    font-weight: 600;
+}
+
+.search-highlight.current {
+    background-color: var(--vscode-editor-findMatchBackground);
+    color: var(--vscode-editor-findMatchForeground);
+    outline: 1px solid var(--vscode-editor-findMatchBorder);
+}
+
+/* Modal Animations */
+.modal-container.active {
+    animation: modalFadeIn 0.3s ease-out;
+}
+
+.modal-content {
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
+    to {
+        opacity: 1;
+        backdrop-filter: blur(4px);
+    }
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: scale(0.9) translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Modal closing animation */
+.modal-container.closing {
+    animation: modalFadeOut 0.2s ease-in;
+}
+
+.modal-container.closing .modal-content {
+    animation: modalSlideOut 0.2s ease-in;
+}
+
+@keyframes modalFadeOut {
+    from {
+        opacity: 1;
+        backdrop-filter: blur(4px);
+    }
+    to {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
+}
+
+@keyframes modalSlideOut {
+    from {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: scale(0.9) translateY(-20px);
+        opacity: 0;
+    }
+}
+
+/* Responsive Modal Design */
+@media (max-width: 768px) {
+    .modal-header {
+        grid-template-columns: 1fr auto;
+        grid-template-areas: 
+            "title close"
+            "controls controls";
+        gap: 8px;
+        padding: 8px 12px;
+    }
+
+    .modal-controls {
+        grid-area: controls;
+        justify-self: stretch;
+        grid-auto-flow: row;
+        gap: 8px;
+    }
+
+    .modal-control-group {
+        justify-content: center;
+    }
+
+    .modal-search-input {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .modal-body {
+        padding: 12px;
+    }
+
+    .modal-title {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-header {
+        padding: 6px 8px;
+    }
+
+    .modal-controls {
+        gap: 6px;
+    }
+
+    .modal-control-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+
+    .modal-close-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 18px;
+    }
+
+    .modal-body {
+        padding: 8px;
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .modal-content {
+        border-width: 2px;
+    }
+
+    .modal-control-btn {
+        border-width: 2px;
+    }
+
+    .modal-close-btn {
+        border: 2px solid var(--vscode-foreground);
+    }
+
+    .search-highlight {
+        outline: 2px solid var(--vscode-foreground);
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    .modal-container.active,
+    .modal-content,
+    .modal-container.closing,
+    .modal-container.closing .modal-content {
+        animation: none;
+    }
+
+    .modal-control-btn {
+        transition: none;
+    }
+
+    .modal-body {
+        transition: none;
+    }
+}
+
+/* Focus Management */
+.modal-container.active {
+    /* Trap focus within modal */
+}
+
+.modal-content:focus {
+    outline: none;
+}
+
+/* Ensure modal content is accessible */
+.modal[aria-modal="true"] {
+    /* Screen reader support */
+}
+
+/* Error States for Modal */
+.modal-error {
+    padding: 16px;
+    background-color: var(--vscode-inputValidation-errorBackground);
+    border: 1px solid var(--vscode-inputValidation-errorBorder);
+    border-radius: 4px;
+    color: var(--vscode-inputValidation-errorForeground);
+    margin: 16px 0;
+}
+
+.modal-error h3 {
+    margin: 0 0 8px 0;
+    color: var(--vscode-errorForeground);
+}
+
+.modal-error p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Loading States for Modal */
+.modal-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    color: var(--vscode-descriptionForeground);
+}
+
+.modal-loading .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--vscode-progressBar-background);
+    border-top: 3px solid var(--vscode-progressBar-foreground);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+.modal-loading p {
+    margin: 0;
+    font-size: 14px;
+    text-align: center;
+}
+
+/* Modal Overlay for Multiple Modals */
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 1;
+}
+
+/* Ensure proper stacking for nested modals */
+.modal-container[data-modal-level="1"] {
+    z-index: 9999;
+}
+
+.modal-container[data-modal-level="2"] {
+    z-index: 10000;
+}
+
+.modal-container[data-modal-level="3"] {
+    z-index: 10001;
+}
+/* M
+odal System Styles */
+.modal-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: none;
+    pointer-events: none;
+}
+
+.modal-container.active {
+    display: block;
+    pointer-events: all;
+}
+
+.modal {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-fullscreen {
+    width: 100vw;
+    height: 100vh;
+}
+
+.modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    position: relative;
+    width: 95%;
+    height: 95%;
+    max-width: none;
+    max-height: none;
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background-color: var(--vscode-titleBar-activeBackground);
+    border-bottom: 1px solid var(--vscode-panel-border);
+    flex-shrink: 0;
+}
+
+.modal-title-section {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+}
+
+.modal-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 16px;
+}
+
+.modal-control-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.modal-search-input {
+    padding: 6px 8px;
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    font-size: 12px;
+    width: 200px;
+    transition: border-color 0.2s ease;
+}
+
+.modal-search-input:focus {
+    outline: none;
+    border-color: var(--vscode-focusBorder);
+}
+
+.modal-search-input::placeholder {
+    color: var(--vscode-input-placeholderForeground);
+}
+
+.modal-control-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 8px;
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: 1px solid var(--vscode-button-border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+    min-width: 32px;
+    height: 32px;
+}
+
+.modal-control-btn:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.modal-control-btn:active {
+    transform: scale(0.95);
+}
+
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
+    border-radius: 6px;
+}
+
+.zoom-level {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    min-width: 40px;
+    text-align: center;
+    padding: 0 4px;
+}
+
+.modal-reset-btn {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+}
+
+.modal-reset-btn:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.modal-close-section {
+    display: flex;
+    align-items: center;
+}
+
+.modal-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: none;
+    border: none;
+    color: var(--vscode-foreground);
+    font-size: 20px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+    background-color: var(--vscode-toolbar-hoverBackground);
+    color: var(--vscode-errorForeground);
+}
+
+.modal-close-btn:active {
+    transform: scale(0.9);
+}
+
+.modal-body {
+    flex: 1;
+    padding: 16px;
+    overflow: auto;
+    background-color: var(--vscode-editor-background);
+    position: relative;
+    transform-origin: top left;
+    transition: transform 0.2s ease;
+}
+
+/* Search highlighting */
+.search-highlight {
+    background-color: var(--vscode-editor-findMatchHighlightBackground);
+    color: var(--vscode-editor-findMatchForeground);
+    border-radius: 2px;
+    padding: 1px 2px;
+    font-weight: 600;
+}
+
+.search-highlight.current {
+    background-color: var(--vscode-editor-findMatchBackground);
+    color: var(--vscode-editor-findMatchForeground);
+    box-shadow: 0 0 0 1px var(--vscode-editor-findMatchBorder);
+}
+
+/* Modal animations */
+.modal-container.active .modal-backdrop {
+    animation: modalFadeIn 0.2s ease-out;
+}
+
+.modal-container.active .modal-content {
+    animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Responsive modal design */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 98%;
+        height: 98%;
+        border-radius: 4px;
+    }
+    
+    .modal-header {
+        padding: 8px 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .modal-controls {
+        margin: 0;
+        gap: 8px;
+    }
+    
+    .modal-search-input {
+        width: 150px;
+        font-size: 11px;
+    }
+    
+    .modal-control-btn {
+        padding: 4px 6px;
+        font-size: 11px;
+        min-width: 28px;
+        height: 28px;
+    }
+    
+    .modal-title {
+        font-size: 14px;
+    }
+    
+    .modal-body {
+        padding: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .modal-title-section {
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+    
+    .modal-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .modal-search-input {
+        width: 120px;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .modal-content {
+        border-width: 2px;
+    }
+    
+    .modal-control-btn {
+        border-width: 2px;
+    }
+    
+    .search-highlight {
+        border: 1px solid var(--vscode-foreground);
+    }
+}
+
+/* Focus management */
+.modal-container.active .modal-content {
+    outline: none;
+}
+
+.modal-container.active .modal-search-input:focus,
+.modal-container.active .modal-control-btn:focus,
+.modal-container.active .modal-close-btn:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+/* Accessibility improvements */
+.modal[aria-modal="true"] {
+    isolation: isolate;
+}
+
+.modal-body:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: -2px;
+}
+
+/* Dark theme specific adjustments */
+body[data-vscode-theme-kind="vscode-dark"] .modal-backdrop,
+body[data-vscode-theme-name*="dark"] .modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+body[data-vscode-theme-kind="vscode-dark"] .search-highlight,
+body[data-vscode-theme-name*="dark"] .search-highlight {
+    background-color: var(--vscode-editor-findMatchHighlightBackground);
+    color: var(--vscode-editor-findMatchHighlightForeground);
+}
+/*
+ ===== TAB SYSTEM STYLES ===== */
+
+/* Tab System Container */
+.tab-system {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    font-family: var(--vscode-font-family);
+    background-color: var(--vscode-editor-background);
+    color: var(--vscode-editor-foreground);
+}
+
+/* Tab Header */
+.tab-header {
+    display: flex;
+    background-color: var(--vscode-tab-inactiveBackground);
+    border-bottom: 1px solid var(--vscode-tab-border);
+    overflow-x: auto;
+    flex-shrink: 0;
+    position: relative;
+    min-height: 35px;
+}
+
+.tab-header::-webkit-scrollbar {
+    height: 3px;
+}
+
+.tab-header::-webkit-scrollbar-track {
+    background: var(--vscode-scrollbarSlider-background);
+}
+
+.tab-header::-webkit-scrollbar-thumb {
+    background: var(--vscode-scrollbarSlider-hoverBackground);
+    border-radius: 2px;
+}
+
+.tab-header::-webkit-scrollbar-thumb:hover {
+    background: var(--vscode-scrollbarSlider-activeBackground);
+}
+
+/* Tab Button */
+.tab-button {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    background: none;
+    border: none;
+    color: var(--vscode-tab-inactiveForeground);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-bottom: 2px solid transparent;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    font-weight: 400;
+    position: relative;
+    min-width: 0;
+    flex-shrink: 0;
+}
+
+.tab-button:hover:not(.disabled) {
+    background-color: var(--vscode-tab-hoverBackground);
+    color: var(--vscode-tab-activeForeground);
+}
+
+.tab-button.active {
+    background-color: var(--vscode-tab-activeBackground);
+    color: var(--vscode-tab-activeForeground);
+    border-bottom-color: var(--vscode-tab-activeBorder, var(--vscode-focusBorder));
+    font-weight: 500;
+}
+
+.tab-button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    color: var(--vscode-disabledForeground);
+}
+
+.tab-button:focus {
+    outline: none;
+    box-shadow: inset 0 0 0 1px var(--vscode-focusBorder);
+}
+
+.tab-button:focus:not(.active) {
+    background-color: var(--vscode-tab-hoverBackground);
+}
+
+/* Tab Icon */
+.tab-icon {
+    margin-right: 6px;
+    font-size: 14px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+}
+
+/* Tab Title */
+.tab-title {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+/* Tab Content Area */
+.tab-content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    background-color: var(--vscode-editor-background);
+}
+
+/* Tab Panel */
+.tab-panel {
+    display: none;
+    height: 100%;
+    overflow: auto;
+    position: relative;
+    background-color: var(--vscode-editor-background);
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+.tab-panel:focus {
+    outline: none;
+}
+
+/* Tab Content Inner (for zoom/transform) */
+.tab-content-inner {
+    min-height: 100%;
+    transform-origin: top left;
+    transition: transform 0.2s ease;
+}
+
+/* Loading State for Tabs */
+.tab-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--vscode-descriptionForeground);
+    gap: 12px;
+}
+
+.tab-loading .spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--vscode-progressBar-background);
+    border-top: 2px solid var(--vscode-progressBar-foreground);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.tab-loading-text {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Error State for Tabs */
+.tab-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    padding: 20px;
+    text-align: center;
+    color: var(--vscode-errorForeground);
+    background-color: var(--vscode-inputValidation-errorBackground);
+    border: 1px solid var(--vscode-inputValidation-errorBorder);
+    border-radius: 6px;
+    margin: 16px;
+}
+
+.tab-error-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.tab-error-message {
+    font-size: 14px;
+    margin-bottom: 16px;
+    opacity: 0.9;
+}
+
+.tab-error-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.tab-retry-btn {
+    padding: 6px 12px;
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.2s ease;
+}
+
+.tab-retry-btn:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+/* Tab Navigation Indicators */
+.tab-nav-indicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(90deg, var(--vscode-tab-inactiveBackground) 0%, transparent 100%);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 10;
+}
+
+.tab-nav-indicator.left {
+    left: 0;
+    background: linear-gradient(90deg, var(--vscode-tab-inactiveBackground) 0%, transparent 100%);
+}
+
+.tab-nav-indicator.right {
+    right: 0;
+    background: linear-gradient(270deg, var(--vscode-tab-inactiveBackground) 0%, transparent 100%);
+}
+
+.tab-header:hover .tab-nav-indicator {
+    opacity: 1;
+}
+
+.tab-nav-indicator:hover {
+    background-color: var(--vscode-tab-hoverBackground);
+}
+
+.tab-nav-arrow {
+    font-size: 12px;
+    color: var(--vscode-tab-inactiveForeground);
+}
+
+/* Tab Close Button (if needed) */
+.tab-close-btn {
+    margin-left: 6px;
+    padding: 2px;
+    background: none;
+    border: none;
+    color: var(--vscode-tab-inactiveForeground);
+    cursor: pointer;
+    border-radius: 2px;
+    font-size: 12px;
+    opacity: 0;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+}
+
+.tab-button:hover .tab-close-btn {
+    opacity: 1;
+}
+
+.tab-close-btn:hover {
+    background-color: var(--vscode-toolbar-hoverBackground);
+    color: var(--vscode-tab-activeForeground);
+}
+
+/* Tab Badge (for notifications, counts, etc.) */
+.tab-badge {
+    margin-left: 6px;
+    background-color: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    border-radius: 9px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    min-width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Tab Separator */
+.tab-separator {
+    width: 1px;
+    background-color: var(--vscode-tab-border);
+    margin: 4px 0;
+    flex-shrink: 0;
+}
+
+/* Responsive Tab Behavior */
+@media (max-width: 768px) {
+    .tab-button {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+    
+    .tab-icon {
+        margin-right: 4px;
+        font-size: 12px;
+        width: 14px;
+        height: 14px;
+    }
+    
+    .tab-title {
+        max-width: 120px;
+    }
+}
+
+@media (max-width: 480px) {
+    .tab-button {
+        padding: 6px 8px;
+    }
+    
+    .tab-title {
+        max-width: 80px;
+    }
+    
+    /* Hide tab text on very small screens, show only icons */
+    .tab-button.icon-only .tab-title {
+        display: none;
+    }
+    
+    .tab-button.icon-only .tab-icon {
+        margin-right: 0;
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .tab-button {
+        border: 1px solid transparent;
+    }
+    
+    .tab-button:hover:not(.disabled) {
+        border-color: var(--vscode-contrastBorder);
+    }
+    
+    .tab-button.active {
+        border-color: var(--vscode-tab-activeBorder, var(--vscode-focusBorder));
+        border-bottom-width: 3px;
+    }
+    
+    .tab-button:focus {
+        border-color: var(--vscode-focusBorder);
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    .tab-button {
+        transition: none;
+    }
+    
+    .tab-content-inner {
+        transition: none;
+    }
+    
+    .tab-loading .spinner {
+        animation: none;
+        border: 2px solid var(--vscode-progressBar-foreground);
+    }
+}
+
+/* Dark Theme Specific Adjustments */
+body[data-vscode-theme-kind="vscode-dark"] .tab-header,
+body[data-vscode-theme-name*="dark"] .tab-header {
+    background-color: var(--vscode-tab-inactiveBackground);
+    border-bottom-color: var(--vscode-tab-border);
+}
+
+body[data-vscode-theme-kind="vscode-dark"] .tab-button.active,
+body[data-vscode-theme-name*="dark"] .tab-button.active {
+    background-color: var(--vscode-tab-activeBackground);
+    border-bottom-color: var(--vscode-tab-activeBorder, var(--vscode-focusBorder));
+}
+
+/* Light Theme Specific Adjustments */
+body[data-vscode-theme-kind="vscode-light"] .tab-header,
+body[data-vscode-theme-name*="light"] .tab-header {
+    background-color: var(--vscode-tab-inactiveBackground);
+    border-bottom-color: var(--vscode-tab-border);
+}
+
+/* Tab Animation Effects */
+@keyframes tabSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tab-panel.active {
+    animation: tabSlideIn 0.2s ease-out;
+}
+
+/* Tab Drag and Drop (if implemented) */
+.tab-button.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+}
+
+.tab-button.drop-target {
+    background-color: var(--vscode-list-dropBackground);
+}
+
+.tab-drop-indicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: var(--vscode-focusBorder);
+    z-index: 100;
+}
+
+/* Tab Context Menu */
+.tab-context-menu {
+    position: absolute;
+    background-color: var(--vscode-menu-background);
+    border: 1px solid var(--vscode-menu-border);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    min-width: 150px;
+    padding: 4px 0;
+}
+
+.tab-context-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--vscode-menu-foreground);
+    transition: background-color 0.1s ease;
+}
+
+.tab-context-item:hover {
+    background-color: var(--vscode-menu-selectionBackground);
+    color: var(--vscode-menu-selectionForeground);
+}
+
+.tab-context-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.tab-context-separator {
+    height: 1px;
+    background-color: var(--vscode-menu-separatorBackground);
+    margin: 4px 0;
+}
+
+/* Tab Overflow Handling */
+.tab-header.overflow {
+    position: relative;
+}
+
+.tab-overflow-btn {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 24px;
+    background-color: var(--vscode-tab-inactiveBackground);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--vscode-tab-inactiveForeground);
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.tab-overflow-btn:hover {
+    background-color: var(--vscode-tab-hoverBackground);
+    color: var(--vscode-tab-activeForeground);
+}
+
+.tab-overflow-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: var(--vscode-menu-background);
+    border: 1px solid var(--vscode-menu-border);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    min-width: 200px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.tab-overflow-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--vscode-menu-foreground);
+    transition: background-color 0.1s ease;
+}
+
+.tab-overflow-item:hover {
+    background-color: var(--vscode-menu-selectionBackground);
+    color: var(--vscode-menu-selectionForeground);
+}
+
+.tab-overflow-item.active {
+    background-color: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+/* Accessibility Improvements */
+.tab-button[aria-selected="true"] {
+    /* Additional styling for screen readers */
+}
+
+.tab-panel[aria-hidden="true"] {
+    display: none;
+}
+
+.tab-system:focus-within .tab-button:focus {
+    z-index: 1;
+}
+
+/* Print Styles */
+@media print {
+    .tab-header {
+        display: none;
+    }
+    
+    .tab-panel {
+        display: block !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    
+    .tab-panel:not(.active) {
+        page-break-before: always;
+    }
+}
+
+/* ===== END TAB SYSTEM STYLES ===== */
