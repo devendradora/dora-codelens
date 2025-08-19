@@ -2,436 +2,357 @@
 
 ## Overview
 
-This design addresses the critical tab rendering bug in the TabbedWebviewProvider where tabs are not displaying properly despite correct backend data flow. The issue appears to be in the JavaScript execution within the webview, specifically in the DOM manipulation and event handling for tab creation and switching. The solution focuses on robust error handling, improved DOM manipulation, and enhanced debugging capabilities.
+This design addresses the critical tab rendering and data parsing issues in the full code analysis webview. The core problem is a mismatch between the expected frontend data structure and the actual backend response format. The backend returns nested objects (e.g., `modules.nodes`, `functions.nodes`) while the frontend expects flat arrays. This design will update the data parsing logic, fix counting methods, and ensure proper error handling across all tabs.
 
 ## Architecture
 
-### Current State Analysis
+### Current vs Expected Data Structure
 
-Based on the logs and code analysis, the current flow is:
-1. `TabbedWebviewProvider.updateWebviewContent()` is called
-2. HTML content is set successfully 
-3. `updateData` message is sent to webview with analysis data
-4. JavaScript in webview should render tabs and content
-5. **FAILURE POINT**: Tabs are not rendering visually
+**Backend Response Structure (Actual)**:
+```typescript
+interface BackendResponse {
+  success: boolean;
+  metadata: {
+    analysis_time: number;
+    total_files: number;
+    total_lines: number;
+    schema_version: string;
+    warnings: string[];
+  };
+  tech_stack: {
+    libraries: Array<{name: string, version: string, usage_count: number}>;
+    frameworks: string[];
+    languages: {[key: string]: number};
+    python_version: string;
+  };
+  modules: {
+    nodes: Array<ModuleNode>;
+    edges: Array<ModuleEdge>;
+    total_modules: number;
+    complexity_summary: ComplexitySummary;
+  };
+  functions: {
+    nodes: Array<FunctionNode>;
+    edges: Array<CallEdge>;
+    total_functions: number;
+  };
+  framework_patterns: {
+    django?: DjangoPatterns;
+    flask?: FlaskPatterns;
+    fastapi?: FastAPIPatterns;
+  };
+  errors: string[];
+  warnings: string[];
+}
+```
 
-The logs show:
-- "HTML content set successfully" ✓
-- "Sending message to webview" ✓  
-- "Tabbed webview content updated" ✓
-- But tabs are not visible to users ✗
+**Current Frontend Expectations (Incorrect)**:
+```typescript
+interface CurrentExpectations {
+  modules: Array<ModuleNode>;  // Should be modules.nodes
+  functions: Array<FunctionNode>;  // Should be functions.nodes
+  tech_stack: {
+    languages: {[key: string]: number};  // Correct
+    frameworks: string[];  // Should be frameworks array
+  };
+}
+```
 
-### Root Cause Analysis
+### Data Flow Architecture
 
-Potential causes identified:
-1. **DOM Timing Issues**: JavaScript executing before DOM is fully ready
-2. **CSS Rendering Problems**: Tab elements created but not visible due to styling
-3. **JavaScript Errors**: Silent failures in tab rendering functions
-4. **Message Handling Failures**: updateData message not processed correctly
-5. **Element Selection Issues**: querySelector/querySelectorAll failing to find elements
-
-### Proposed Solution Architecture
-
-1. **Enhanced Error Handling**: Wrap all DOM operations in try-catch blocks
-2. **Robust DOM Ready Detection**: Ensure DOM is ready before manipulation
-3. **Fallback Rendering**: Emergency tab creation if normal rendering fails
-4. **Improved Logging**: Detailed logging at each step of tab rendering
-5. **State Validation**: Verify DOM state before and after operations
+```
+Backend Response
+       │
+       ▼
+┌─────────────────────┐
+│ Data Structure      │ ──► Validates response structure
+│ Validator           │     against expected schema
+└─────────────────────┘
+       │
+       ▼
+┌─────────────────────┐
+│ Data Normalizer     │ ──► Transforms nested structures
+│                     │     to expected format
+└─────────────────────┘
+       │
+       ▼
+┌─────────────────────┐
+│ Tab Content         │ ──► Generates tab content using
+│ Generator           │     normalized data
+└─────────────────────┘
+```
 
 ## Components and Interfaces
 
-### 1. Enhanced Tab Rendering System
+### 1. Data Structure Validator
 
+**Purpose**: Validate and log the actual backend response structure for debugging
+
+**Key Features**:
+- Schema validation against expected structure
+- Detailed logging of data structure mismatches
+- Graceful handling of missing or malformed data
+- Clear error messages for debugging
+
+**Interface**:
 ```typescript
-interface TabRenderingState {
-    domReady: boolean;
-    tabsRendered: boolean;
-    lastError: Error | null;
-    renderAttempts: number;
-    fallbackMode: boolean;
+interface DataValidator {
+  validateResponse(data: any): ValidationResult;
+  logStructureMismatch(expected: string, actual: any): void;
+  getValidationErrors(): string[];
 }
 
-interface TabRenderingConfig {
-    maxRetries: number;
-    retryDelay: number;
-    enableFallback: boolean;
-    debugMode: boolean;
+interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  normalizedData: any;
 }
 ```
 
-### 2. Improved Message Handling
+### 2. Data Normalizer
 
+**Purpose**: Transform the backend response to match frontend expectations
+
+**Key Features**:
+- Convert nested structures to expected format
+- Handle missing data gracefully
+- Maintain backward compatibility
+- Preserve all available data
+
+**Methods**:
 ```typescript
-interface EnhancedWebviewMessage {
-    command: string;
-    data?: any;
-    timestamp: number;
-    messageId: string;
-    retryCount?: number;
-}
-
-interface MessageProcessingResult {
-    success: boolean;
-    error?: string;
-    processingTime: number;
-    domState: DOMState;
-}
-
-interface DOMState {
-    tabHeaderExists: boolean;
-    tabContentExists: boolean;
-    tabButtonCount: number;
-    activeTabId: string | null;
+interface DataNormalizer {
+  normalizeModulesData(data: any): ModuleData;
+  normalizeFunctionsData(data: any): FunctionData;
+  normalizeTechStackData(data: any): TechStackData;
+  normalizeFrameworkPatternsData(data: any): FrameworkPatternData;
 }
 ```
 
-### 3. Enhanced Logging System
+### 3. Updated Counting Methods
 
+**Purpose**: Provide accurate counts based on the actual data structure
+
+**Key Features**:
+- Use `total_modules` when available, fallback to counting nodes
+- Handle both nested and flat data structures
+- Consistent counting logic across all tabs
+- Proper error handling for missing data
+
+**Methods**:
 ```typescript
-interface WebviewLogger {
-    logLevel: 'debug' | 'info' | 'warn' | 'error';
-    logToExtension: (level: string, message: string, data?: any) => void;
-    logDOMState: () => void;
-    logTabState: () => void;
-    logError: (error: Error, context: string) => void;
+interface CountingMethods {
+  getModuleCount(data: any): number;
+  getFunctionCount(data: any): number;
+  getTechStackCount(data: any): number;
+  getFrameworkPatternCount(data: any): number;
 }
 ```
+
+### 4. Enhanced Tab Content Generators
+
+**Purpose**: Generate tab content using the correct data structure
+
+**Key Features**:
+- Access data from correct nested paths
+- Handle missing data with appropriate empty states
+- Provide detailed error information
+- Support both old and new data formats for compatibility
 
 ## Data Models
 
-### 1. Tab Rendering Pipeline
+### Normalized Data Interfaces
 
 ```typescript
-interface TabRenderingPipeline {
-    steps: RenderingStep[];
-    currentStep: number;
-    completed: boolean;
-    errors: RenderingError[];
-}
-
-interface RenderingStep {
-    name: string;
-    execute: () => Promise<boolean>;
-    validate: () => boolean;
-    rollback?: () => void;
-}
-
-interface RenderingError {
-    step: string;
-    error: Error;
-    timestamp: number;
-    domState: DOMState;
+interface NormalizedAnalysisData {
+  // Metadata (unchanged)
+  metadata: {
+    analysis_time: number;
+    total_files: number;
+    total_lines: number;
+    schema_version: string;
+    warnings: string[];
+  };
+  
+  // Tech Stack (normalized)
+  tech_stack: {
+    languages: {[key: string]: number};
+    frameworks: string[];
+    libraries: Array<{name: string, version: string, usage_count: number}>;
+    python_version: string;
+  };
+  
+  // Modules (normalized from nested structure)
+  modules: {
+    items: Array<ModuleNode>;  // From modules.nodes
+    relationships: Array<ModuleEdge>;  // From modules.edges
+    total_count: number;  // From modules.total_modules
+    complexity_summary: ComplexitySummary;
+  };
+  
+  // Functions (normalized from nested structure)
+  functions: {
+    items: Array<FunctionNode>;  // From functions.nodes
+    calls: Array<CallEdge>;  // From functions.edges
+    total_count: number;  // From functions.total_functions
+  };
+  
+  // Framework Patterns (normalized)
+  framework_patterns: {
+    detected: Array<{
+      framework: string;
+      patterns: any;
+      confidence: number;
+    }>;
+    total_count: number;
+  };
+  
+  // Error handling
+  errors: string[];
+  warnings: string[];
+  success: boolean;
 }
 ```
 
-### 2. Emergency Fallback System
+### Module and Function Node Interfaces
 
 ```typescript
-interface EmergencyTabConfig {
-    id: string;
-    title: string;
-    icon: string;
-    htmlContent: string;
-    clickHandler: string;
+interface ModuleNode {
+  id: string;
+  name: string;
+  path: string;
+  complexity: {
+    level: string;
+    score: number;
+  };
+  files: string[];
+  line_count: number;
 }
 
-interface FallbackRenderingOptions {
-    useMinimalTabs: boolean;
-    inlineStyles: boolean;
-    basicEventHandlers: boolean;
-    skipComplexFeatures: boolean;
+interface FunctionNode {
+  id: string;
+  name: string;
+  module: string;
+  complexity: number;
+  line_number: number;
+  parameters: Array<{
+    name: string;
+    type_hint?: string;
+    default_value?: string;
+  }>;
 }
 ```
 
 ## Error Handling
 
-### 1. DOM Operation Error Handling
+### Data Structure Mismatch Handling
 
-```javascript
-function safeQuerySelector(selector, context = document) {
-    try {
-        const element = context.querySelector(selector);
-        if (!element) {
-            logger.logError(new Error(`Element not found: ${selector}`), 'DOM_SELECTION');
-            return null;
-        }
-        return element;
-    } catch (error) {
-        logger.logError(error, `DOM_SELECTION_FAILED: ${selector}`);
-        return null;
-    }
+1. **Detection**: Identify when expected data paths don't exist
+2. **Logging**: Log detailed information about structure mismatches
+3. **Fallback**: Attempt alternative data paths for backward compatibility
+4. **User Feedback**: Show clear error messages in affected tabs
+
+### Missing Data Handling Strategy
+
+```typescript
+interface DataAccessStrategy {
+  // Primary path (new structure)
+  primary: string;
+  // Fallback path (old structure)
+  fallback?: string;
+  // Default value if both fail
+  default: any;
+  // Error message for debugging
+  errorMessage: string;
 }
 
-function safeSetInnerHTML(element, html) {
-    try {
-        if (!element) {
-            throw new Error('Element is null or undefined');
-        }
-        element.innerHTML = html;
-        return true;
-    } catch (error) {
-        logger.logError(error, 'DOM_INNER_HTML_FAILED');
-        return false;
-    }
-}
+const DATA_ACCESS_STRATEGIES = {
+  modules: {
+    primary: 'modules.nodes',
+    fallback: 'modules',
+    default: [],
+    errorMessage: 'Module data not found in expected locations'
+  },
+  functions: {
+    primary: 'functions.nodes',
+    fallback: 'functions',
+    default: [],
+    errorMessage: 'Function data not found in expected locations'
+  }
+};
 ```
 
-### 2. Tab Rendering Error Recovery
+### Error Recovery Mechanisms
 
-```javascript
-function renderTabsWithFallback() {
-    let attempts = 0;
-    const maxAttempts = 3;
-    
-    async function attemptRender() {
-        attempts++;
-        try {
-            // Primary rendering method
-            const success = await renderTabs();
-            if (success && validateTabRendering()) {
-                return true;
-            }
-            throw new Error('Tab rendering validation failed');
-        } catch (error) {
-            logger.logError(error, `TAB_RENDER_ATTEMPT_${attempts}`);
-            
-            if (attempts < maxAttempts) {
-                // Wait and retry
-                await new Promise(resolve => setTimeout(resolve, 100 * attempts));
-                return attemptRender();
-            } else {
-                // Use emergency fallback
-                return renderEmergencyTabs();
-            }
-        }
-    }
-    
-    return attemptRender();
-}
-```
-
-### 3. Message Processing Error Handling
-
-```javascript
-function handleWebviewMessage(message) {
-    const messageId = message.messageId || generateMessageId();
-    const startTime = performance.now();
-    
-    try {
-        logger.logInfo(`Processing message: ${message.command}`, { messageId });
-        
-        // Validate message structure
-        if (!validateMessage(message)) {
-            throw new Error('Invalid message structure');
-        }
-        
-        // Process message based on command
-        const result = processMessageCommand(message);
-        
-        // Log success
-        const processingTime = performance.now() - startTime;
-        logger.logInfo(`Message processed successfully`, { 
-            messageId, 
-            processingTime,
-            command: message.command 
-        });
-        
-        return result;
-        
-    } catch (error) {
-        const processingTime = performance.now() - startTime;
-        logger.logError(error, `MESSAGE_PROCESSING_FAILED: ${message.command}`, {
-            messageId,
-            processingTime,
-            domState: getDOMState()
-        });
-        
-        // Send error back to extension
-        vscode.postMessage({
-            command: 'error',
-            originalCommand: message.command,
-            error: error.message,
-            messageId: messageId
-        });
-    }
-}
-```
+1. **Graceful Degradation**: Show available data even if some sections fail
+2. **Retry Logic**: Allow users to retry failed data parsing
+3. **Debug Information**: Provide raw data access in Metadata tab
+4. **User Guidance**: Clear instructions on what went wrong and how to fix it
 
 ## Testing Strategy
 
-### 1. DOM Manipulation Tests
+### Data Structure Testing
 
-```javascript
-// Test tab header creation
-function testTabHeaderCreation() {
-    const tabHeader = document.querySelector('.tab-header');
-    if (!tabHeader) {
-        throw new Error('Tab header not found');
-    }
-    
-    const tabButtons = tabHeader.querySelectorAll('.tab-button');
-    if (tabButtons.length === 0) {
-        throw new Error('No tab buttons found');
-    }
-    
-    return {
-        success: true,
-        tabCount: tabButtons.length,
-        activeTab: tabHeader.querySelector('.tab-button.active')?.dataset.tab
-    };
-}
+1. **Schema Validation**: Test with various backend response formats
+2. **Edge Cases**: Test with missing, null, or malformed data
+3. **Backward Compatibility**: Test with old data formats
+4. **Error Scenarios**: Test error handling and recovery
 
-// Test tab switching functionality
-function testTabSwitching() {
-    const tabs = ['techstack', 'codegraph', 'dbschema'];
-    const results = [];
-    
-    for (const tabId of tabs) {
-        try {
-            switchTab(tabId);
-            const activeButton = document.querySelector('.tab-button.active');
-            const activePanel = document.querySelector('.tab-panel.active');
-            
-            results.push({
-                tabId,
-                success: activeButton?.dataset.tab === tabId && activePanel?.id === `${tabId}-panel`,
-                activeButton: !!activeButton,
-                activePanel: !!activePanel
-            });
-        } catch (error) {
-            results.push({
-                tabId,
-                success: false,
-                error: error.message
-            });
-        }
-    }
-    
-    return results;
-}
-```
+### Integration Testing
 
-### 2. Integration Tests
-
-```javascript
-// Test full rendering pipeline
-async function testFullRenderingPipeline(analysisData) {
-    const pipeline = [
-        { name: 'DOM Ready', test: () => document.readyState === 'complete' },
-        { name: 'Tab Header Exists', test: () => !!document.querySelector('.tab-header') },
-        { name: 'Tab Content Exists', test: () => !!document.querySelector('.tab-content') },
-        { name: 'Tabs Rendered', test: () => document.querySelectorAll('.tab-button').length > 0 },
-        { name: 'Content Rendered', test: () => document.querySelectorAll('.tab-panel').length > 0 },
-        { name: 'Active Tab Set', test: () => !!document.querySelector('.tab-button.active') }
-    ];
-    
-    const results = [];
-    for (const step of pipeline) {
-        try {
-            const success = step.test();
-            results.push({ step: step.name, success, error: null });
-            if (!success) break;
-        } catch (error) {
-            results.push({ step: step.name, success: false, error: error.message });
-            break;
-        }
-    }
-    
-    return results;
-}
-```
+1. **End-to-End**: Test full analysis workflow with corrected data parsing
+2. **Tab Rendering**: Verify all tabs display content correctly
+3. **Counting Accuracy**: Verify module and function counts are correct
+4. **Error Handling**: Test behavior with various error conditions
 
 ## Implementation Approach
 
-### Phase 1: Enhanced Error Handling and Logging
+### Phase 1: Data Structure Analysis and Validation
+- Add comprehensive logging of backend response structure
+- Implement data structure validator
+- Create debugging tools for structure analysis
 
-1. **Add Comprehensive Logging**
-   - Log every step of tab rendering process
-   - Log DOM state before and after operations
-   - Log message processing details
+### Phase 2: Data Normalization Layer
+- Implement data normalizer to transform nested structures
+- Update counting methods to use correct data paths
+- Add fallback mechanisms for backward compatibility
 
-2. **Implement Safe DOM Operations**
-   - Wrap all querySelector operations in try-catch
-   - Add null checks before DOM manipulation
-   - Validate elements exist before using them
+### Phase 3: Tab Content Updates
+- Update all tab content generators to use normalized data
+- Fix availability checking logic
+- Improve error handling and empty states
 
-3. **Add Message Processing Validation**
-   - Validate message structure before processing
-   - Add timeout handling for message processing
-   - Implement retry logic for failed operations
-
-### Phase 2: Robust Tab Rendering
-
-1. **Implement DOM Ready Detection**
-   - Wait for DOM to be fully loaded before rendering
-   - Add multiple DOM ready detection methods
-   - Implement polling fallback if needed
-
-2. **Create Fallback Rendering System**
-   - Emergency tab creation if normal rendering fails
-   - Minimal HTML/CSS for basic functionality
-   - Simple event handlers for basic interaction
-
-3. **Add State Validation**
-   - Validate tab state after each operation
-   - Check for required DOM elements
-   - Verify event handlers are attached
-
-### Phase 3: Enhanced User Experience
-
-1. **Add Loading States**
-   - Show loading indicators during tab rendering
-   - Provide feedback when operations are in progress
-   - Display error messages when rendering fails
-
-2. **Implement Retry Mechanisms**
-   - Allow users to retry failed operations
-   - Automatic retry with exponential backoff
-   - Manual refresh button for complete reset
-
-3. **Add Debug Information**
-   - Debug panel showing current state
-   - Export debug information for troubleshooting
-   - Real-time DOM state monitoring
+### Phase 4: Testing and Validation
+- Test with real backend responses
+- Verify all tabs render correctly
+- Validate counting accuracy
+- Test error scenarios
 
 ## Technical Considerations
 
-### 1. Timing Issues
+### Performance Optimization
 
-The main issue appears to be timing-related. The HTML is set successfully, but JavaScript execution might be happening before the DOM is fully ready or before CSS is applied.
+- **Lazy Normalization**: Only normalize data when tabs are accessed
+- **Caching**: Cache normalized data to avoid repeated processing
+- **Memory Management**: Efficient handling of large datasets
 
-**Solutions:**
-- Use `DOMContentLoaded` event
-- Implement `MutationObserver` to detect DOM changes
-- Add polling mechanism to wait for elements
-- Use `requestAnimationFrame` for DOM operations
+### Backward Compatibility
 
-### 2. CSS Rendering Issues
+- **Dual Support**: Support both old and new data formats
+- **Migration Path**: Gradual transition to new structure
+- **Version Detection**: Detect data format version and handle appropriately
 
-Tabs might be created but not visible due to CSS issues.
+### Debugging and Monitoring
 
-**Solutions:**
-- Add inline styles as fallback
-- Validate computed styles after rendering
-- Implement CSS loading detection
-- Add emergency CSS injection
+- **Detailed Logging**: Comprehensive logging of data structure issues
+- **Error Reporting**: Clear error messages for developers
+- **Debug Tools**: Built-in tools for analyzing data structure problems
 
-### 3. JavaScript Execution Context
+## Success Metrics
 
-The webview JavaScript context might have limitations or errors.
-
-**Solutions:**
-- Add global error handlers
-- Implement CSP-compliant error reporting
-- Use `postMessage` for error communication
-- Add JavaScript execution validation
-
-### 4. VS Code Webview Lifecycle
-
-The webview lifecycle might affect tab rendering.
-
-**Solutions:**
-- Handle webview visibility changes
-- Re-render tabs when webview becomes visible
-- Persist tab state across visibility changes
-- Add webview ready detection
+1. **Tab Rendering**: All tabs display content correctly (100% success rate)
+2. **Count Accuracy**: Module and function counts match actual data
+3. **Error Reduction**: Significant reduction in tab rendering errors
+4. **User Experience**: Improved reliability and consistency of analysis display
+5. **Debug Capability**: Clear error messages and debugging information available

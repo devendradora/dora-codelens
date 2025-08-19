@@ -351,7 +351,7 @@ export class WebviewManager {
     switch (analysisType) {
       case 'fullCode':
       case 'fullCodeAnalysis':
-        return data.modules || data.tech_stack || data.dependencies;
+        return data.code_graph_json || data.tech_stack || data.dependencies;
         
       case 'currentFile':
       case 'currentFileAnalysis':

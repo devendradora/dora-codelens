@@ -457,6 +457,12 @@ class EnhancedGraphControls {
         }
     }
 
+    center() {
+        if (this.cy) {
+            this.cy.center();
+        }
+    }
+
     reset() {
         if (this.cy) {
             // Reset zoom and pan
@@ -474,6 +480,10 @@ class EnhancedGraphControls {
             // Clear search
             this.clearSearch();
         }
+    }
+
+    search(query) {
+        this.handleSearch(query);
     }
 
     /**

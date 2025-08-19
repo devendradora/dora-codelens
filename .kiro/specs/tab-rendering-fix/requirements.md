@@ -2,61 +2,66 @@
 
 ## Introduction
 
-This feature addresses a critical bug in the VS Code extension where tabs in the TabbedWebviewProvider are not rendering properly despite the backend sending correct data and messages. The logs show that the webview is receiving data and tab switch commands, but the visual tab interface is not displaying correctly, leaving users unable to navigate between different analysis views.
+The full code analysis webview has critical issues with tab rendering and data display. The Overview tab shows content correctly, but other tabs (Tech Stack, Code Graph, Modules, Functions, Framework Patterns) are not displaying content properly. Additionally, the module count is showing incorrect values (14 instead of the expected 3 modules). This is caused by the webview code expecting a different data structure than what the Python backend actually returns. The backend returns structured data with nested objects (e.g., `modules.nodes`, `functions.nodes`) but the frontend is looking for flat arrays.
 
 ## Requirements
 
 ### Requirement 1
 
-**User Story:** As a developer using the extension, I want the tabbed interface to render properly so that I can see and interact with the tab buttons in the analysis dashboard.
+**User Story:** As a developer using the extension, I want all tabs to display their content correctly, so that I can view the complete analysis results across all sections.
 
 #### Acceptance Criteria
 
-1. WHEN the TabbedWebviewProvider displays the analysis dashboard THEN the system SHALL render visible tab buttons in the tab header
-2. WHEN tab buttons are rendered THEN the system SHALL display proper tab titles and icons
-3. WHEN the webview receives updateData messages THEN the system SHALL ensure tab buttons are created and visible
-4. WHEN tab rendering fails THEN the system SHALL log detailed error information for debugging
+1. WHEN the full code analysis webview opens THEN all tabs SHALL display their appropriate content
+2. WHEN switching to the Tech Stack tab THEN the system SHALL show technology stack information from `analysisData.tech_stack`
+3. WHEN switching to the Code Graph tab THEN the system SHALL render the interactive graph using `analysisData.modules.nodes` and `analysisData.modules.edges`
+4. WHEN switching to the Modules tab THEN the system SHALL display module information from `analysisData.modules.nodes`
+5. WHEN switching to the Functions tab THEN the system SHALL show function data from `analysisData.functions.nodes` if available
 
 ### Requirement 2
 
-**User Story:** As a developer analyzing code, I want to be able to click on tab buttons so that I can switch between different analysis views (Tech Stack, Code Graph, DB Schema, etc.).
+**User Story:** As a developer using the extension, I want the module count to display the correct number of actual modules, so that I can understand the true scope of my codebase organization.
 
 #### Acceptance Criteria
 
-1. WHEN a user clicks on a tab button THEN the system SHALL switch to the corresponding tab panel
-2. WHEN a tab is active THEN the system SHALL apply the active styling to highlight the current tab
-3. WHEN switching tabs THEN the system SHALL hide the previous tab panel and show the new one
-4. WHEN tab switching occurs THEN the system SHALL update the currentTab state correctly
+1. WHEN viewing the Overview tab THEN the system SHALL display the correct module count from `analysisData.modules.total_modules` or `analysisData.modules.nodes.length`
+2. WHEN the backend provides `total_modules` in the response THEN the system SHALL use that value for display
+3. WHEN `total_modules` is not available THEN the system SHALL count the actual nodes in `analysisData.modules.nodes`
+4. WHEN displaying module counts in tab badges THEN the system SHALL use the same counting logic consistently
+5. IF modules data is missing or malformed THEN the system SHALL display 0 and show appropriate empty states
 
 ### Requirement 3
 
-**User Story:** As a developer using the extension, I want the tab content to load properly so that I can view the analysis results in each tab.
+**User Story:** As a developer using the extension, I want the data structure parsing to match the actual backend response format, so that all analysis data is correctly interpreted and displayed.
 
 #### Acceptance Criteria
 
-1. WHEN a tab is switched THEN the system SHALL call renderCurrentTabContent() successfully
-2. WHEN tab content is rendered THEN the system SHALL display the appropriate content based on available analysis data
-3. WHEN analysis data is missing for a tab THEN the system SHALL show a meaningful empty state message
-4. WHEN content rendering fails THEN the system SHALL display an error state with retry options
+1. WHEN parsing tech stack data THEN the system SHALL correctly access `analysisData.tech_stack.libraries`, `analysisData.tech_stack.frameworks`, and `analysisData.tech_stack.languages`
+2. WHEN parsing module data THEN the system SHALL access `analysisData.modules.nodes` for individual modules and `analysisData.modules.edges` for relationships
+3. WHEN parsing function data THEN the system SHALL access `analysisData.functions.nodes` for function information and `analysisData.functions.edges` for call relationships
+4. WHEN parsing framework patterns THEN the system SHALL correctly access nested framework data structures
+5. IF any data structure is missing or malformed THEN the system SHALL gracefully handle the error and show appropriate empty states
 
 ### Requirement 4
 
-**User Story:** As a developer troubleshooting the extension, I want detailed logging and error handling so that I can identify why tabs are not rendering.
+**User Story:** As a developer using the extension, I want consistent data availability checking across all tabs, so that tabs are only shown when they have actual data to display.
 
 #### Acceptance Criteria
 
-1. WHEN the webview initializes THEN the system SHALL log the tab configuration and rendering process
-2. WHEN JavaScript errors occur in the webview THEN the system SHALL capture and log them to the extension output
-3. WHEN DOM elements are not found THEN the system SHALL log specific error messages about missing elements
-4. WHEN tab rendering fails THEN the system SHALL provide fallback emergency tab creation
+1. WHEN checking tech stack availability THEN the system SHALL verify `analysisData.tech_stack` exists and has meaningful content
+2. WHEN checking modules availability THEN the system SHALL verify `analysisData.modules.nodes` exists and is a non-empty array
+3. WHEN checking functions availability THEN the system SHALL verify `analysisData.functions.nodes` exists and is a non-empty array
+4. WHEN checking framework patterns availability THEN the system SHALL verify the nested framework pattern structures contain data
+5. IF a tab's data is not available THEN the system SHALL hide the tab or show it as disabled with appropriate indicators
 
 ### Requirement 5
 
-**User Story:** As a developer using the extension, I want the tab interface to work consistently across different analysis types so that the user experience is reliable.
+**User Story:** As a developer using the extension, I want proper error handling and debugging information, so that I can understand what data is available when tabs don't render correctly.
 
 #### Acceptance Criteria
 
-1. WHEN displaying full code analysis THEN the system SHALL render all configured tabs (Tech Stack, Code Graph, DB Schema, Git Analytics)
-2. WHEN displaying current file analysis THEN the system SHALL render only relevant tabs (Code Graph, Code Graph JSON)
-3. WHEN switching between analysis types THEN the system SHALL update tab configurations appropriately
-4. WHEN the webview becomes visible after being hidden THEN the system SHALL maintain proper tab state and rendering
+1. WHEN data parsing fails THEN the system SHALL log detailed error information about the expected vs actual data structure
+2. WHEN tabs fail to render THEN the system SHALL show specific error messages indicating what data is missing
+3. WHEN debugging is needed THEN the system SHALL provide access to the raw backend response in the Metadata tab
+4. WHEN data structure validation fails THEN the system SHALL show clear guidance on what structure was expected
+5. IF the backend response format changes THEN the system SHALL gracefully handle the change and provide informative error messages

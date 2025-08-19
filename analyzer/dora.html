@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Django REST Framework Project Visualizer</title>
+  <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+  <style>
+    #cy { width: 100%; height: 95vh; border: 1px solid #ccc; }
+    .legend {
+      position: absolute; top: 10px; right: 10px; background: white; padding: 10px;
+      border: 1px solid #ccc; border-radius: 5px; font-size: 14px;
+    }
+    .legend div { margin-bottom: 5px; }
+    .legend span {
+      display: inline-block; width: 20px; height: 20px; margin-right: 8px; vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+<div id="cy"></div>
+<div class="legend">
+  <div><span style="background: yellow; border:1px solid #000;"></span> Folder</div>
+  <div><span style="background: skyblue; border:1px solid #000;"></span> File</div>
+  <div><span style="background: orange; clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);"></span> Class</div>
+  <div><span style="background: green; border-radius: 50%;"></span> Function</div>
+  <div><span style="background: #888; width: 30px; height: 2px;"></span> Contains</div>
+  <div><span style="background: red; width: 30px; height: 2px;"></span> Calls</div>
+</div>
+
+<script>
+const width = window.innerWidth;
+const height = window.innerHeight;
+
+// Sample project data with complexity
+const projectData = [
+  {
+    "name": "Payments",
+    "type": "folder",
+    "children": [
+      {
+        "name": "models.py",
+        "type": "file",
+        "children": [
+          {
+            "name": "ThirdPartyAPI",
+            "type": "class",
+            "children": [
+              {
+                "name": "status",
+                "type": "function",
+                "complexity": { "level": "low" },
+                "children": [],
+                "calls": []
+              },
+              {
+                "name": "pay",
+                "type": "function",
+                "complexity": { "level": "medium" },
+                "children": [],
+                "calls": [
+                  { "target": ["Orders","views.py","OrderService","get_order"] }
+                ]
+              },
+              {
+                "name": "refund",
+                "type": "function",
+                "complexity": { "level": "high" },
+                "children": [],
+                "calls": []
+              }
+            ]
+          },
+          {
+            "name": "PaymentGateway",
+            "type": "class",
+            "children": [
+              { "name": "get", "type": "function", "complexity": { "level": "low" }, "children": [], "calls": [{ "target": ["Payments","models.py","ThirdPartyAPI","status"] }] },
+              { "name": "post", "type": "function", "complexity": { "level": "low" }, "children": [], "calls": [] },
+              { "name": "put", "type": "function", "complexity": { "level": "medium" }, "children": [], "calls": [] },
+              { "name": "delete", "type": "function", "complexity": { "level": "high" }, "children": [], "calls": [] },
+              { "name": "pg_refund", "type": "function", "complexity": { "level": "medium" }, "children": [], "calls": [{ "target": ["Payments","models.py","ThirdPartyAPI","refund"] }] }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Orders",
+    "type": "folder",
+    "children": [
+      {
+        "name": "views.py",
+        "type": "file",
+        "children": [
+          {
+            "name": "OrderService",
+            "type": "class",
+            "children": [
+              { "name": "get_order", "type": "function", "complexity": { "level": "low" }, "children": [], "calls": [] },
+              { "name": "place_order", "type": "function", "complexity": { "level": "medium" }, "children": [], "calls": [{ "target": ["Carts","models.py","CartService","get_cart_id"] }] }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  { "name": "Carts", "type": "folder", "children": [ { "name": "models.py", "type": "file", "children":[ { "name":"CartService","type":"class","children":[{ "name":"get_cart_id","type":"function","complexity":{"level":"low"},"children":[],"calls":[]} ] } ] } ] },
+  { "name": "Users","type":"folder","children":[] },
+  { "name": "Datapipelines","type":"folder","children":[] },
+  { "name": "Refunds","type":"folder","children":[] },
+  { "name": "Analytics","type":"folder","children":[] }
+];
+
+const cy = cytoscape({
+  container: document.getElementById('cy'),
+  style: [
+    { selector: 'node[type="folder"]', style: { shape:'rectangle','background-color':'yellow', label:'data(name)','text-valign':'center','text-halign':'center','font-weight':'bold','border-width':2,'border-color':'#000','width':150,'height':80 } },
+    { selector: 'node[type="file"]', style: { shape:'rectangle','background-color':'skyblue', label:'data(name)','text-valign':'center','text-halign':'center','border-width':1,'border-color':'#000','width':120,'height':60 } },
+    { selector: 'node[type="class"]', style: { shape:'hexagon','background-color':'orange', label:'data(name)','text-valign':'center','text-halign':'center','width':100,'height':60 } },
+    { selector: 'node[type="function"]', style: { shape:'ellipse', 'color':'#fff', label:'data(name)','text-valign':'center','text-halign':'center','width':60,'height':40,'font-size':10 } },
+    { selector: 'node[complexity="low"]', style: { 'background-color':'green' } },
+    { selector: 'node[complexity="medium"]', style: { 'background-color':'orange' } },
+    { selector: 'node[complexity="high"]', style: { 'background-color':'red' } },
+    { selector: 'edge[type="contains"]', style: { width:2, 'line-color':'#888','curve-style':'bezier' } },
+    { selector: 'edge[type="calls"]', style: { width:2,'line-color':'red','target-arrow-shape':'triangle','target-arrow-color':'red','curve-style':'bezier' } },
+    { selector: 'edge[label]', style: { label:'data(label)','text-rotation':'autorotate','text-margin-y':-10,'font-size':10 } }
+  ],
+  layout: { name:'preset' }
+});
+
+const expanded = {};
+
+// Dynamically add top-level folder nodes
+projectData.forEach((folder, i) => {
+  const posX = 100 + (i % 3) * (width / 3);
+  const posY = 100 + Math.floor(i / 3) * 200;
+  cy.add({ data: { id: folder.name, name: folder.name, type: 'folder' }, position: { x: posX, y: posY } });
+});
+
+// Recursive function to add children and edges
+function addNode(parentId, nodeData, folderId, level=0, index=0){
+  const id = parentId ? `${parentId}_${nodeData.name}` : nodeData.name;
+  const posX = 150 + level*200;
+  const posY = 100 + index*80;
+
+  const dataObj = { id:id, name:nodeData.name, type:nodeData.type, folder:folderId };
+  if(nodeData.type === 'function' && nodeData.complexity) dataObj.complexity = nodeData.complexity.level;
+
+  cy.add({ data: dataObj, position:{x:posX,y:posY} });
+
+  if(parentId){
+    cy.add({ data:{ id:`contains_${id}`, source:parentId, target:id, type:'contains', folder:folderId } });
+  }
+
+  if(nodeData.children){
+    nodeData.children.forEach((child,i)=>{
+      addNode(id, child, folderId, level+1, i);
+    });
+  }
+
+  if(nodeData.calls){
+    nodeData.calls.forEach(call=>{
+      let targetId = call.target.join('_');
+      if(cy.getElementById(targetId).empty()){
+        targetId = call.target[0]; // fallback to folder
+      }
+      cy.add({ data:{ id:`calls_${id}_${targetId}`, source:id, target:targetId, type:'calls', folder:folderId } });
+    });
+  }
+}
+
+// Expand folder on click
+cy.on('tap', 'node[type="folder"]', function(evt){
+  const folderId = evt.target.id();
+  if(expanded[folderId]){
+    cy.remove(cy.nodes().filter(n=>n.data('folder')===folderId));
+    cy.remove(cy.edges().filter(e=>e.data('folder')===folderId));
+    expanded[folderId] = false;
+    return;
+  }
+
+  const folderData = projectData.find(f=>f.name===folderId);
+  if(folderData && folderData.children){
+    folderData.children.forEach((child,i)=>{
+      addNode(folderId, child, folderId, 1, i);
+    });
+  }
+
+  expanded[folderId] = true;
+  cy.layout({ name:'cose', fit:false, nodeDimensionsIncludeLabels:true, animate:true, componentSpacing:100, nodeRepulsion:10000, edgeElasticity:100, nestingFactor:5, gravity:10, numIter:500 }).run();
+});
+</script>
+</body>
+</html>

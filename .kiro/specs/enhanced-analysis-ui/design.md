@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design creates a modern, tabbed interface for the full code analysis webview that leverages the complete backend response structure. The interface will feature a clean tab navigation system with dedicated sections for tech stack, code graph, modules, functions, framework patterns, and metadata. Each tab will be optimized to display its specific data type with appropriate visualizations and interactions.
+This design creates a streamlined, two-tab interface for the full code analysis webview focusing on the most essential analysis information. The interface will feature a clean tab navigation system with only Tech Stack and Code Graph tabs. The Tech Stack tab will consolidate project statistics (total modules, files, analysis status) with comprehensive technology information, while the Code Graph tab will provide an enhanced visualization of the module (folder) structure.
 
 ## Architecture
 
@@ -12,8 +12,7 @@ This design creates a modern, tabbed interface for the full code analysis webvie
 ┌─────────────────────────────────────────────────────────────┐
 │                    Tab Navigation Bar                        │
 ├─────────────────────────────────────────────────────────────┤
-│  Overview | Tech Stack | Code Graph | Modules | Functions   │
-│           | Patterns   | Metadata   | Debug                  │
+│              Tech Stack    |    Code Graph                  │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │                    Active Tab Content                       │
@@ -68,34 +67,41 @@ interface TabConfig {
 
 ### 2. Tech Stack Tab Component
 
-**Purpose**: Displays comprehensive technology stack information
+**Purpose**: Displays comprehensive technology stack information and project statistics
 
 **Key Features**:
+- Project statistics section showing TOTAL MODULES (folders), TOTAL FILES, and ANALYSIS STATUS
+- Primary Framework detection and prominent display (Django, Flask, etc.)
+- Complete libraries and dependencies list with versions
 - Language breakdown with percentages and file counts
-- Framework detection with versions
-- Dependency analysis with security indicators
-- Visual charts and progress bars
+- Visual charts and progress bars for language distribution
 
 **Data Structure Expected**:
 ```typescript
 interface TechStackData {
+  total_modules: number;
+  total_files: number;
+  analysis_status: string;
+  primary_framework: { name: string; version: string; confidence: number };
   languages: { [key: string]: number };
   frameworks: Array<{ name: string; version: string; confidence: number }>;
   dependencies: { [key: string]: string };
+  libraries: Array<{ name: string; version: string; type: string }>;
   package_managers: string[];
 }
 ```
 
 ### 3. Code Graph Tab Component
 
-**Purpose**: Interactive visualization of code structure and relationships
+**Purpose**: Interactive visualization of module (folder) structure and relationships
 
 **Key Features**:
-- Cytoscape.js integration for graph rendering
-- Node filtering by complexity, type, or module
-- Layout algorithms (hierarchical, force-directed, circular)
+- Cytoscape.js integration for graph rendering focused on modules (folders)
+- Module nodes representing all folders in the codebase
+- Hierarchical layout showing folder structure relationships
+- Visual styling similar to the provided reference image
+- Tooltip details showing file counts and module information
 - Zoom, pan, and selection interactions
-- Sidebar details for selected nodes
 
 **Data Structure Expected**:
 ```typescript
@@ -103,60 +109,21 @@ interface GraphData {
   nodes: Array<{
     id: string;
     name: string;
-    type: 'module' | 'file' | 'function';
-    complexity: { level: string; score: number };
+    type: 'module';
     path: string;
+    file_count: number;
+    complexity: { level: string; score: number };
+    is_root: boolean;
   }>;
   edges: Array<{
     source: string;
     target: string;
-    type: 'contains' | 'imports' | 'calls';
+    type: 'contains';
   }>;
 }
 ```
 
-### 4. Modules Tab Component
 
-**Purpose**: Detailed module-by-module analysis
-
-**Key Features**:
-- Sortable and filterable module list
-- Expandable file trees for each module
-- Complexity indicators and metrics
-- Search functionality
-- Export capabilities
-
-### 5. Functions Tab Component
-
-**Purpose**: Function-level analysis and metrics
-
-**Key Features**:
-- Function complexity analysis
-- Code quality indicators
-- Performance suggestions
-- Searchable function list
-- Source code preview
-
-### 6. Framework Patterns Tab Component
-
-**Purpose**: Pattern detection and architectural analysis
-
-**Key Features**:
-- Detected pattern visualization
-- Compliance scoring
-- Recommendation engine
-- Pattern comparison tools
-
-### 7. Metadata Tab Component
-
-**Purpose**: Analysis metadata, diagnostics, and debugging
-
-**Key Features**:
-- Analysis statistics and timing
-- Error and warning display
-- Raw JSON response viewer
-- Schema version information
-- Debug tools and logs
 
 ## Data Models
 
@@ -168,7 +135,8 @@ interface AnalysisData {
   metadata: {
     analysis_time: number;
     total_files: number;
-    total_lines: number;
+    total_modules: number;
+    analysis_status: string;
     schema_version: string;
   };
   tech_stack: TechStackData;
@@ -176,10 +144,7 @@ interface AnalysisData {
     nodes: ModuleNode[];
     edges: ModuleEdge[];
     total_modules: number;
-    complexity_summary: ComplexitySummary;
   };
-  functions?: FunctionData[];
-  framework_patterns?: PatternData[];
   errors: string[];
   warnings: string[];
 }
@@ -189,10 +154,11 @@ interface AnalysisData {
 
 ```typescript
 interface TabState {
-  activeTab: string;
-  tabData: { [tabId: string]: any };
-  loading: { [tabId: string]: boolean };
-  errors: { [tabId: string]: string[] };
+  activeTab: 'tech-stack' | 'code-graph';
+  techStackData: TechStackData | null;
+  graphData: GraphData | null;
+  loading: { techStack: boolean; codeGraph: boolean };
+  errors: { techStack: string[]; codeGraph: string[] };
 }
 ```
 
@@ -231,25 +197,27 @@ interface TabState {
 ## Implementation Approach
 
 ### Phase 1: Core Tab Infrastructure
-- Implement tab navigation system
+- Implement simplified two-tab navigation system (Tech Stack and Code Graph)
 - Create base tab component structure
 - Set up data routing and state management
 
-### Phase 2: Essential Tabs
-- Tech Stack tab with visual components
-- Code Graph tab with basic visualization
-- Modules tab with list and details
+### Phase 2: Tech Stack Tab Implementation
+- Implement project statistics section (total modules, files, analysis status)
+- Add primary framework detection and display
+- Create comprehensive libraries and dependencies listing
+- Add language breakdown with visual charts
 
-### Phase 3: Advanced Features
-- Functions analysis tab
-- Framework patterns tab
-- Enhanced interactions and filtering
+### Phase 3: Code Graph Tab Implementation
+- Implement module-focused graph visualization
+- Create hierarchical layout for folder structure
+- Add interactive features and tooltips
+- Style graph similar to reference image
 
 ### Phase 4: Polish and Optimization
-- Metadata and debug tab
-- Performance optimizations
+- Performance optimizations for graph rendering
 - Responsive design improvements
 - Accessibility enhancements
+- Error handling and empty states
 
 ## Technical Considerations
 

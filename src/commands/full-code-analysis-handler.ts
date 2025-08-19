@@ -108,7 +108,7 @@ export class FullCodeAnalysisHandler {
             
             // Show success message
             vscode.window.showInformationMessage(
-              `Full code analysis completed! Found ${validatedResult.modules?.length || 0} modules.`
+              `Full code analysis completed! Found ${validatedResult.code_graph_json?.length || 0} modules.`
             );
 
             return validatedResult;
@@ -154,9 +154,8 @@ export class FullCodeAnalysisHandler {
       if (options.useCache === false) {
         args.push('--no-cache');
       }
-      if (options.forceRefresh) {
-        args.push('--force-refresh');
-      }
+      // Always force refresh to ensure fresh code_graph_json data
+      args.push('--force-refresh');
       if (options.includeTests === false) {
         args.push('--exclude-tests');
       }

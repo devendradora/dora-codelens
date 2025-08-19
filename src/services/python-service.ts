@@ -382,6 +382,40 @@ export class PythonService {
   }
 
   /**
+   * Clear analyzer cache
+   */
+  public async clearAnalyzerCache(): Promise<boolean> {
+    try {
+      const result = await this.executePythonScript('', {
+        args: ['-c', `
+import sys
+sys.path.append('analyzer')
+from analyzer import ProjectAnalyzer
+import os
+
+# Clear cache for current workspace
+workspace_path = os.getcwd()
+analyzer = ProjectAnalyzer(workspace_path)
+analyzer.clear_cache()
+print('Cache cleared successfully')
+`],
+        timeout: 10000
+      });
+
+      if (result.success) {
+        this.errorHandler.logError('Analyzer cache cleared successfully', null, 'clearAnalyzerCache');
+        return true;
+      } else {
+        this.errorHandler.logError('Failed to clear analyzer cache', { stderr: result.stderr }, 'clearAnalyzerCache');
+        return false;
+      }
+    } catch (error) {
+      this.errorHandler.logError('Error clearing analyzer cache', error, 'clearAnalyzerCache');
+      return false;
+    }
+  }
+
+  /**
    * Dispose of the service
    */
   public dispose(): void {

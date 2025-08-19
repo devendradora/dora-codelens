@@ -22,7 +22,7 @@ export interface AnalysisData {
 }
 
 export interface FullCodeAnalysisData extends AnalysisData {
-  modules?: any[];
+  code_graph_json?: any[];
   tech_stack?: {
     languages?: { [key: string]: number };
     frameworks?: any[];

@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 """
 AST Parser module for CodeMindMap analyzer.
@@ -362,7 +363,7 @@ class ASTParser:
         return parameters
     
     def _calculate_function_complexity(self, node: ast.FunctionDef) -> ComplexityScore:
-        """Calculate basic complexity score for a function.
+        """Calculate complexity score for a function including cognitive complexity.
         
         Args:
             node: AST function definition node
@@ -370,30 +371,79 @@ class ASTParser:
         Returns:
             ComplexityScore object
         """
-        # Count control flow statements for basic cyclomatic complexity
-        complexity = 1  # Base complexity
+        # Count control flow statements for cyclomatic complexity
+        cyclomatic = 1  # Base complexity
+        cognitive = 0  # Cognitive complexity starts at 0
+        nesting_level = 0
         
-        for child in ast.walk(node):
-            # Skip nested functions to avoid double counting
-            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)) and child != node:
-                continue
+        def calculate_complexity_recursive(node_list, current_nesting=0):
+            nonlocal cyclomatic, cognitive
+            
+            for child in node_list:
+                # Skip nested functions to avoid double counting
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)) and child != node:
+                    continue
                 
-            if isinstance(child, (ast.If, ast.While, ast.For, ast.AsyncFor)):
-                complexity += 1
-            elif isinstance(child, ast.Try):
-                complexity += 1
-                # Add complexity for except handlers
-                if hasattr(child, 'handlers'):
-                    complexity += len(child.handlers)
-            elif isinstance(child, (ast.And, ast.Or)):
-                complexity += 1
-            elif isinstance(child, ast.comprehension):
-                complexity += 1
-            elif isinstance(child, ast.BoolOp):
-                # Count boolean operations (and/or)
-                complexity += len(child.values) - 1
+                # Cyclomatic complexity increments
+                if isinstance(child, (ast.If, ast.While, ast.For, ast.AsyncFor)):
+                    cyclomatic += 1
+                    cognitive += 1 + current_nesting  # Cognitive complexity increases with nesting
+                    
+                    # Recursively process nested statements with increased nesting
+                    if hasattr(child, 'body'):
+                        calculate_complexity_recursive(child.body, current_nesting + 1)
+                    if hasattr(child, 'orelse') and child.orelse:
+                        calculate_complexity_recursive(child.orelse, current_nesting + 1)
+                        
+                elif isinstance(child, ast.Try):
+                    cyclomatic += 1
+                    cognitive += 1 + current_nesting
+                    
+                    # Process try body
+                    if hasattr(child, 'body'):
+                        calculate_complexity_recursive(child.body, current_nesting + 1)
+                    
+                    # Add complexity for except handlers
+                    if hasattr(child, 'handlers'):
+                        cyclomatic += len(child.handlers)
+                        for handler in child.handlers:
+                            cognitive += 1 + current_nesting
+                            if hasattr(handler, 'body'):
+                                calculate_complexity_recursive(handler.body, current_nesting + 1)
+                    
+                    # Process finally block
+                    if hasattr(child, 'finalbody') and child.finalbody:
+                        calculate_complexity_recursive(child.finalbody, current_nesting + 1)
+                        
+                elif isinstance(child, (ast.And, ast.Or)):
+                    cyclomatic += 1
+                    cognitive += 1
+                    
+                elif isinstance(child, ast.comprehension):
+                    cyclomatic += 1
+                    cognitive += 1 + current_nesting
+                    
+                elif isinstance(child, ast.BoolOp):
+                    # Count boolean operations (and/or)
+                    additional_complexity = len(child.values) - 1
+                    cyclomatic += additional_complexity
+                    cognitive += additional_complexity
+                
+                # Continue processing child nodes
+                elif hasattr(child, 'body') and isinstance(child.body, list):
+                    calculate_complexity_recursive(child.body, current_nesting)
+                elif hasattr(child, '__dict__'):
+                    # Process other child nodes
+                    for attr_name, attr_value in child.__dict__.items():
+                        if isinstance(attr_value, list):
+                            for item in attr_value:
+                                if isinstance(item, ast.AST):
+                                    calculate_complexity_recursive([item], current_nesting)
         
-        return ComplexityScore(cyclomatic=complexity)
+        # Start recursive calculation
+        calculate_complexity_recursive(node.body, 0)
+        
+        return ComplexityScore(cyclomatic=cyclomatic, cognitive=cognitive)
     
     def _extract_function_docstring(self, node: ast.FunctionDef) -> Optional[str]:
         """Extract function docstring.
@@ -441,6 +491,327 @@ class ASTParser:
         return len(node.args.args) > 0 and node.args.args[0].arg in ['self', 'cls']
 
 
+class EnhancedCodeGraphBuilder:
+    """Builder for enhanced hierarchical code graph structure."""
+    
+    def __init__(self, project_path: Path):
+        """Initialize the enhanced code graph builder.
+        
+        Args:
+            project_path: Path to the project root
+        """
+        self.project_path = project_path
+        self.function_registry: Dict[str, FunctionInfo] = {}
+        self.call_relationships: Dict[str, List[Dict[str, Any]]] = {}
+    
+    def build_code_graph(self, modules: List[ModuleInfo]) -> List[Dict[str, Any]]:
+        """Build enhanced code graph with hierarchical structure.
+        
+        Args:
+            modules: List of analyzed modules
+            
+        Returns:
+            List of dictionaries representing the hierarchical code structure
+        """
+        logger.info("Building enhanced code graph...")
+        
+        # Register all functions for call resolution
+        self._register_functions(modules)
+        
+        # Extract call relationships
+        self._extract_call_relationships(modules)
+        
+        # Build hierarchical structure
+        folder_structure = self._build_folder_structure(modules)
+        
+        logger.info(f"Built enhanced code graph with {len(folder_structure)} top-level folders")
+        return folder_structure
+    
+    def _register_functions(self, modules: List[ModuleInfo]) -> None:
+        """Register all functions for call resolution."""
+        for module in modules:
+            # Register module-level functions
+            for func in module.functions:
+                func_key = f"{module.name}.{func.name}"
+                self.function_registry[func_key] = func
+            
+            # Register class methods
+            for class_info in module.classes:
+                for method in class_info.methods:
+                    method_key = f"{module.name}.{class_info.name}.{method.name}"
+                    self.function_registry[method_key] = method
+    
+    def _extract_call_relationships(self, modules: List[ModuleInfo]) -> None:
+        """Extract call relationships with full path tracking."""
+        for module in modules:
+            try:
+                module_path = Path(module.path)
+                if module_path.exists():
+                    with open(module_path, 'r', encoding='utf-8') as f:
+                        source_code = f.read()
+                    
+                    tree = ast.parse(source_code, filename=str(module_path))
+                    visitor = CallExtractorVisitor(module.name, self.function_registry)
+                    visitor.visit(tree)
+                    
+                    # Store call relationships for each function
+                    for func_id, calls in visitor.function_calls.items():
+                        self.call_relationships[func_id] = calls
+                        
+            except Exception as e:
+                logger.error(f"Failed to extract calls from {module.path}: {e}")
+    
+    def _build_folder_structure(self, modules: List[ModuleInfo]) -> List[Dict[str, Any]]:
+        """Build hierarchical folder structure."""
+        # Group modules by their folder structure
+        folder_map: Dict[str, List[ModuleInfo]] = {}
+        
+        for module in modules:
+            module_path = Path(module.path)
+            try:
+                relative_path = module_path.relative_to(self.project_path)
+            except ValueError:
+                # If path is not relative to project, use the parent directory
+                relative_path = module_path.parent / module_path.name
+            
+            if len(relative_path.parts) > 1:
+                # Module is in a subfolder
+                folder_name = relative_path.parts[0]
+            else:
+                # Module is in root
+                folder_name = "root"
+            
+            if folder_name not in folder_map:
+                folder_map[folder_name] = []
+            folder_map[folder_name].append(module)
+        
+        # Build folder nodes
+        folder_nodes = []
+        for folder_name, folder_modules in folder_map.items():
+            folder_node = self._build_folder_node(folder_name, folder_modules)
+            folder_nodes.append(folder_node)
+        
+        return folder_nodes
+    
+    def _build_folder_node(self, folder_name: str, modules: List[ModuleInfo]) -> Dict[str, Any]:
+        """Build a folder node with its contained files."""
+        file_nodes = []
+        
+        for module in modules:
+            file_node = self._build_file_node(module)
+            file_nodes.append(file_node)
+        
+        return {
+            "name": folder_name,
+            "type": "folder",
+            "children": file_nodes,
+            "calls": []
+        }
+    
+    def _build_file_node(self, module: ModuleInfo) -> Dict[str, Any]:
+        """Build a file node with its contained classes and functions."""
+        children = []
+        
+        # Add classes
+        for class_info in module.classes:
+            class_node = self._build_class_node(class_info, module.name)
+            children.append(class_node)
+        
+        # Add module-level functions
+        for func in module.functions:
+            if not func.is_method:  # Skip methods (they're in classes)
+                func_node = self._build_function_node(func, module.name)
+                children.append(func_node)
+        
+        return {
+            "name": Path(module.path).name,
+            "type": "file",
+            "children": children,
+            "calls": [],
+            "path": module.path
+        }
+    
+    def _build_class_node(self, class_info: ClassInfo, module_name: str) -> Dict[str, Any]:
+        """Build a class node with its methods."""
+        method_nodes = []
+        
+        for method in class_info.methods:
+            method_node = self._build_function_node(method, module_name, class_info.name)
+            method_nodes.append(method_node)
+        
+        return {
+            "name": class_info.name,
+            "type": "class",
+            "children": method_nodes,
+            "calls": [],
+            "line_number": class_info.line_number
+        }
+    
+    def _build_function_node(self, func: FunctionInfo, module_name: str, class_name: Optional[str] = None) -> Dict[str, Any]:
+        """Build a function node with call relationships."""
+        # Build function identifier for call lookup
+        if class_name:
+            func_id = f"{module_name}.{class_name}.{func.name}"
+        else:
+            func_id = f"{module_name}.{func.name}"
+        
+        # Get call relationships for this function
+        calls = self.call_relationships.get(func_id, [])
+        
+        return {
+            "name": func.name,
+            "type": "function",
+            "children": [],
+            "calls": calls,
+            "complexity": {
+                "cyclomatic": func.complexity.cyclomatic,
+                "cognitive": func.complexity.cognitive,
+                "level": func.complexity.level.value
+            },
+            "line_number": func.line_number
+        }
+
+
+class CallExtractorVisitor(ast.NodeVisitor):
+    """AST visitor to extract function calls with full path tracking."""
+    
+    def __init__(self, current_module: str, function_registry: Dict[str, FunctionInfo]):
+        """Initialize the call extractor visitor."""
+        self.current_module = current_module
+        self.function_registry = function_registry
+        self.function_calls: Dict[str, List[Dict[str, Any]]] = {}
+        self.current_function_stack: List[str] = []
+        self.current_class = ""
+        self.imports: Dict[str, str] = {}  # alias -> module mapping
+    
+    def visit_Import(self, node: ast.Import) -> None:
+        """Visit import statements to track module aliases."""
+        for alias in node.names:
+            if alias.asname:
+                self.imports[alias.asname] = alias.name
+            else:
+                self.imports[alias.name] = alias.name
+        self.generic_visit(node)
+    
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        """Visit from-import statements to track imported names."""
+        if node.module:
+            for alias in node.names:
+                imported_name = alias.asname if alias.asname else alias.name
+                self.imports[imported_name] = f"{node.module}.{alias.name}"
+        self.generic_visit(node)
+    
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        """Visit class definitions to track current class context."""
+        old_class = self.current_class
+        self.current_class = node.name
+        self.generic_visit(node)
+        self.current_class = old_class
+    
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        """Visit function definitions to track current function context."""
+        if self.current_class:
+            func_id = f"{self.current_module}.{self.current_class}.{node.name}"
+        else:
+            func_id = f"{self.current_module}.{node.name}"
+        
+        self.current_function_stack.append(func_id)
+        self.function_calls[func_id] = []
+        self.generic_visit(node)
+        self.current_function_stack.pop()
+    
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        """Visit async function definitions to track current function context."""
+        if self.current_class:
+            func_id = f"{self.current_module}.{self.current_class}.{node.name}"
+        else:
+            func_id = f"{self.current_module}.{node.name}"
+        
+        self.current_function_stack.append(func_id)
+        self.function_calls[func_id] = []
+        self.generic_visit(node)
+        self.current_function_stack.pop()
+    
+    def visit_Call(self, node: ast.Call) -> None:
+        """Visit function call expressions to extract call relationships."""
+        if not self.current_function_stack:
+            self.generic_visit(node)
+            return
+        
+        caller_id = self.current_function_stack[-1]
+        call_info = self._resolve_call_target(node.func)
+        
+        if call_info:
+            target_path, label = call_info
+            call_relationship = {
+                "target": target_path,
+                "label": label
+            }
+            self.function_calls[caller_id].append(call_relationship)
+        
+        self.generic_visit(node)
+    
+    def _resolve_call_target(self, func_node: ast.AST) -> Optional[tuple]:
+        """Resolve the target function with full path and generate label."""
+        if isinstance(func_node, ast.Name):
+            func_name = func_node.id
+            
+            # Check if it's an imported function
+            if func_name in self.imports:
+                imported_path = self.imports[func_name]
+                parts = imported_path.split('.')
+                if len(parts) >= 2:
+                    return (["", parts[0], "", parts[1]], "calls")
+            
+            # Check if it's a function in the current module
+            local_func_id = f"{self.current_module}.{func_name}"
+            if local_func_id in self.function_registry:
+                return (["", self.current_module, "", func_name], "calls")
+            
+            # Check if it's a method in the current class
+            if self.current_class:
+                method_id = f"{self.current_module}.{self.current_class}.{func_name}"
+                if method_id in self.function_registry:
+                    return (["", self.current_module, self.current_class, func_name], "calls")
+        
+        elif isinstance(func_node, ast.Attribute):
+            return self._resolve_attribute_call(func_node)
+        
+        return None
+    
+    def _resolve_attribute_call(self, attr_node: ast.Attribute) -> Optional[tuple]:
+        """Resolve attribute-based function calls with enhanced path tracking."""
+        method_name = attr_node.attr
+        
+        if isinstance(attr_node.value, ast.Name):
+            obj_name = attr_node.value.id
+            
+            # Check if it's a module.function call
+            if obj_name in self.imports:
+                module_name = self.imports[obj_name]
+                potential_func_id = f"{module_name}.{method_name}"
+                if potential_func_id in self.function_registry:
+                    return (["", module_name, "", method_name], "uses")
+            
+            # Check for self.method() calls
+            if obj_name == "self" and self.current_class:
+                method_id = f"{self.current_module}.{self.current_class}.{method_name}"
+                if method_id in self.function_registry:
+                    return (["", self.current_module, self.current_class, method_name], "calls")
+            
+            # Generate descriptive labels based on common patterns
+            if method_name.startswith("get_"):
+                return (["", "external", "", method_name], "fetches")
+            elif method_name.startswith("set_") or method_name.startswith("update_"):
+                return (["", "external", "", method_name], "updates")
+            elif method_name.startswith("create_") or method_name.startswith("make_"):
+                return (["", "external", "", method_name], "creates")
+            else:
+                return (["", "external", "", method_name], "uses")
+        
+        return None
+
+
 class ModuleDiscovery:
     """Module discovery and dependency resolution."""
     
@@ -452,6 +823,7 @@ class ModuleDiscovery:
         """
         self.project_path = project_path
         self.ast_parser = ASTParser()
+        self.code_graph_builder = EnhancedCodeGraphBuilder(project_path)
     
     def discover_modules(self, python_files: List[Path]) -> List[ModuleInfo]:
         """Discover and parse all modules in the project.
@@ -507,3 +879,14 @@ class ModuleDiscovery:
             dependencies[module.name] = deps
         
         return dependencies
+    
+    def build_enhanced_code_graph(self, modules: List[ModuleInfo]) -> List[Dict[str, Any]]:
+        """Build enhanced hierarchical code graph structure.
+        
+        Args:
+            modules: List of parsed modules
+            
+        Returns:
+            List of dictionaries representing the hierarchical code structure
+        """
+        return self.code_graph_builder.build_code_graph(modules)
