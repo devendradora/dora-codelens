@@ -4,197 +4,1554 @@
   <title>Django REST Framework Project Visualizer</title>
   <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
   <style>
-    #cy {
-      width: 100%;
-      height: 95vh;
-      border: 1px solid #ccc;
-    }
+    #cy { width: 100%; height: 95vh; border: 1px solid #ccc; }
     .legend {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: white;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 14px;
+      position: absolute; top: 10px; right: 10px; background: white; padding: 10px;
+      border: 1px solid #ccc; border-radius: 5px; font-size: 14px;
     }
     .legend div { margin-bottom: 5px; }
     .legend span {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      margin-right: 8px;
-      vertical-align: middle;
+      display: inline-block; width: 20px; height: 20px; margin-right: 8px; vertical-align: middle;
     }
   </style>
 </head>
 <body>
-  <div id="cy"></div>
-  <div class="legend">
-    <div><span style="background: yellow; border:1px solid #000;"></span> Folder</div>
-    <div><span style="background: skyblue; border:1px solid #000;"></span> File</div>
-    <div><span style="background: orange; clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);"></span> Class</div>
-    <div><span style="background: green; border-radius: 50%;"></span> Function</div>
-    <div><span style="background: #888; width: 30px; height: 2px;"></span> Contains</div>
-    <div><span style="background: red; width: 30px; height: 2px;"></span> Calls</div>
-  </div>
+<div id="cy"></div>
+<div class="legend">
+  <div><span style="background: yellow; border:1px solid #000;"></span> Folder</div>
+  <div><span style="background: skyblue; border:1px solid #000;"></span> File</div>
+  <div><span style="background: orange; clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);"></span> Class</div>
+  <div><span style="background: green; border-radius: 50%;"></span> Function</div>
+  <div><span style="background: #888; width: 30px; height: 2px;"></span> Contains</div>
+  <div><span style="background: red; width: 30px; height: 2px;"></span> Calls</div>
+</div>
 
-  <script>
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+<script>
+const width = window.innerWidth;
+const height = window.innerHeight;
 
-    const cy = cytoscape({
-      container: document.getElementById('cy'),
-      style: [
-        { selector: 'node[type="folder"]', style: { 'shape': 'rectangle','background-color': 'yellow', 'label': 'data(label)','text-valign': 'center','text-halign': 'center','font-weight': 'bold','border-width': 2,'border-color': '#000','width': 150,'height': 80 }},
-        { selector: 'node[type="file"]', style: { 'shape': 'rectangle','background-color': 'skyblue', 'label': 'data(label)','text-valign': 'center','text-halign': 'center','border-width': 1,'border-color': '#000','width': 120,'height': 60 }},
-        { selector: 'node[type="class"]', style: { 'shape': 'hexagon','background-color': 'orange', 'label': 'data(label)','text-valign': 'center','text-halign': 'center','width': 100,'height': 60 }},
-        { selector: 'node[type="function"]', style: { 'shape': 'ellipse','background-color': 'green','color': '#fff', 'label': 'data(label)','text-valign': 'center','text-halign': 'center','width': 60,'height': 40,'font-size': 10 }},
-        { selector: 'edge[type="contains"]', style: { 'width': 2,'line-color': '#888','curve-style': 'bezier' }},
-        { selector: 'edge[type="calls"]', style: { 'width': 2,'line-color': 'red','target-arrow-shape': 'triangle','target-arrow-color': 'red','curve-style': 'bezier' }},
-        { selector: 'edge[label]', style: { 'label': 'data(label)','text-rotation': 'autorotate','text-margin-y': -10,'font-size': 10 }}
-      ],
-      elements: {
-        nodes: [
-          { data: { id: 'payments', label: 'Payments', type: 'folder' }, position: { x: 100, y: 100 } },
-          { data: { id: 'carts', label: 'Carts', type: 'folder' }, position: { x: width - 200, y: 100 } },
-          { data: { id: 'users', label: 'Users', type: 'folder' }, position: { x: 100, y: height - 200 } },
-          { data: { id: 'orders', label: 'Orders', type: 'folder' }, position: { x: width - 200, y: height - 200 } },
-          { data: { id: 'datapipelines', label: 'Datapipelines', type: 'folder' }, position: { x: width/2, y: 80 } },
-          { data: { id: 'refunds', label: 'Refunds', type: 'folder' }, position: { x: width/2, y: height - 100 } },
-          { data: { id: 'analytics', label: 'Analytics', type: 'folder' }, position: { x: width - 120, y: height/2 } }
-        ]
-      },
-      layout: { name: 'preset' }
-    });
-
-    const expandedData = {
-      payments: [
-        { data: { id: 'payments_models', label: 'models.py', type: 'file' } },
-        { data: { id: 'ThirdPartyAPI', label: 'ThirdPartyAPI', type: 'class' } },
-        { data: { id: 'status', label: 'status()', type: 'function' } },
-        { data: { id: 'pay', label: 'pay()', type: 'function' } },
-        { data: { id: 'refund', label: 'refund()', type: 'function' } },
-        { data: { id: 'PaymentGateway', label: 'PaymentGateway', type: 'class' } },
-        { data: { id: 'get', label: 'get()', type: 'function' } },
-        { data: { id: 'post', label: 'post()', type: 'function' } },
-        { data: { id: 'put', label: 'put()', type: 'function' } },
-        { data: { id: 'delete', label: 'delete()', type: 'function' } },
-        { data: { id: 'pg_refund', label: 'refund()', type: 'function' } }
-      ],
-      orders: [
-        { data: { id: 'orders_views', label: 'views.py', type: 'file' } },
-        { data: { id: 'OrderService', label: 'OrderService', type: 'class' } },
-        { data: { id: 'get_order', label: 'get_order()', type: 'function' } },
-        { data: { id: 'place_order', label: 'place_order()', type: 'function' } }
-      ],
-      carts: [
-        { data: { id: 'carts_models', label: 'models.py', type: 'file' } },
-        { data: { id: 'CartService', label: 'CartService', type: 'class' } },
-        { data: { id: 'get_cart_id', label: 'get_cart_id()', type: 'function' } }
-      ]
-    };
-
-    const hierarchyRelationships = {
-      payments: [
-        { source: 'payments', target: 'payments_models', type: 'contains' },
-        { source: 'payments_models', target: 'ThirdPartyAPI', type: 'contains' },
-        { source: 'ThirdPartyAPI', target: 'status', type: 'contains' },
-        { source: 'ThirdPartyAPI', target: 'pay', type: 'contains' },
-        { source: 'ThirdPartyAPI', target: 'refund', type: 'contains' },
-        { source: 'payments_models', target: 'PaymentGateway', type: 'contains' },
-        { source: 'PaymentGateway', target: 'get', type: 'contains' },
-        { source: 'PaymentGateway', target: 'post', type: 'contains' },
-        { source: 'PaymentGateway', target: 'put', type: 'contains' },
-        { source: 'PaymentGateway', target: 'delete', type: 'contains' },
-        { source: 'PaymentGateway', target: 'pg_refund', type: 'contains' }
-      ],
-      orders: [
-        { source: 'orders', target: 'orders_views', type: 'contains' },
-        { source: 'orders_views', target: 'OrderService', type: 'contains' },
-        { source: 'OrderService', target: 'get_order', type: 'contains' },
-        { source: 'OrderService', target: 'place_order', type: 'contains' }
-      ],
-      carts: [
-        { source: 'carts', target: 'carts_models', type: 'contains' },
-        { source: 'carts_models', target: 'CartService', type: 'contains' },
-        { source: 'CartService', target: 'get_cart_id', type: 'contains' }
-      ]
-    };
-
-    const callRelationships = {
-      payments: [
-        { source: 'get', target: 'status', type: 'calls', label: 'uses' },
-        { source: 'pg_refund', target: 'refund', type: 'calls', label: 'uses' },
-        { source: 'pay', target: 'get_order', type: 'calls', label: 'fetches' }
-      ],
-      orders: [
-        { source: 'place_order', target: 'get_cart_id', type: 'calls', label: 'uses' }
-      ]
-    };
-
-    const expanded = {};
-
-    cy.on('tap', 'node[type="folder"]', function(evt){
-      const node = evt.target;
-      const folderId = node.id();
-      const basePos = node.position();
-
-      if(expanded[folderId]){
-        cy.remove(cy.nodes().filter(n => n.data('folder') === folderId));
-        cy.remove(cy.edges().filter(e => e.data('folder') === folderId));
-        expanded[folderId] = false;
-        return;
-      }
-
-      const children = expandedData[folderId] || [];
-      const newEles = [];
-
-      // Add child nodes
-      children.forEach((el, i) => {
-        let posX = basePos.x + 200;
-        let posY = basePos.y + i * 100;
-        newEles.push({ data: { ...el.data, folder: folderId }, position: { x: posX, y: posY } });
-      });
-
-      // Add hierarchy edges
-      if (hierarchyRelationships[folderId]) {
-        hierarchyRelationships[folderId].forEach(rel => {
-          newEles.push({
-            data: { id: `${folderId}_h_${rel.source}_${rel.target}`, source: rel.source, target: rel.target, type: rel.type, folder: folderId }
-          });
-        });
-      }
-
-      // Add call edges (redirect to folder if target not expanded)
-      if (callRelationships[folderId]) {
-        callRelationships[folderId].forEach(rel => {
-          let targetId = rel.target;
-          if (cy.getElementById(targetId).empty()) {
-            // fallback to folder node
-            const folderForTarget = Object.keys(expandedData).find(fid =>
-              expandedData[fid].some(n => n.data.id === rel.target)
-            );
-            if (folderForTarget) targetId = folderForTarget;
+// Sample project data with complexity
+const projectData = [
+  {
+    "name": "root",
+    "type": "folder",
+    "children": [
+      {
+        "name": "manage.py",
+        "type": "file",
+        "children": [
+          {
+            "name": "main",
+            "type": "function",
+            "children": [],
+            "calls": [
+              {
+                "target": [
+                  "",
+                  "django",
+                  "",
+                  "core"
+                ],
+                "label": "calls"
+              }
+            ],
+            "complexity": {
+              "cyclomatic": 3,
+              "cognitive": 2,
+              "level": "low"
+            },
+            "line_number": 7
           }
-
-          newEles.push({
-            data: {
-              id: `${folderId}_c_${rel.source}_${targetId}`,
-              source: rel.source,
-              target: targetId,
-              type: rel.type,
-              label: rel.label,
-              folder: folderId
-            }
-          });
-        });
+        ],
+        "calls": [],
+        "path": "/Users/devendradora/projects/backend-app-templates/events/manage.py"
       }
+    ],
+    "calls": []
+  },
+  {
+    "name": "app",
+    "type": "folder",
+    "children": [
+      {
+        "name": "models.py",
+        "type": "file",
+        "children": [
+          {
+            "name": "Event",
+            "type": "class",
+            "children": [
+              {
+                "name": "__str__",
+                "type": "function",
+                "children": [],
+                "calls": [],
+                "complexity": {
+                  "cyclomatic": 1,
+                  "cognitive": 1,
+                  "level": "low"
+                },
+                "line_number": 18
+              }
+            ],
+            "calls": [],
+            "line_number": 3
+          }
+        ],
+        "calls": [],
+        "path": "/Users/devendradora/projects/backend-app-templates/events/app/models.py"
+      },
+      {
+        "name": "serializers.py",
+        "type": "file",
+        "children": [
+          {
+            "name": "EventSerializer",
+            "type": "class",
+            "children": [],
+            "calls": [],
+            "line_number": 4
+          },
+          {
+            "name": "Meta",
+            "type": "class",
+            "children": [],
+            "calls": [],
+            "line_number": 5
+          }
+        ],
+        "calls": [],
+        "path": "/Users/devendradora/projects/backend-app-templates/events/app/serializers.py"
+      },
+      {
+        "name": "__init__.py",
+        "type": "file",
+        "children": [],
+        "calls": [],
+        "path": "/Users/devendradora/projects/backend-app-templates/events/app/__init__.py"
+      },
+      {
+        "name": "apps.py",
+        "type": "file",
+        "children": [
+          {
+            "name": "AppConfig",
+            "type": "class",
+            "children": [],
+            "calls": [],
+            "line_number": 4
+          }
+        ],
+        "calls": [],
+        "path": "/Users/devendradora/projects/backend-app-templates/events/app/apps.py"
+      },
+      {
+        "name": "admin.py",
+        "type": "file",
+        "children": [],
+        "calls": [],
+        "path": "/Users/devendradora/projects/backend-app-templates/events/app/admin.py"
+      },
+      {
+        "name": "tests.py",
+        "type": "file",
+        "children": [
+          {
+            "name": "CreateEventTest",
+            "type": "class",
+            "children": [
+              {
+                "name": "setUp",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "rest_framework",
+                      "",
+                      "test"
+                    ],
+                    "label": "calls"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 1,
+                  "cognitive": 1,
+                  "level": "low"
+                },
+                "line_number": 48
+              },
+              {
+                "name": "test_event_creation_valid_data",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertEquals"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "json"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertIn"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertTrue"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertDictEqual"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertEquals"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "json"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertIn"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertTrue"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertDictEqual"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 1,
+                  "cognitive": 1,
+                  "level": "low"
+                },
+                "line_number": 52
+              },
+              {
+                "name": "test_event_creation_invalid_type",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "copy"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertEquals"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 1,
+                  "cognitive": 1,
+                  "level": "low"
+                },
+                "line_number": 69
+              }
+            ],
+            "calls": [],
+            "line_number": 47
+          },
+          {
+            "name": "TestGetAllEvents",
+            "type": "class",
+            "children": [
+              {
+                "name": "setUp",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "rest_framework",
+                      "",
+                      "test"
+                    ],
+                    "label": "calls"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 77
+              },
+              {
+                "name": "test_get_all_events",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertEquals"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "json"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertListEqual"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 87
+              },
+              {
+                "name": "test_with_public_true",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertListEqual"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 96
+              },
+              {
+                "name": "test_with_public_false",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertListEqual"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 105
+              }
+            ],
+            "calls": [],
+            "line_number": 76
+          },
+          {
+            "name": "TestGetEvent",
+            "type": "class",
+            "children": [
+              {
+                "name": "setUp",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "rest_framework",
+                      "",
+                      "test"
+                    ],
+                    "label": "calls"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 115
+              },
+              {
+                "name": "test_get_retrieve_existing_id",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertEquals"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "json"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertDictEqual"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 4,
+                  "cognitive": 5,
+                  "level": "low"
+                },
+                "line_number": 124
+              },
+              {
+                "name": "test_get_retrieve_non_existing_id",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertEquals"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 135
+              }
+            ],
+            "calls": [],
+            "line_number": 114
+          },
+          {
+            "name": "TestGetEventsByRepository",
+            "type": "class",
+            "children": [
+              {
+                "name": "setUp",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "rest_framework",
+                      "",
+                      "test"
+                    ],
+                    "label": "calls"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 144
+              },
+              {
+                "name": "test_with_existing_id_1",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertEquals"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "json"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertListEqual"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 157
+              },
+              {
+                "name": "test_with_existing_id_2",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertEquals"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "json"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertListEqual"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 166
+              },
+              {
+                "name": "test_with_non_existing_id",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertEquals"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "json"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertListEqual"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 176
+              },
+              {
+                "name": "test_with_existing_id_1_test_with_public_true",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertListEqual"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 186
+              },
+              {
+                "name": "test_with_existing_id_1_test_with_public_false",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertListEqual"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 194
+              }
+            ],
+            "calls": [],
+            "line_number": 143
+          },
+          {
+            "name": "TestGetEventByUser",
+            "type": "class",
+            "children": [
+              {
+                "name": "setUp",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "rest_framework",
+                      "",
+                      "test"
+                    ],
+                    "label": "calls"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 204
+              },
+              {
+                "name": "test_with_existing_id_1",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertEquals"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "json"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertListEqual"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 218
+              },
+              {
+                "name": "test_with_existing_id_2",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertEquals"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "json"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertListEqual"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 227
+              },
+              {
+                "name": "test_with_non_existing_id",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertEquals"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "json"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertListEqual"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 237
+              },
+              {
+                "name": "test_with_existing_id_1_test_with_public_true",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertListEqual"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 247
+              },
+              {
+                "name": "test_with_existing_id_1_test_with_public_false",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertListEqual"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 255
+              }
+            ],
+            "calls": [],
+            "line_number": 203
+          },
+          {
+            "name": "TestOtherMethodsToUrl",
+            "type": "class",
+            "children": [
+              {
+                "name": "setUp",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "rest_framework",
+                      "",
+                      "test"
+                    ],
+                    "label": "calls"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "fail"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 265
+              },
+              {
+                "name": "test_with_disallowed_method",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "assertEquals"
+                    ],
+                    "label": "uses"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 2,
+                  "cognitive": 1,
+                  "level": "low"
+                },
+                "line_number": 274
+              }
+            ],
+            "calls": [],
+            "line_number": 264
+          }
+        ],
+        "calls": [],
+        "path": "/Users/devendradora/projects/backend-app-templates/events/app/tests.py"
+      },
+      {
+        "name": "urls.py",
+        "type": "file",
+        "children": [],
+        "calls": [],
+        "path": "/Users/devendradora/projects/backend-app-templates/events/app/urls.py"
+      },
+      {
+        "name": "views.py",
+        "type": "file",
+        "children": [
+          {
+            "name": "Events",
+            "type": "class",
+            "children": [
+              {
+                "name": "get",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "capitalize"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "app",
+                      "",
+                      "serializers"
+                    ],
+                    "label": "calls"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "rest_framework",
+                      "",
+                      "response"
+                    ],
+                    "label": "calls"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 2,
+                  "cognitive": 1,
+                  "level": "low"
+                },
+                "line_number": 17
+              },
+              {
+                "name": "post",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "app",
+                      "",
+                      "serializers"
+                    ],
+                    "label": "calls"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "is_valid"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "save"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "rest_framework",
+                      "",
+                      "response"
+                    ],
+                    "label": "calls"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "rest_framework",
+                      "",
+                      "response"
+                    ],
+                    "label": "calls"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 2,
+                  "cognitive": 1,
+                  "level": "low"
+                },
+                "line_number": 27
+              }
+            ],
+            "calls": [],
+            "line_number": 12
+          },
+          {
+            "name": "EventDetail",
+            "type": "class",
+            "children": [
+              {
+                "name": "get_object",
+                "type": "function",
+                "children": [],
+                "calls": [],
+                "complexity": {
+                  "cyclomatic": 3,
+                  "cognitive": 2,
+                  "level": "low"
+                },
+                "line_number": 39
+              },
+              {
+                "name": "get",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "views",
+                      "EventDetail",
+                      "get_object"
+                    ],
+                    "label": "calls"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "app",
+                      "",
+                      "serializers"
+                    ],
+                    "label": "calls"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "rest_framework",
+                      "",
+                      "response"
+                    ],
+                    "label": "calls"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 1,
+                  "cognitive": 1,
+                  "level": "low"
+                },
+                "line_number": 45
+              }
+            ],
+            "calls": [],
+            "line_number": 35
+          },
+          {
+            "name": "RepoEvents",
+            "type": "class",
+            "children": [
+              {
+                "name": "get",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "capitalize"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "app",
+                      "",
+                      "serializers"
+                    ],
+                    "label": "calls"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "rest_framework",
+                      "",
+                      "response"
+                    ],
+                    "label": "calls"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 2,
+                  "cognitive": 1,
+                  "level": "low"
+                },
+                "line_number": 54
+              }
+            ],
+            "calls": [],
+            "line_number": 50
+          },
+          {
+            "name": "UserEvents",
+            "type": "class",
+            "children": [
+              {
+                "name": "get",
+                "type": "function",
+                "children": [],
+                "calls": [
+                  {
+                    "target": [
+                      "",
+                      "external",
+                      "",
+                      "capitalize"
+                    ],
+                    "label": "uses"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "app",
+                      "",
+                      "serializers"
+                    ],
+                    "label": "calls"
+                  },
+                  {
+                    "target": [
+                      "",
+                      "rest_framework",
+                      "",
+                      "response"
+                    ],
+                    "label": "calls"
+                  }
+                ],
+                "complexity": {
+                  "cyclomatic": 2,
+                  "cognitive": 1,
+                  "level": "low"
+                },
+                "line_number": 67
+              }
+            ],
+            "calls": [],
+            "line_number": 63
+          }
+        ],
+        "calls": [],
+        "path": "/Users/devendradora/projects/backend-app-templates/events/app/views.py"
+      }
+    ],
+    "calls": []
+  },
+  {
+    "name": "project",
+    "type": "folder",
+    "children": [
+      {
+        "name": "asgi.py",
+        "type": "file",
+        "children": [],
+        "calls": [],
+        "path": "/Users/devendradora/projects/backend-app-templates/events/project/asgi.py"
+      },
+      {
+        "name": "__init__.py",
+        "type": "file",
+        "children": [],
+        "calls": [],
+        "path": "/Users/devendradora/projects/backend-app-templates/events/project/__init__.py"
+      },
+      {
+        "name": "settings.py",
+        "type": "file",
+        "children": [],
+        "calls": [],
+        "path": "/Users/devendradora/projects/backend-app-templates/events/project/settings.py"
+      },
+      {
+        "name": "urls.py",
+        "type": "file",
+        "children": [],
+        "calls": [],
+        "path": "/Users/devendradora/projects/backend-app-templates/events/project/urls.py"
+      },
+      {
+        "name": "wsgi.py",
+        "type": "file",
+        "children": [],
+        "calls": [],
+        "path": "/Users/devendradora/projects/backend-app-templates/events/project/wsgi.py"
+      }
+    ],
+    "calls": []
+  }
+];
 
-      cy.add(newEles);
-      expanded[folderId] = true;
+const cy = cytoscape({
+  container: document.getElementById('cy'),
+  style: [
+    { selector: 'node[type="folder"]', style: { shape:'rectangle','background-color':'yellow', label:'data(name)','text-valign':'center','text-halign':'center','font-weight':'bold','border-width':2,'border-color':'#000','width':150,'height':80 } },
+    { selector: 'node[type="file"]', style: { shape:'rectangle','background-color':'skyblue', label:'data(name)','text-valign':'center','text-halign':'center','border-width':1,'border-color':'#000','width':120,'height':60 } },
+    { selector: 'node[type="class"]', style: { shape:'hexagon','background-color':'orange', label:'data(name)','text-valign':'center','text-halign':'center','width':100,'height':60 } },
+    { selector: 'node[type="function"]', style: { shape:'ellipse', 'color':'#fff', label:'data(name)','text-valign':'center','text-halign':'center','width':60,'height':40,'font-size':10 } },
+    { selector: 'node[complexity="low"]', style: { 'background-color':'green' } },
+    { selector: 'node[complexity="medium"]', style: { 'background-color':'orange' } },
+    { selector: 'node[complexity="high"]', style: { 'background-color':'red' } },
+    { selector: 'edge[type="contains"]', style: { width:2, 'line-color':'#888','curve-style':'bezier' } },
+    { selector: 'edge[type="calls"]', style: { width:2,'line-color':'red','target-arrow-shape':'triangle','target-arrow-color':'red','curve-style':'bezier' } },
+    { selector: 'edge[label]', style: { label:'data(label)','text-rotation':'autorotate','text-margin-y':-10,'font-size':10 } }
+  ],
+  layout: { name:'preset' }
+});
+
+const expanded = {};
+
+// Dynamically add top-level folder nodes
+projectData.forEach((folder, i) => {
+  const posX = 100 + (i % 3) * (width / 3);
+  const posY = 100 + Math.floor(i / 3) * 200;
+  cy.add({ data: { id: folder.name, name: folder.name, type: 'folder' }, position: { x: posX, y: posY } });
+});
+
+// Recursive function to add children and edges
+function addNode(parentId, nodeData, folderId, level=0, index=0){
+  const id = parentId ? `${parentId}_${nodeData.name}` : nodeData.name;
+  const posX = 150 + level*200;
+  const posY = 100 + index*80;
+
+  const dataObj = { id:id, name:nodeData.name, type:nodeData.type, folder:folderId };
+  if(nodeData.type === 'function' && nodeData.complexity) dataObj.complexity = nodeData.complexity.level;
+
+  cy.add({ data: dataObj, position:{x:posX,y:posY} });
+
+  if(parentId){
+    cy.add({ data:{ id:`contains_${id}`, source:parentId, target:id, type:'contains', folder:folderId } });
+  }
+
+  if(nodeData.children){
+    nodeData.children.forEach((child,i)=>{
+      addNode(id, child, folderId, level+1, i);
     });
-  </script>
+  }
+
+  if(nodeData.calls){
+    nodeData.calls.forEach(call=>{
+      let targetId = call.target.join('_');
+      if(cy.getElementById(targetId).empty()){
+        targetId = call.target[0]; // fallback to folder
+      }
+      cy.add({ data:{ id:`calls_${id}_${targetId}`, source:id, target:targetId, type:'calls', folder:folderId } });
+    });
+  }
+}
+
+// Expand folder on click
+cy.on('tap', 'node[type="folder"]', function(evt){
+  const folderId = evt.target.id();
+  if(expanded[folderId]){
+    cy.remove(cy.nodes().filter(n=>n.data('folder')===folderId));
+    cy.remove(cy.edges().filter(e=>e.data('folder')===folderId));
+    expanded[folderId] = false;
+    return;
+  }
+
+  const folderData = projectData.find(f=>f.name===folderId);
+  if(folderData && folderData.children){
+    folderData.children.forEach((child,i)=>{
+      addNode(folderId, child, folderId, 1, i);
+    });
+  }
+
+  expanded[folderId] = true;
+  cy.layout({ name:'cose', fit:false, nodeDimensionsIncludeLabels:true, animate:true, componentSpacing:100, nodeRepulsion:10000, edgeElasticity:100, nestingFactor:5, gravity:10, numIter:500 }).run();
+});
+</script>
 </body>
 </html>
