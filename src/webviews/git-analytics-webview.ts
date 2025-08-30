@@ -99,11 +99,8 @@ export class GitAnalyticsWebview {
     const chartJsUri = webview.asWebviewUri(vscode.Uri.file(path.join(this.extensionPath, 'node_modules', 'chart.js', 'dist', 'chart.min.js')));
     const gitChartsUri = webview.asWebviewUri(vscode.Uri.file(path.join(this.extensionPath, 'resources', 'git-analytics-charts.js')));
 
-    // Generate content sections
-    const repositoryInfoHtml = this.generateRepositoryInfo(analyticsData);
-    const authorContributionsHtml = this.generateAuthorContributions(analyticsData);
-    const timelineHtml = this.generateCommitTimeline(analyticsData);
-    const moduleStatsHtml = this.generateModuleStatistics(analyticsData);
+    // Generate tab contents
+    const tabContents = this.generateTabContents(analyticsData);
 
     return `
       <!DOCTYPE html>
@@ -122,96 +119,56 @@ export class GitAnalyticsWebview {
         ">
       </head>
       <body>
-        <div class="git-analytics-container">
-          <!-- Header -->
-          <div class="git-analytics-header">
-            <h1>📊 Git Repository Analytics</h1>
-            ${repositoryInfoHtml}
-          </div>
-
-          <!-- Author Contributions -->
-          <div class="analytics-section">
-            <h3>👥 Author Contributions</h3>
-            ${authorContributionsHtml}
-          </div>
-
-          <!-- Charts Section -->
-          <div class="analytics-section">
-            <h3>📈 Contribution Charts</h3>
-            <div class="charts-container">
-              <div class="chart-container">
-                <div class="chart-header">
-                  <h4 class="chart-title">Commits by Author</h4>
-                  <div class="chart-controls">
-                    <button class="chart-control-btn active" onclick="showCommitsChart()">Commits</button>
-                    <button class="chart-control-btn" onclick="showLinesChart()">Lines</button>
-                  </div>
-                </div>
-                <div class="chart-canvas-container">
-                  <canvas id="authorContributionsChart" class="chart-canvas"></canvas>
-                </div>
-              </div>
-
-              <div class="chart-container">
-                <div class="chart-header">
-                  <h4 class="chart-title">Commit Timeline</h4>
-                  <div class="chart-controls">
-                    <button class="chart-control-btn active" onclick="showDailyTimeline()">Daily</button>
-                    <button class="chart-control-btn" onclick="showWeeklyTimeline()">Weekly</button>
-                  </div>
-                </div>
-                <div class="chart-canvas-container">
-                  <canvas id="commitTimelineChart" class="chart-canvas"></canvas>
-                </div>
-              </div>
-            </div>
-
-            <div class="charts-container">
-              <div class="chart-container">
-                <div class="chart-header">
-                  <h4 class="chart-title">Lines of Code Changes</h4>
-                </div>
-                <div class="chart-canvas-container">
-                  <canvas id="linesOfCodeChart" class="chart-canvas"></canvas>
-                </div>
-              </div>
-
-              <div class="chart-container">
-                <div class="chart-header">
-                  <h4 class="chart-title">Module Activity</h4>
-                </div>
-                <div class="chart-canvas-container">
-                  <canvas id="moduleActivityChart" class="chart-canvas"></canvas>
-                </div>
-              </div>
+        <div class="analysis-container">
+          <!-- Navigation Links -->
+          <div class="navigation-bar">
+            <div class="nav-links">
+              <button class="nav-link active" data-tab="repository-overview-section">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Repository Overview</span>
+              </button>
+              <button class="nav-link" data-tab="contributors-section">
+                <span class="nav-icon">👥</span>
+                <span class="nav-label">Contributors</span>
+              </button>
+              <button class="nav-link" data-tab="timeline-charts-section">
+                <span class="nav-icon">📈</span>
+                <span class="nav-label">Timeline Charts</span>
+              </button>
             </div>
           </div>
 
-          <!-- Commit Timeline -->
-          <div class="analytics-section">
-            <h3>⏰ Commit Timeline</h3>
-            ${timelineHtml}
-          </div>
-
-          <!-- Module Statistics -->
-          <div class="analytics-section">
-            <h3>📁 Module Statistics</h3>
-            ${moduleStatsHtml}
-          </div>
-
-          <!-- Export Section -->
-          <div class="export-section">
-            <div class="export-header">
-              <h3 class="export-title">Export Analytics</h3>
-              <div class="export-buttons">
-                <button class="export-btn" onclick="exportCharts()">📊 Export Charts</button>
-                <button class="export-btn" onclick="exportData()">💾 Export Data</button>
-                <button class="export-btn" onclick="generateReport()">📄 Generate Report</button>
+          <!-- Scrollable Content -->
+          <div class="scrollable-content">
+            <!-- Repository Overview Section -->
+            <section id="repository-overview-section" class="content-section active">
+              <div class="section-header">
+                <h2>📊 Repository Overview</h2>
               </div>
-            </div>
-            <p class="export-description">
-              Export your Git analytics data as charts, raw data, or a comprehensive report.
-            </p>
+              <div class="section-content">
+                ${tabContents.repositoryOverview}
+              </div>
+            </section>
+
+            <!-- Contributors Section -->
+            <section id="contributors-section" class="content-section">
+              <div class="section-header">
+                <h2>👥 Contributors</h2>
+              </div>
+              <div class="section-content">
+                ${tabContents.contributors}
+              </div>
+            </section>
+
+            <!-- Timeline Charts Section -->
+            <section id="timeline-charts-section" class="content-section">
+              <div class="section-header">
+                <h2>📈 Timeline Charts</h2>
+              </div>
+              <div class="section-content">
+                ${tabContents.timelineCharts}
+              </div>
+            </section>
           </div>
         </div>
 
@@ -226,8 +183,38 @@ export class GitAnalyticsWebview {
           
           // Initialize when DOM is ready
           document.addEventListener('DOMContentLoaded', function() {
+            initializeTabs();
             initializeGitAnalytics();
           });
+
+          function initializeTabs() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const contentSections = document.querySelectorAll('.content-section');
+
+            navLinks.forEach(link => {
+              link.addEventListener('click', function() {
+                const targetTab = this.getAttribute('data-tab');
+                
+                // Remove active class from all nav links and content sections
+                navLinks.forEach(nav => nav.classList.remove('active'));
+                contentSections.forEach(section => section.classList.remove('active'));
+                
+                // Add active class to clicked nav link and corresponding content section
+                this.classList.add('active');
+                const targetSection = document.getElementById(targetTab);
+                if (targetSection) {
+                  targetSection.classList.add('active');
+                  
+                  // If switching to timeline charts tab, ensure charts are rendered properly
+                  if (targetTab === 'timeline-charts-section' && gitChartsInstance) {
+                    setTimeout(() => {
+                      gitChartsInstance.createContributionGraphs(analyticsData);
+                    }, 100);
+                  }
+                }
+              });
+            });
+          }
           
           function initializeGitAnalytics() {
             try {
@@ -350,6 +337,134 @@ export class GitAnalyticsWebview {
         </script>
       </body>
       </html>
+    `;
+  }
+
+  /**
+   * Generate tab contents for the webview
+   */
+  private generateTabContents(analyticsData: any): any {
+    return {
+      repositoryOverview: this.generateRepositoryOverview(analyticsData),
+      contributors: this.generateContributorsContent(analyticsData),
+      timelineCharts: this.generateTimelineChartsContent(analyticsData)
+    };
+  }
+
+  /**
+   * Generate repository overview content
+   */
+  private generateRepositoryOverview(analyticsData: any): string {
+    const repositoryInfoHtml = this.generateRepositoryInfo(analyticsData);
+    const moduleStatsHtml = this.generateModuleStatistics(analyticsData);
+
+    return `
+      <div class="repository-overview-content">
+        ${repositoryInfoHtml}
+        
+        <div class="analytics-section">
+          <h3>📁 Module Statistics</h3>
+          ${moduleStatsHtml}
+        </div>
+
+        <!-- Export Section -->
+        <div class="export-section">
+          <div class="export-header">
+            <h3 class="export-title">Export Analytics</h3>
+            <div class="export-buttons">
+              <button class="export-btn" onclick="exportCharts()">📊 Export Charts</button>
+              <button class="export-btn" onclick="exportData()">💾 Export Data</button>
+              <button class="export-btn" onclick="generateReport()">📄 Generate Report</button>
+            </div>
+          </div>
+          <p class="export-description">
+            Export your Git analytics data as charts, raw data, or a comprehensive report.
+          </p>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Generate contributors content
+   */
+  private generateContributorsContent(analyticsData: any): string {
+    const authorContributionsHtml = this.generateAuthorContributions(analyticsData);
+
+    return `
+      <div class="contributors-content">
+        <div class="analytics-section">
+          ${authorContributionsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Generate timeline charts content
+   */
+  private generateTimelineChartsContent(analyticsData: any): string {
+    const timelineHtml = this.generateCommitTimeline(analyticsData);
+
+    return `
+      <div class="timeline-charts-content">
+        <!-- Charts Section -->
+        <div class="analytics-section">
+          <div class="charts-container">
+            <div class="chart-container">
+              <div class="chart-header">
+                <h4 class="chart-title">Commits by Author</h4>
+                <div class="chart-controls">
+                  <button class="chart-control-btn active" onclick="showCommitsChart()">Commits</button>
+                  <button class="chart-control-btn" onclick="showLinesChart()">Lines</button>
+                </div>
+              </div>
+              <div class="chart-canvas-container">
+                <canvas id="authorContributionsChart" class="chart-canvas"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <div class="chart-header">
+                <h4 class="chart-title">Commit Timeline</h4>
+                <div class="chart-controls">
+                  <button class="chart-control-btn active" onclick="showDailyTimeline()">Daily</button>
+                  <button class="chart-control-btn" onclick="showWeeklyTimeline()">Weekly</button>
+                </div>
+              </div>
+              <div class="chart-canvas-container">
+                <canvas id="commitTimelineChart" class="chart-canvas"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="charts-container">
+            <div class="chart-container">
+              <div class="chart-header">
+                <h4 class="chart-title">Lines of Code Changes</h4>
+              </div>
+              <div class="chart-canvas-container">
+                <canvas id="linesOfCodeChart" class="chart-canvas"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <div class="chart-header">
+                <h4 class="chart-title">Module Activity</h4>
+              </div>
+              <div class="chart-canvas-container">
+                <canvas id="moduleActivityChart" class="chart-canvas"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Commit Timeline -->
+        <div class="analytics-section">
+          <h3>⏰ Commit Timeline</h3>
+          ${timelineHtml}
+        </div>
+      </div>
     `;
   }
 

@@ -18,7 +18,7 @@ try:
     RADON_AVAILABLE = True
 except ImportError:
     RADON_AVAILABLE = False
-    logging.warning("Radon library not available. Using basic complexity calculation.")
+    # Note: Using built-in complexity calculation instead of radon
 
 from analyzer import (
     ModuleInfo, FunctionInfo, ComplexityScore, ComplexityLevel
@@ -80,7 +80,7 @@ class ComplexityAnalyzer:
         """Initialize the complexity analyzer."""
         self.radon_available = RADON_AVAILABLE
         if not self.radon_available:
-            logger.warning("Radon library not available. Falling back to basic complexity analysis.")
+            logger.debug("Using built-in complexity analysis (radon not available)")
     
     def enhance_module_complexity(self, module: ModuleInfo) -> ModuleInfo:
         """Enhance module with detailed complexity analysis using radon.

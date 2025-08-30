@@ -204,7 +204,10 @@ export class CurrentFileAnalysisHandler {
       pythonProcess.stderr?.on('data', (data) => {
         const chunk = data.toString();
         stderr += chunk;
-        this.errorHandler.logError('Python stderr', chunk, CurrentFileAnalysisHandler.COMMAND_ID);
+        // Only log as error if it's not just warnings or info messages
+        if (!chunk.includes('WARNING') && !chunk.includes('INFO') && !chunk.includes('DEBUG')) {
+          this.errorHandler.logError('Python stderr', chunk, CurrentFileAnalysisHandler.COMMAND_ID);
+        }
       });
 
       // Handle process completion

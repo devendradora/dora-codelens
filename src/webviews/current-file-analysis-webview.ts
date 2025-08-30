@@ -30,7 +30,7 @@ export class CurrentFileAnalysisWebview {
       if (this.panel) {
         // If panel exists, update it and bring to front
         this.updateContent(analysisData);
-        this.panel.reveal(vscode.ViewColumn.Two);
+        this.panel.reveal(vscode.ViewColumn.One);
       } else {
         // Create new panel
         this.createPanel();
@@ -51,7 +51,7 @@ export class CurrentFileAnalysisWebview {
     this.panel = vscode.window.createWebviewPanel(
       CurrentFileAnalysisWebview.VIEW_TYPE,
       'Current File Analysis',
-      vscode.ViewColumn.Two,
+      vscode.ViewColumn.One,
       {
         enableScripts: true,
         retainContextWhenHidden: true,
@@ -100,12 +100,8 @@ export class CurrentFileAnalysisWebview {
     const cssUri = webview.asWebviewUri(vscode.Uri.file(path.join(this.extensionPath, 'resources', 'webview.css')));
     const chartJsUri = webview.asWebviewUri(vscode.Uri.file(path.join(this.extensionPath, 'node_modules', 'chart.js', 'dist', 'chart.min.js')));
 
-    // Generate analysis sections
-    const fileInfoHtml = this.generateFileInfo(analysisData);
-    const complexityHtml = this.generateComplexityAnalysis(analysisData);
-    const dependenciesHtml = this.generateDependencyAnalysis(analysisData);
-    const frameworksHtml = this.generateFrameworkAnalysis(analysisData);
-    const metricsHtml = this.generateMetricsCharts(analysisData);
+    // Generate tab contents
+    const tabContents = this.generateTabContents(analysisData);
 
     return `
       <!DOCTYPE html>
@@ -123,292 +119,60 @@ export class CurrentFileAnalysisWebview {
           font-src ${webview.cspSource} https:;
         ">
         <style>
-          .file-analysis-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            font-family: var(--vscode-font-family);
-            color: var(--vscode-foreground);
-            background: var(--vscode-editor-background);
-          }
-          
-          .analysis-header {
-            margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--vscode-widget-border);
-          }
-          
-          .file-title {
-            font-size: 24px;
-            font-weight: 600;
-            margin: 0 0 8px 0;
-            color: var(--vscode-foreground);
-          }
-          
-          .file-path {
-            font-size: 14px;
-            color: var(--vscode-descriptionForeground);
-            font-family: monospace;
-          }
-          
-          .analysis-section {
-            margin-bottom: 32px;
-            background: var(--vscode-editor-inactiveSelectionBackground);
-            border-radius: 8px;
-            padding: 20px;
-            border: 1px solid var(--vscode-widget-border);
-          }
-          
-          .section-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin: 0 0 16px 0;
-            color: var(--vscode-foreground);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          }
-          
-          .section-icon {
-            font-size: 20px;
-          }
-          
-          .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 16px;
-          }
-          
-          .info-item {
-            background: var(--vscode-editor-background);
-            padding: 12px;
-            border-radius: 6px;
-            border: 1px solid var(--vscode-widget-border);
-          }
-          
-          .info-label {
-            font-size: 12px;
-            color: var(--vscode-descriptionForeground);
-            margin-bottom: 4px;
-            font-weight: 500;
-          }
-          
-          .info-value {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--vscode-foreground);
-          }
-          
-          .complexity-indicator {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-          }
-          
-          .complexity-low {
-            background: #27ae60;
-            color: white;
-          }
-          
-          .complexity-medium {
-            background: #f39c12;
-            color: white;
-          }
-          
-          .complexity-high {
-            background: #e74c3c;
-            color: white;
-          }
-          
-          .function-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-          }
-          
-          .function-item {
-            background: var(--vscode-editor-background);
-            padding: 12px;
-            border-radius: 6px;
-            border: 1px solid var(--vscode-widget-border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-          }
-          
-          .function-name {
-            font-family: monospace;
-            font-weight: 600;
-            color: var(--vscode-foreground);
-          }
-          
-          .function-complexity {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          }
-          
-          .dependency-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-          }
-          
-          .dependency-item {
-            background: var(--vscode-editor-background);
-            padding: 12px;
-            border-radius: 6px;
-            border: 1px solid var(--vscode-widget-border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-          }
-          
-          .dependency-name {
-            font-family: monospace;
-            color: var(--vscode-foreground);
-          }
-          
-          .dependency-type {
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-          }
-          
-          .import-type {
-            background: var(--vscode-charts-blue);
-            color: white;
-          }
-          
-          .framework-type {
-            background: var(--vscode-charts-green);
-            color: white;
-          }
-          
-          .chart-container {
-            background: var(--vscode-editor-background);
-            border-radius: 6px;
-            padding: 16px;
-            border: 1px solid var(--vscode-widget-border);
-            margin-bottom: 16px;
-          }
-          
-          .chart-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: var(--vscode-foreground);
-          }
-          
-          .chart-canvas {
-            max-height: 300px;
-          }
-          
-          .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: var(--vscode-descriptionForeground);
-          }
-          
-          .empty-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-          }
-          
-          .action-buttons {
-            display: flex;
-            gap: 8px;
-            margin-top: 16px;
-          }
-          
-          .action-btn {
-            padding: 8px 16px;
-            background: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: background-color 0.2s ease;
-          }
-          
-          .action-btn:hover {
-            background: var(--vscode-button-hoverBackground);
-          }
-          
-          .secondary-btn {
-            background: var(--vscode-button-secondaryBackground);
-            color: var(--vscode-button-secondaryForeground);
-            border: 1px solid var(--vscode-button-border);
-          }
-          
-          .secondary-btn:hover {
-            background: var(--vscode-button-secondaryHoverBackground);
-          }
+          ${this.generateStyles()}
         </style>
       </head>
       <body>
-        <div class="file-analysis-container">
-          <!-- Header -->
-          <div class="analysis-header">
-            ${fileInfoHtml}
+        <div class="analysis-container">
+          <!-- Navigation Links -->
+          <div class="navigation-bar">
+            <div class="nav-links">
+              <button class="nav-link active" data-tab="file-overview-section">
+                <span class="nav-icon">📄</span>
+                <span class="nav-label">File Overview</span>
+              </button>
+              <button class="nav-link" data-tab="complexity-analysis-section">
+                <span class="nav-icon">🔍</span>
+                <span class="nav-label">Complexity Analysis</span>
+              </button>
+              <button class="nav-link" data-tab="dependencies-section">
+                <span class="nav-icon">📦</span>
+                <span class="nav-label">Dependencies</span>
+              </button>
+            </div>
           </div>
 
-          <!-- Complexity Analysis -->
-          <div class="analysis-section">
-            <h2 class="section-title">
-              <span class="section-icon">🔍</span>
-              Complexity Analysis
-            </h2>
-            ${complexityHtml}
-          </div>
+          <!-- Scrollable Content -->
+          <div class="scrollable-content">
+            <!-- File Overview Section -->
+            <section id="file-overview-section" class="content-section active">
+              <div class="section-header">
+                <h2>📄 File Overview</h2>
+              </div>
+              <div class="section-content">
+                ${tabContents.fileOverview}
+              </div>
+            </section>
 
-          <!-- Dependencies -->
-          <div class="analysis-section">
-            <h2 class="section-title">
-              <span class="section-icon">📦</span>
-              Dependencies
-            </h2>
-            ${dependenciesHtml}
-          </div>
+            <!-- Complexity Analysis Section -->
+            <section id="complexity-analysis-section" class="content-section">
+              <div class="section-header">
+                <h2>🔍 Complexity Analysis</h2>
+              </div>
+              <div class="section-content">
+                ${tabContents.complexityAnalysis}
+              </div>
+            </section>
 
-          <!-- Framework Patterns -->
-          <div class="analysis-section">
-            <h2 class="section-title">
-              <span class="section-icon">🏗️</span>
-              Framework Patterns
-            </h2>
-            ${frameworksHtml}
-          </div>
-
-          <!-- Metrics Charts -->
-          <div class="analysis-section">
-            <h2 class="section-title">
-              <span class="section-icon">📊</span>
-              Metrics Visualization
-            </h2>
-            ${metricsHtml}
-          </div>
-
-          <!-- Actions -->
-          <div class="action-buttons">
-            <button class="action-btn" onclick="refreshAnalysis()">
-              🔄 Refresh Analysis
-            </button>
-            <button class="action-btn secondary-btn" onclick="openFile()">
-              📝 Open in Editor
-            </button>
-            <button class="action-btn secondary-btn" onclick="exportReport()">
-              💾 Export Report
-            </button>
+            <!-- Dependencies Section -->
+            <section id="dependencies-section" class="content-section">
+              <div class="section-header">
+                <h2>📦 Dependencies</h2>
+              </div>
+              <div class="section-content">
+                ${tabContents.dependencies}
+              </div>
+            </section>
           </div>
         </div>
 
@@ -419,10 +183,40 @@ export class CurrentFileAnalysisWebview {
           const analysisData = ${JSON.stringify(analysisData)};
           const filePath = ${JSON.stringify(this.currentFilePath)};
           
-          // Initialize charts when DOM is ready
+          // Initialize when DOM is ready
           document.addEventListener('DOMContentLoaded', function() {
+            initializeTabs();
             initializeCharts();
           });
+          
+          function initializeTabs() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const contentSections = document.querySelectorAll('.content-section');
+
+            navLinks.forEach(link => {
+              link.addEventListener('click', function() {
+                const targetTab = this.getAttribute('data-tab');
+                
+                // Remove active class from all nav links and content sections
+                navLinks.forEach(nav => nav.classList.remove('active'));
+                contentSections.forEach(section => section.classList.remove('active'));
+                
+                // Add active class to clicked nav link and corresponding content section
+                this.classList.add('active');
+                const targetSection = document.getElementById(targetTab);
+                if (targetSection) {
+                  targetSection.classList.add('active');
+                  
+                  // If switching to complexity analysis tab, initialize charts if not already done
+                  if (targetTab === 'complexity-analysis-section' && !window.chartsInitialized) {
+                    setTimeout(() => {
+                      initializeCharts();
+                    }, 100);
+                  }
+                }
+              });
+            });
+          }
           
           function initializeCharts() {
             try {
@@ -435,6 +229,8 @@ export class CurrentFileAnalysisWebview {
               if (analysisData.complexity_metrics) {
                 createMetricsChart();
               }
+              
+              window.chartsInitialized = true;
             } catch (error) {
               console.error('Failed to initialize charts:', error);
             }
@@ -514,7 +310,7 @@ export class CurrentFileAnalysisWebview {
                 datasets: [{
                   label: 'File Metrics',
                   data: [
-                    Math.min(metrics.lines_of_code / 10, 100),
+                    Math.min((metrics.code_lines || metrics.lines_of_code || 0) / 10, 100),
                     Math.min(metrics.cyclomatic_complexity * 10, 100),
                     metrics.maintainability_index || 50,
                     Math.min((metrics.halstead_metrics?.volume || 0) / 10, 100),
@@ -568,22 +364,371 @@ export class CurrentFileAnalysisWebview {
   }
 
   /**
-   * Generate file information HTML
+   * Generate tab contents for the webview
    */
-  private generateFileInfo(analysisData: any): string {
-    const fileName = this.currentFilePath ? path.basename(this.currentFilePath) : 'Unknown File';
-    const filePath = this.currentFilePath || 'Unknown Path';
-    
+  private generateTabContents(analysisData: any): any {
+    return {
+      fileOverview: this.generateFileOverview(analysisData),
+      complexityAnalysis: this.generateComplexityAnalysisTab(analysisData),
+      dependencies: this.generateDependenciesTab(analysisData)
+    };
+  }
+
+  /**
+   * Generate styles for the webview
+   */
+  private generateStyles(): string {
     return `
-      <h1 class="file-title">${fileName}</h1>
-      <div class="file-path">${filePath}</div>
+      .analysis-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        font-family: var(--vscode-font-family);
+        color: var(--vscode-foreground);
+        background: var(--vscode-editor-background);
+      }
+
+      .navigation-bar {
+        border-bottom: 1px solid var(--vscode-panel-border);
+        background: var(--vscode-tab-activeBackground);
+        padding: 0;
+        flex-shrink: 0;
+      }
+
+      .nav-links {
+        display: flex;
+        overflow-x: auto;
+      }
+
+      .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        background: none;
+        border: none;
+        color: var(--vscode-tab-inactiveForeground);
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        font-size: 14px;
+        font-family: inherit;
+      }
+
+      .nav-link:hover {
+        background: var(--vscode-tab-hoverBackground);
+        color: var(--vscode-tab-activeForeground);
+      }
+
+      .nav-link.active {
+        color: var(--vscode-tab-activeForeground);
+        border-bottom-color: var(--vscode-focusBorder);
+        background: var(--vscode-tab-activeBackground);
+      }
+
+      .scrollable-content {
+        flex: 1;
+        overflow: auto;
+        padding: 24px;
+      }
+
+      .content-section {
+        margin-bottom: 32px;
+        display: none;
+      }
+
+      .content-section.active {
+        display: block;
+      }
+
+      .section-header {
+        margin-bottom: 16px;
+      }
+
+      .section-header h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+      }
+
+      .section-content {
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border);
+        border-radius: 6px;
+        padding: 16px;
+      }
+
+      .file-info-header {
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--vscode-widget-border);
+      }
+      
+      .file-title {
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0 0 8px 0;
+        color: var(--vscode-foreground);
+      }
+      
+      .file-path {
+        font-size: 14px;
+        color: var(--vscode-descriptionForeground);
+        font-family: monospace;
+      }
+      
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+      
+      .info-item {
+        background: var(--vscode-editor-background);
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid var(--vscode-widget-border);
+      }
+      
+      .info-label {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+        margin-bottom: 4px;
+        font-weight: 500;
+      }
+      
+      .info-value {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--vscode-foreground);
+      }
+      
+      .complexity-indicator {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      
+      .complexity-low {
+        background: #27ae60;
+        color: white;
+      }
+      
+      .complexity-medium {
+        background: #f39c12;
+        color: white;
+      }
+      
+      .complexity-high {
+        background: #e74c3c;
+        color: white;
+      }
+      
+      .function-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .function-item {
+        background: var(--vscode-editor-background);
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid var(--vscode-widget-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      
+      .function-name {
+        font-family: monospace;
+        font-weight: 600;
+        color: var(--vscode-foreground);
+      }
+      
+      .function-complexity {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .dependency-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .dependency-item {
+        background: var(--vscode-editor-background);
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid var(--vscode-widget-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      
+      .dependency-name {
+        font-family: monospace;
+        color: var(--vscode-foreground);
+      }
+      
+      .dependency-type {
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      
+      .import-type {
+        background: var(--vscode-charts-blue);
+        color: white;
+      }
+      
+      .framework-type {
+        background: var(--vscode-charts-green);
+        color: white;
+      }
+      
+      .chart-container {
+        background: var(--vscode-editor-background);
+        border-radius: 6px;
+        padding: 16px;
+        border: 1px solid var(--vscode-widget-border);
+        margin-bottom: 16px;
+      }
+      
+      .chart-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: var(--vscode-foreground);
+      }
+      
+      .chart-canvas {
+        max-height: 300px;
+      }
+      
+      .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: var(--vscode-descriptionForeground);
+      }
+      
+      .empty-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+      }
+      
+      .action-buttons {
+        display: flex;
+        gap: 8px;
+        margin-top: 16px;
+      }
+      
+      .action-btn {
+        padding: 8px 16px;
+        background: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: background-color 0.2s ease;
+      }
+      
+      .action-btn:hover {
+        background: var(--vscode-button-hoverBackground);
+      }
+      
+      .secondary-btn {
+        background: var(--vscode-button-secondaryBackground);
+        color: var(--vscode-button-secondaryForeground);
+        border: 1px solid var(--vscode-button-border);
+      }
+      
+      .secondary-btn:hover {
+        background: var(--vscode-button-secondaryHoverBackground);
+      }
     `;
   }
 
   /**
-   * Generate complexity analysis HTML
+   * Generate file overview content
    */
-  private generateComplexityAnalysis(analysisData: any): string {
+  private generateFileOverview(analysisData: any): string {
+    const fileName = this.currentFilePath ? path.basename(this.currentFilePath) : 'Unknown File';
+    const filePath = this.currentFilePath || 'Unknown Path';
+    
+    let html = `
+      <div class="file-info-header">
+        <h1 class="file-title">${fileName}</h1>
+        <div class="file-path">${filePath}</div>
+      </div>
+    `;
+
+    // Basic file metrics
+    if (analysisData.complexity_metrics) {
+      const metrics = analysisData.complexity_metrics;
+      html += '<div class="info-grid">';
+      
+      html += `<div class="info-item">
+        <div class="info-label">Lines of Code</div>
+        <div class="info-value">${metrics.code_lines || metrics.lines_of_code || 0}</div>
+      </div>`;
+      
+      html += `<div class="info-item">
+        <div class="info-label">Functions</div>
+        <div class="info-value">${metrics.function_complexities?.length || 0}</div>
+      </div>`;
+      
+      html += `<div class="info-item">
+        <div class="info-label">Maintainability Index</div>
+        <div class="info-value">${metrics.maintainability_index?.toFixed(1) || 'N/A'}</div>
+      </div>`;
+      
+      const overallComplexity = metrics.overall_complexity || { level: 'unknown', score: 0 };
+      html += `<div class="info-item">
+        <div class="info-label">Overall Complexity</div>
+        <div class="info-value">
+          <span class="complexity-indicator complexity-${overallComplexity.level}">
+            ${overallComplexity.level}
+          </span>
+        </div>
+      </div>`;
+      
+      html += '</div>';
+    }
+
+    // Action buttons
+    html += `
+      <div class="action-buttons">
+        <button class="action-btn" onclick="refreshAnalysis()">
+          🔄 Refresh Analysis
+        </button>
+        <button class="action-btn secondary-btn" onclick="openFile()">
+          📝 Open in Editor
+        </button>
+        <button class="action-btn secondary-btn" onclick="exportReport()">
+          💾 Export Report
+        </button>
+      </div>
+    `;
+    
+    return html;
+  }
+
+  /**
+   * Generate complexity analysis tab content
+   */
+  private generateComplexityAnalysisTab(analysisData: any): string {
     if (!analysisData.complexity_metrics) {
       return '<div class="empty-state"><div class="empty-icon">📊</div><p>No complexity metrics available.</p></div>';
     }
@@ -605,25 +750,25 @@ export class CurrentFileAnalysisWebview {
     </div>`;
     
     html += `<div class="info-item">
-      <div class="info-label">Lines of Code</div>
-      <div class="info-value">${metrics.lines_of_code || 0}</div>
-    </div>`;
-    
-    html += `<div class="info-item">
       <div class="info-label">Cyclomatic Complexity</div>
       <div class="info-value">${metrics.cyclomatic_complexity || 0}</div>
     </div>`;
     
     html += `<div class="info-item">
-      <div class="info-label">Maintainability Index</div>
-      <div class="info-value">${metrics.maintainability_index?.toFixed(1) || 'N/A'}</div>
+      <div class="info-label">Cognitive Complexity</div>
+      <div class="info-value">${metrics.cognitive_complexity || 0}</div>
+    </div>`;
+    
+    html += `<div class="info-item">
+      <div class="info-label">Halstead Volume</div>
+      <div class="info-value">${metrics.halstead_metrics?.volume?.toFixed(1) || 'N/A'}</div>
     </div>`;
     
     html += '</div>';
     
     // Function complexities
     if (metrics.function_complexities && metrics.function_complexities.length > 0) {
-      html += '<h3>Function Complexities</h3>';
+      html += '<h3 style="margin: 24px 0 16px 0; font-size: 18px; font-weight: 600;">Function Complexities</h3>';
       html += '<div class="function-list">';
       
       metrics.function_complexities.forEach((func: any) => {
@@ -641,69 +786,12 @@ export class CurrentFileAnalysisWebview {
       
       html += '</div>';
     }
-    
-    return html;
-  }
 
-  /**
-   * Generate dependency analysis HTML
-   */
-  private generateDependencyAnalysis(analysisData: any): string {
-    if (!analysisData.dependencies || analysisData.dependencies.length === 0) {
-      return '<div class="empty-state"><div class="empty-icon">📦</div><p>No dependencies found.</p></div>';
-    }
-
-    let html = '';
-    html += '<div class="dependency-list">';
-    
-    analysisData.dependencies.forEach((dep: any) => {
-      const depType = dep.type || 'import';
-      html += `<div class="dependency-item">
-        <span class="dependency-name">${dep.name || dep.module}</span>
-        <span class="dependency-type ${depType}-type">${depType}</span>
-      </div>`;
-    });
-    
-    html += '</div>';
-    
-    return html;
-  }
-
-  /**
-   * Generate framework analysis HTML
-   */
-  private generateFrameworkAnalysis(analysisData: any): string {
-    if (!analysisData.framework_patterns || analysisData.framework_patterns.length === 0) {
-      return '<div class="empty-state"><div class="empty-icon">🏗️</div><p>No framework patterns detected.</p></div>';
-    }
-
-    let html = '';
-    html += '<div class="dependency-list">';
-    
-    analysisData.framework_patterns.forEach((pattern: any) => {
-      html += `<div class="dependency-item">
-        <span class="dependency-name">${pattern.framework}</span>
-        <span class="dependency-type framework-type">${pattern.pattern_type}</span>
-      </div>`;
-    });
-    
-    html += '</div>';
-    
-    return html;
-  }
-
-  /**
-   * Generate metrics charts HTML
-   */
-  private generateMetricsCharts(analysisData: any): string {
-    if (!analysisData.complexity_metrics) {
-      return '<div class="empty-state"><div class="empty-icon">📊</div><p>No metrics available for visualization.</p></div>';
-    }
-
-    let html = '';
+    // Charts section
+    html += '<h3 style="margin: 24px 0 16px 0; font-size: 18px; font-weight: 600;">Metrics Visualization</h3>';
     
     // Function complexity chart
-    if (analysisData.complexity_metrics.function_complexities && analysisData.complexity_metrics.function_complexities.length > 0) {
+    if (metrics.function_complexities && metrics.function_complexities.length > 0) {
       html += `<div class="chart-container">
         <div class="chart-title">Function Complexity Distribution</div>
         <canvas id="complexityChart" class="chart-canvas"></canvas>
@@ -718,6 +806,94 @@ export class CurrentFileAnalysisWebview {
     
     return html;
   }
+
+  /**
+   * Generate dependencies tab content
+   */
+  private generateDependenciesTab(analysisData: any): string {
+    let html = '';
+
+    // Add debug logging for data structure validation
+    console.log('[CurrentFileAnalysisWebview] Processing dependencies tab data:', {
+      hasFrameworkPatterns: !!analysisData.framework_patterns,
+      frameworkPatternsType: typeof analysisData.framework_patterns,
+      frameworkPatternsKeys: analysisData.framework_patterns ? Object.keys(analysisData.framework_patterns) : null
+    });
+
+    // Dependencies section
+    html += '<h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600;">Dependencies</h3>';
+    
+    if (!analysisData.dependencies || analysisData.dependencies.length === 0) {
+      html += '<div class="empty-state"><div class="empty-icon">📦</div><p>No dependencies found.</p></div>';
+    } else {
+      html += '<div class="dependency-list">';
+      
+      analysisData.dependencies.forEach((dep: any) => {
+        const depType = dep.type || 'import';
+        html += `<div class="dependency-item">
+          <span class="dependency-name">${dep.name || dep.module}</span>
+          <span class="dependency-type ${depType}-type">${depType}</span>
+        </div>`;
+      });
+      
+      html += '</div>';
+    }
+
+    // Framework patterns section
+    html += '<h3 style="margin: 24px 0 16px 0; font-size: 18px; font-weight: 600;">Framework Patterns</h3>';
+    
+    // Transform framework_patterns object to array format for display
+    let frameworkPatterns: any[] = [];
+    try {
+      if (analysisData.framework_patterns && typeof analysisData.framework_patterns === 'object') {
+        if (Array.isArray(analysisData.framework_patterns)) {
+          // Handle legacy array format
+          frameworkPatterns = analysisData.framework_patterns;
+        } else {
+          // Handle new object format with nested arrays
+          Object.keys(analysisData.framework_patterns).forEach(key => {
+            if (key.endsWith('_patterns') && Array.isArray(analysisData.framework_patterns[key])) {
+              const frameworkName = key.replace('_patterns', '');
+              analysisData.framework_patterns[key].forEach((pattern: any) => {
+                frameworkPatterns.push({
+                  framework: frameworkName,
+                  pattern_type: pattern.type || 'unknown',
+                  name: pattern.name || '',
+                  line_number: pattern.line_number || 0
+                });
+              });
+            }
+          });
+        }
+      }
+      console.log('[CurrentFileAnalysisWebview] Transformed framework patterns:', frameworkPatterns.length, 'patterns');
+    } catch (error) {
+      console.error('[CurrentFileAnalysisWebview] Error transforming framework patterns:', error);
+      console.log('[CurrentFileAnalysisWebview] Raw framework_patterns data:', analysisData.framework_patterns);
+      frameworkPatterns = [];
+    }
+    
+    if (frameworkPatterns.length === 0) {
+      html += '<div class="empty-state"><div class="empty-icon">🏗️</div><p>No framework patterns detected.</p></div>';
+    } else {
+      html += '<div class="dependency-list">';
+      
+      frameworkPatterns.forEach((pattern: any) => {
+        html += `<div class="dependency-item">
+          <span class="dependency-name">${pattern.framework}</span>
+          <span class="dependency-type framework-type">${pattern.pattern_type}</span>
+          ${pattern.name ? `<span class="dependency-version">${pattern.name}</span>` : ''}
+          ${pattern.line_number ? `<span class="dependency-line">Line ${pattern.line_number}</span>` : ''}
+        </div>`;
+      });
+      
+      html += '</div>';
+    }
+    
+    return html;
+  }
+
+
 
   /**
    * Handle messages from webview

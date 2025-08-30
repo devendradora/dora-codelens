@@ -184,25 +184,25 @@ export class FullCodeAnalysisWebview {
           <!-- Navigation Links -->
           <div class="navigation-bar">
             <div class="nav-links">
-              <a href="#tech-stack-section" class="nav-link">
+              <button class="nav-link active" data-tab="tech-stack-section">
                 <span class="nav-icon">🛠️</span>
                 <span class="nav-label">Tech Stack</span>
-              </a>
-              <a href="#code-graph-section" class="nav-link">
+              </button>
+              <button class="nav-link" data-tab="code-graph-section">
                 <span class="nav-icon">🕸️</span>
                 <span class="nav-label">Code Graph</span>
-              </a>
-              <a href="#code-graph-json-section" class="nav-link">
+              </button>
+              <button class="nav-link" data-tab="code-graph-json-section">
                 <span class="nav-icon">📄</span>
                 <span class="nav-label">Code Graph JSON</span>
-              </a>
+              </button>
             </div>
           </div>
 
           <!-- Scrollable Content -->
           <div class="scrollable-content">
             <!-- Tech Stack Section -->
-            <section id="tech-stack-section" class="content-section">
+            <section id="tech-stack-section" class="content-section active">
               <div class="section-header">
                 <h2>🛠️ Tech Stack Analysis</h2>
               </div>
@@ -213,8 +213,33 @@ export class FullCodeAnalysisWebview {
 
             <!-- Code Graph Section -->
             <section id="code-graph-section" class="content-section">
-              <div class="section-header">
-                <h2>🕸️ Code Graph Visualization</h2>
+              <div class="section-header" style="margin-bottom: 16px;">
+                <h2 style="margin: 0 0 16px 0;">🕸️ Code Graph Visualization</h2>
+                <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                  <!-- Quick Controls -->
+                  <div style="display: flex; gap: 8px; flex-wrap: wrap; padding: 8px; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 5px;">
+                    <button id="zoom-in-btn" style="padding: 6px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 14px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Zoom In">🔍+</button>
+                    <button id="zoom-out-btn" style="padding: 6px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 14px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Zoom Out">🔍-</button>
+                    <button id="reset-view-btn" style="padding: 6px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 14px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Reset View">🎯</button>
+                    <button id="fit-view-btn" style="padding: 6px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 14px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Fit to Screen">�</button>
+                    <button id="expand-all-btn" style="padding: 6px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 14px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Expand All Folders">📂+</button>
+                    <button id="collapse-all-btn" style="padding: 6px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 14px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Collapse All Folders">📁-</button>
+                  </div>
+                  <!-- Layout Selector -->
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <label style="font-size: 12px; color: var(--vscode-foreground); font-weight: 600;">Layout:</label>
+                    <select id="layout-select" style="padding: 4px 8px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); border-radius: 3px; font-size: 12px; min-width: 120px;">
+                      <option value="preset">Manual</option>
+                      <option value="grid">Grid</option>
+                      <option value="circle">Circle</option>
+                      <option value="concentric" selected>Concentric</option>
+                      <option value="breadthfirst">Breadth First</option>
+                      <option value="cose">Force-directed</option>
+                      <option value="dagre">Hierarchical</option>
+                      <option value="random">Random</option>
+                    </select>
+                  </div>
+                </div>
               </div>
               <div class="section-content" style="position: relative; padding: 0;">
                 <div id="graph-loading" style="text-align: center; padding: 40px; font-size: 16px;">
@@ -222,13 +247,22 @@ export class FullCodeAnalysisWebview {
                   <div>Initializing interactive code graph...</div>
                 </div>
                 <div id="enhanced-graph" style="width: 100%; height: 600px; border: 1px solid var(--vscode-panel-border); display: none;"></div>
-                <div class="legend" style="position: absolute; top: 10px; right: 10px; background: var(--vscode-editor-background); padding: 10px; border: 1px solid var(--vscode-panel-border); border-radius: 5px; font-size: 14px; display: none;">
-                  <div style="margin-bottom: 5px;"><span style="display: inline-block; width: 20px; height: 20px; margin-right: 8px; vertical-align: middle; background: yellow; border:1px solid #000;"></span> Folder</div>
-                  <div style="margin-bottom: 5px;"><span style="display: inline-block; width: 20px; height: 20px; margin-right: 8px; vertical-align: middle; background: skyblue; border:1px solid #000;"></span> File</div>
-                  <div style="margin-bottom: 5px;"><span style="display: inline-block; width: 20px; height: 20px; margin-right: 8px; vertical-align: middle; background: orange; clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);"></span> Class</div>
-                  <div style="margin-bottom: 5px;"><span style="display: inline-block; width: 20px; height: 20px; margin-right: 8px; vertical-align: middle; background: green; border-radius: 50%;"></span> Function</div>
-                  <div style="margin-bottom: 5px;"><span style="display: inline-block; width: 30px; height: 2px; margin-right: 8px; vertical-align: middle; background: #888;"></span> Contains</div>
-                  <div><span style="display: inline-block; width: 30px; height: 2px; margin-right: 8px; vertical-align: middle; background: red;"></span> Calls</div>
+                
+
+
+                <!-- Legend Panel (Bottom Right) -->
+                <div class="legend" style="position: fixed; bottom: 16px; right: 16px; background: var(--vscode-editor-background); padding: 12px; border: 1px solid var(--vscode-panel-border); border-radius: 5px; font-size: 12px; display: none; z-index: 1000; min-width: 180px; max-height: 80vh; overflow-y: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                  <div style="font-weight: bold; margin-bottom: 12px; font-size: 13px;">📊 Legend</div>
+                  
+                  <!-- Legend -->
+                  <div>
+                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: yellow; border:1px solid #000; border-radius: 2px;"></span> 📁 Folder</div>
+                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: skyblue; border:1px solid #000; border-radius: 2px;"></span> 📄 File</div>
+                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: orange; clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);"></span> 🏛️ Class</div>
+                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: green; border-radius: 50%;"></span> ⚙️ Function</div>
+                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 24px; height: 2px; margin-right: 8px; vertical-align: middle; background: #888;"></span> Contains</div>
+                    <div><span style="display: inline-block; width: 24px; height: 2px; margin-right: 8px; vertical-align: middle; background: red;"></span> Calls</div>
+                  </div>
                 </div>
               </div>
             </section>
@@ -263,8 +297,38 @@ export class FullCodeAnalysisWebview {
           // Initialize when DOM is ready
           document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM ready, starting initialization...');
+            initializeTabs();
             initializeGraph();
           });
+
+          function initializeTabs() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const contentSections = document.querySelectorAll('.content-section');
+
+            navLinks.forEach(link => {
+              link.addEventListener('click', function() {
+                const targetTab = this.getAttribute('data-tab');
+                
+                // Remove active class from all nav links and content sections
+                navLinks.forEach(nav => nav.classList.remove('active'));
+                contentSections.forEach(section => section.classList.remove('active'));
+                
+                // Add active class to clicked nav link and corresponding content section
+                this.classList.add('active');
+                const targetSection = document.getElementById(targetTab);
+                if (targetSection) {
+                  targetSection.classList.add('active');
+                  
+                  // If switching to code graph tab, initialize graph if not already done
+                  if (targetTab === 'code-graph-section' && !window.graphInitialized) {
+                    setTimeout(() => {
+                      initializeGraph();
+                    }, 100);
+                  }
+                }
+              });
+            });
+          }
 
           function initializeGraph() {
             // Check if Cytoscape is available
@@ -275,6 +339,12 @@ export class FullCodeAnalysisWebview {
             }
 
             console.log('Cytoscape loaded, initializing graph...');
+            console.log('DOM elements check:');
+            console.log('- layout-select:', !!document.getElementById('layout-select'));
+            console.log('- zoom-in-btn:', !!document.getElementById('zoom-in-btn'));
+            console.log('- zoom-out-btn:', !!document.getElementById('zoom-out-btn'));
+            console.log('- expand-all-btn:', !!document.getElementById('expand-all-btn'));
+            console.log('- collapse-all-btn:', !!document.getElementById('collapse-all-btn'));
             
             const container = document.getElementById('enhanced-graph');
             const loadingElement = document.getElementById('graph-loading');
@@ -315,38 +385,59 @@ export class FullCodeAnalysisWebview {
               const expanded = {};
               const width = container.offsetWidth || 800;
               const height = container.offsetHeight || 600;
+              
+              // Store cytoscape instance and data globally for controls
+              window.cy = cy;
+              window.expanded = expanded;
+              window.projectData = projectData;
 
-              // Add top-level folder nodes
+              // Position folders in corners and edges for better distribution
+              const positions = [
+                { x: 150, y: 150 },           // Top-left
+                { x: width - 150, y: 150 },   // Top-right
+                { x: 150, y: height - 150 },  // Bottom-left
+                { x: width - 150, y: height - 150 }, // Bottom-right
+                { x: width / 2, y: 150 },     // Top-center
+                { x: width / 2, y: height - 150 }, // Bottom-center
+                { x: 150, y: height / 2 },    // Left-center
+                { x: width - 150, y: height / 2 }, // Right-center
+              ];
+
+              // Add top-level folder nodes positioned in corners/edges
               projectData.forEach((folder, i) => {
-                const posX = 100 + (i % 3) * (width / 3);
-                const posY = 100 + Math.floor(i / 3) * 200;
-                cy.add({ data: { id: folder.name, name: folder.name, type: 'folder' }, position: { x: posX, y: posY } });
+                const position = positions[i % positions.length];
+                // If more folders than positions, create a spiral pattern
+                if (i >= positions.length) {
+                  const angle = (i - positions.length) * 0.5;
+                  const radius = 200 + (Math.floor((i - positions.length) / 8) * 100);
+                  position.x = width / 2 + Math.cos(angle) * radius;
+                  position.y = height / 2 + Math.sin(angle) * radius;
+                }
+                cy.add({ 
+                  data: { id: folder.name, name: folder.name, type: 'folder' }, 
+                  position: position 
+                });
               });
 
               // Folder expansion logic
               cy.on('tap', 'node[type="folder"]', function(evt) {
                 const folderId = evt.target.id();
                 console.log('Folder clicked:', folderId);
-                
-                if (expanded[folderId]) {
-                  // Collapse
-                  cy.remove(cy.nodes().filter(n => n.data('folder') === folderId));
-                  cy.remove(cy.edges().filter(e => e.data('folder') === folderId));
-                  expanded[folderId] = false;
-                  return;
-                }
-
-                // Expand
-                const folderData = projectData.find(f => f.name === folderId);
-                if (folderData && folderData.children) {
-                  folderData.children.forEach((child, i) => {
-                    addNode(cy, folderId, child, folderId, 1, i);
-                  });
-                }
-
-                expanded[folderId] = true;
-                cy.layout({ name:'cose', fit:false, animate:true }).run();
+                toggleFolder(cy, folderId, expanded, projectData);
               });
+
+              // Setup zoom and pan controls
+              setupGraphControls(cy);
+              
+              // Test basic functionality
+              console.log('🧪 Testing basic functionality...');
+              setTimeout(() => {
+                console.log('Current graph state:');
+                console.log('- Total nodes:', cy.nodes().length);
+                console.log('- Total edges:', cy.edges().length);
+                console.log('- Folder nodes:', cy.nodes('[type="folder"]').length);
+                console.log('- Expanded folders:', Object.keys(window.expanded).filter(id => window.expanded[id]));
+              }, 1000);
 
               // Show graph and legend, hide loading
               container.style.display = 'block';
@@ -358,6 +449,7 @@ export class FullCodeAnalysisWebview {
               }
               
               console.log('✅ Graph initialized successfully');
+              window.graphInitialized = true;
 
             } catch (error) {
               console.error('Error initializing graph:', error);
@@ -365,10 +457,257 @@ export class FullCodeAnalysisWebview {
             }
           }
 
+          function setupGraphControls(cy) {
+            // Helper function to safely add event listeners
+            function safeAddEventListener(elementId, event, handler) {
+              const element = document.getElementById(elementId);
+              if (element) {
+                element.addEventListener(event, handler);
+              } else {
+                console.warn('Element not found:', elementId);
+              }
+            }
+
+            // Zoom In
+            safeAddEventListener('zoom-in-btn', 'click', function() {
+              cy.zoom(cy.zoom() * 1.25);
+              cy.center();
+            });
+
+            // Zoom Out
+            safeAddEventListener('zoom-out-btn', 'click', function() {
+              cy.zoom(cy.zoom() * 0.8);
+              cy.center();
+            });
+
+            // Reset View
+            safeAddEventListener('reset-view-btn', 'click', function() {
+              cy.zoom(1);
+              cy.center();
+            });
+
+            // Fit to Screen
+            safeAddEventListener('fit-view-btn', 'click', function() {
+              cy.fit();
+            });
+
+            // Expand All Folders
+            safeAddEventListener('expand-all-btn', 'click', function() {
+              expandAllFolders(cy, window.expanded, window.projectData);
+            });
+
+            // Collapse All Folders
+            safeAddEventListener('collapse-all-btn', 'click', function() {
+              collapseAllFolders(cy, window.expanded);
+            });
+
+            // Layout Selection (if exists)
+            safeAddEventListener('layout-select', 'change', function() {
+              const layoutName = this.value;
+              console.log('Changing layout to:', layoutName);
+              
+              let layoutOptions = { name: layoutName };
+              
+              // Add specific options for different layouts
+              switch(layoutName) {
+                case 'cose':
+                  layoutOptions = { name: 'cose', animate: true, fit: true };
+                  break;
+                case 'dagre':
+                  layoutOptions = { name: 'dagre', animate: true, fit: true };
+                  break;
+                case 'breadthfirst':
+                  layoutOptions = { name: 'breadthfirst', animate: true, fit: true, directed: true };
+                  break;
+                case 'circle':
+                  layoutOptions = { name: 'circle', animate: true, fit: true };
+                  break;
+                case 'concentric':
+                  layoutOptions = { name: 'concentric', animate: true, fit: true };
+                  break;
+                case 'grid':
+                  layoutOptions = { name: 'grid', animate: true, fit: true };
+                  break;
+                case 'klay':
+                  layoutOptions = { name: 'klay', animate: true, fit: true };
+                  break;
+                case 'random':
+                  layoutOptions = { name: 'random', animate: true, fit: true };
+                  break;
+              }
+              
+              cy.layout(layoutOptions).run();
+            });
+
+            // Panel Toggle (if exists)
+            safeAddEventListener('toggle-panel-btn', 'click', function() {
+              const panel = document.getElementById('properties-panel');
+              const showBtn = document.getElementById('show-panel-btn');
+              if (panel) panel.style.display = 'none';
+              if (showBtn) showBtn.style.display = 'block';
+            });
+
+            safeAddEventListener('show-panel-btn', 'click', function() {
+              const panel = document.getElementById('properties-panel');
+              const showBtn = document.getElementById('show-panel-btn');
+              if (panel) panel.style.display = 'flex';
+              if (showBtn) showBtn.style.display = 'none';
+            });
+
+            // Enable mouse wheel zoom
+            cy.on('wheel', function(e) {
+              e.preventDefault();
+              const zoom = cy.zoom();
+              const factor = e.originalEvent.deltaY > 0 ? 0.9 : 1.1;
+              cy.zoom(zoom * factor);
+            });
+
+            // Update stats initially and on changes
+            updateGraphStats(cy);
+            cy.on('add remove', function() {
+              updateGraphStats(cy);
+            });
+          }
+
+          function updateGraphStats(cy) {
+            // Just log stats for debugging, no UI updates needed
+            const nodeCount = cy.nodes().length;
+            const edgeCount = cy.edges().length;
+            const folderCount = cy.nodes('[type="folder"]').length;
+            
+            console.log('Graph stats:', { nodes: nodeCount, edges: edgeCount, folders: folderCount });
+          }
+
+          function toggleFolder(cy, folderId, expanded, projectData) {
+            if (expanded[folderId]) {
+              // Collapse
+              collapseFolder(cy, folderId, expanded);
+            } else {
+              // Expand
+              expandFolder(cy, folderId, expanded, projectData);
+            }
+          }
+
+          function expandFolder(cy, folderId, expanded, projectData) {
+            console.log('Expanding folder:', folderId);
+            
+            const folderData = projectData.find(f => f.name === folderId);
+            if (!folderData) {
+              console.warn('Folder data not found for:', folderId);
+              return;
+            }
+            
+            if (!folderData.children || folderData.children.length === 0) {
+              console.log('No children found for folder:', folderId);
+              return;
+            }
+            
+            console.log('Adding', folderData.children.length, 'children to folder:', folderId);
+            folderData.children.forEach((child, i) => {
+              addNode(cy, folderId, child, folderId, 1, i);
+            });
+            
+            expanded[folderId] = true;
+            console.log('Folder expanded successfully:', folderId);
+            
+            // Use a gentler layout that doesn't move everything
+            cy.layout({ name:'cose', fit:false, animate:true, randomize:false }).run();
+          }
+
+          function collapseFolder(cy, folderId, expanded) {
+            console.log('Collapsing folder:', folderId);
+            
+            // Count nodes before removal
+            const nodesToRemove = cy.nodes().filter(n => n.data('folder') === folderId);
+            const edgesToRemove = cy.edges().filter(e => e.data('folder') === folderId);
+            
+            console.log('Removing', nodesToRemove.length, 'nodes and', edgesToRemove.length, 'edges');
+            
+            // Remove all child nodes and edges for this folder
+            cy.remove(nodesToRemove);
+            cy.remove(edgesToRemove);
+            
+            expanded[folderId] = false;
+            console.log('Folder collapsed successfully:', folderId);
+          }
+
+          function expandAllFolders(cy, expanded, projectData) {
+            console.log('🔄 Expanding all folders...');
+            console.log('Project data:', projectData);
+            console.log('Current expanded state:', expanded);
+            
+            if (!projectData || projectData.length === 0) {
+              console.warn('No project data available for expansion');
+              return;
+            }
+            
+            // Get all top-level folder nodes that are not expanded
+            const folderNodes = cy.nodes('[type="folder"]');
+            console.log('Found folder nodes:', folderNodes.length);
+            
+            let expandedCount = 0;
+            folderNodes.forEach(function(node) {
+              const folderId = node.id();
+              console.log('Checking folder:', folderId, 'expanded:', !!expanded[folderId]);
+              
+              if (!expanded[folderId]) {
+                const folderData = projectData.find(f => f.name === folderId);
+                if (folderData && folderData.children) {
+                  console.log('Expanding folder:', folderId, 'with', folderData.children.length, 'children');
+                  expandFolder(cy, folderId, expanded, projectData);
+                  expandedCount++;
+                }
+              }
+            });
+            
+            console.log('✅ Expanded', expandedCount, 'folders');
+            
+            // Update stats
+            updateGraphStats(cy);
+          }
+
+          function collapseAllFolders(cy, expanded) {
+            console.log('🔄 Collapsing all folders...');
+            console.log('Current expanded state:', expanded);
+            
+            // Get all expanded folders
+            const expandedFolders = Object.keys(expanded).filter(id => expanded[id]);
+            console.log('Found expanded folders:', expandedFolders);
+            
+            if (expandedFolders.length === 0) {
+              console.log('No folders to collapse');
+              return;
+            }
+            
+            // Collapse all expanded folders
+            let collapsedCount = 0;
+            expandedFolders.forEach(folderId => {
+              console.log('Collapsing folder:', folderId);
+              collapseFolder(cy, folderId, expanded);
+              collapsedCount++;
+            });
+            
+            console.log('✅ Collapsed', collapsedCount, 'folders');
+            
+            // Update stats
+            updateGraphStats(cy);
+            
+            // Re-run layout to clean up positioning
+            cy.layout({ name:'preset' }).run();
+          }
+
           function addNode(cy, parentId, nodeData, folderId, level = 0, index = 0) {
             const id = parentId ? parentId + '_' + nodeData.name : nodeData.name;
-            const posX = 150 + level * 200;
-            const posY = 100 + index * 80;
+            
+            // Get parent position for relative positioning
+            const parentNode = cy.getElementById(parentId);
+            const parentPos = parentNode.length > 0 ? parentNode.position() : { x: 400, y: 300 };
+            
+            // Create a radial layout around the parent
+            const angle = (index * 2 * Math.PI) / Math.max(1, nodeData.siblings || 1);
+            const radius = 120 + (level * 80);
+            const posX = parentPos.x + Math.cos(angle) * radius;
+            const posY = parentPos.y + Math.sin(angle) * radius;
 
             const dataObj = { id: id, name: nodeData.name, type: nodeData.type, folder: folderId };
             if (nodeData.type === 'function' && nodeData.complexity) {
@@ -382,7 +721,9 @@ export class FullCodeAnalysisWebview {
             }
 
             if (nodeData.children) {
+              // Add sibling count for better positioning
               nodeData.children.forEach((child, i) => {
+                child.siblings = nodeData.children.length;
                 addNode(cy, id, child, folderId, level + 1, i);
               });
             }
@@ -402,22 +743,26 @@ export class FullCodeAnalysisWebview {
             const container = document.getElementById('enhanced-graph');
             const loadingElement = document.getElementById('graph-loading');
             const legendElement = document.querySelector('.legend');
+            const graphControlsElement = document.querySelector('.graph-controls');
             
             container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; text-align: center;"><div><div style="font-size: 48px; margin-bottom: 16px;">🕸️</div><h3>No Graph Data</h3><p>No code graph data available to display.</p></div></div>';
             container.style.display = 'block';
             loadingElement.style.display = 'none';
             if (legendElement) legendElement.style.display = 'none';
+            if (graphControlsElement) graphControlsElement.style.display = 'none';
           }
 
           function showErrorState(message) {
             const container = document.getElementById('enhanced-graph');
             const loadingElement = document.getElementById('graph-loading');
             const legendElement = document.querySelector('.legend');
+            const graphControlsElement = document.querySelector('.graph-controls');
             
             container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; text-align: center;"><div><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><h3>Graph Error</h3><p>' + message + '</p><button onclick="location.reload()" style="margin-top: 16px; padding: 8px 16px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; cursor: pointer;">Retry</button></div></div>';
             container.style.display = 'block';
             loadingElement.style.display = 'none';
             if (legendElement) legendElement.style.display = 'none';
+            if (graphControlsElement) graphControlsElement.style.display = 'none';
           }
         </script>
       </body>
@@ -678,15 +1023,25 @@ export class FullCodeAnalysisWebview {
         align-items: center;
         gap: 8px;
         padding: 12px 20px;
-        text-decoration: none;
+        background: none;
+        border: none;
         color: var(--vscode-tab-inactiveForeground);
         border-bottom: 3px solid transparent;
         transition: all 0.3s ease;
+        cursor: pointer;
+        font-size: 14px;
+        font-family: inherit;
       }
 
       .nav-link:hover {
         background: var(--vscode-tab-hoverBackground);
         color: var(--vscode-tab-activeForeground);
+      }
+
+      .nav-link.active {
+        color: var(--vscode-tab-activeForeground);
+        border-bottom-color: var(--vscode-focusBorder);
+        background: var(--vscode-tab-activeBackground);
       }
 
       .scrollable-content {
@@ -697,6 +1052,11 @@ export class FullCodeAnalysisWebview {
 
       .content-section {
         margin-bottom: 32px;
+        display: none;
+      }
+
+      .content-section.active {
+        display: block;
       }
 
       .section-header {

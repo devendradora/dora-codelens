@@ -771,15 +771,29 @@ class CurrentFileAnalyzer:
 
 
 def main():
-    """Main function for testing the current file analyzer."""
+    """Main function for the current file analyzer."""
     import sys
+    import argparse
     
-    if len(sys.argv) != 2:
-        print("Usage: python current_file_analyzer.py <file_path>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description='Analyze a Python file for complexity and dependencies')
+    parser.add_argument('file_path', help='Path to the Python file to analyze')
+    parser.add_argument('--project-path', help='Project root path for context')
+    parser.add_argument('--no-complexity', action='store_true', help='Skip complexity analysis')
+    parser.add_argument('--no-dependencies', action='store_true', help='Skip dependency analysis')
+    parser.add_argument('--no-frameworks', action='store_true', help='Skip framework pattern detection')
     
-    file_path = Path(sys.argv[1])
-    analyzer = CurrentFileAnalyzer()
+    try:
+        args = parser.parse_args()
+    except SystemExit as e:
+        # Handle argument parsing errors gracefully
+        if e.code != 0:
+            print(f"Error: Invalid arguments. Usage: python current_file_analyzer.py <file_path>", file=sys.stderr)
+        sys.exit(e.code)
+    
+    file_path = Path(args.file_path)
+    project_path = Path(args.project_path) if args.project_path else None
+    
+    analyzer = CurrentFileAnalyzer(project_path)
     result = analyzer.analyze_file(file_path)
     
     print(result.to_json())
