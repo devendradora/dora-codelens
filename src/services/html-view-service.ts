@@ -199,7 +199,7 @@ export class HTMLViewService {
 
     // Add extension resources
     const extensionPath = vscode.extensions.getExtension(
-      "doracodelens.doracodelens"
+      "DevendraDora.doracodelens"
     )?.extensionPath;
     if (extensionPath) {
       localResourceRoots.push(
@@ -344,7 +344,7 @@ export class HTMLViewService {
     webview: vscode.Webview
   ): string {
     const extensionPath = vscode.extensions.getExtension(
-      "doracodelens.doracodelens"
+      "DevendraDora.doracodelens"
     )?.extensionPath;
     if (!extensionPath) {
       return htmlContent;

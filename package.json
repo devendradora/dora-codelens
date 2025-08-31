@@ -6,13 +6,19 @@
   "displayName": "DoraCodeLens",
   "description": "Advanced VS Code extension for comprehensive Python project analysis with Git analytics, enhanced visualizations, JSON utilities, and database schema analysis",
   "version": "0.1.0",
-  "publisher": "doracodelens",
+  "publisher": "DevendraDora",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devendradora/code-mind-map.git"
+  },
+  "homepage": "https://github.com/devendradora/code-mind-map#readme",
+  "bugs": {
+    "url": "https://github.com/devendradora/code-mind-map/issues"
+  },
   "engines": {
     "vscode": "^1.74.0"
   },
-  "enabledApiProposals": [
-    "treeViewActiveItem"
-  ],
+
   "categories": [
     "Visualization",
     "Other"

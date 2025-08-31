@@ -292,7 +292,7 @@ export class DatabaseSchemaHandler {
    * Get analyzer script path
    */
   private getAnalyzerPath(): string {
-    const extensionPath = vscode.extensions.getExtension('doracodelens.doracodelens')?.extensionPath;
+    const extensionPath = vscode.extensions.getExtension('DevendraDora.doracodelens')?.extensionPath;
     if (!extensionPath) {
       throw new Error('Extension path not found');
     }

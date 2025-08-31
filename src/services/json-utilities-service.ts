@@ -463,7 +463,7 @@ export class JsonUtilitiesService {
                 enableScripts: true,
                 retainContextWhenHidden: true,
                 localResourceRoots: [
-                    vscode.Uri.joinPath(vscode.extensions.getExtension('doracodelens.doracodelens')?.extensionUri || vscode.Uri.file(''), 'resources')
+                    vscode.Uri.joinPath(vscode.extensions.getExtension('DevendraDora.doracodelens')?.extensionUri || vscode.Uri.file(''), 'resources')
                 ]
             }
         );

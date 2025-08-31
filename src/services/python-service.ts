@@ -252,7 +252,7 @@ export class PythonService {
    * Get analyzer script path
    */
   public getAnalyzerScriptPath(scriptName: string): string {
-    const extensionPath = vscode.extensions.getExtension('doracodelens.doracodelens')?.extensionPath;
+    const extensionPath = vscode.extensions.getExtension('DevendraDora.doracodelens')?.extensionPath;
     if (!extensionPath) {
       throw new Error('Extension path not found');
     }
