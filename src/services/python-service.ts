@@ -79,7 +79,7 @@ export class PythonService {
       this.errorHandler.logError('Executing Python script', { scriptPath, args }, 'executePythonScript');
 
       // Get configured Python path
-      const pythonPath = vscode.workspace.getConfiguration('doracodebirdview').get<string>('pythonPath', 'python3');
+      const pythonPath = vscode.workspace.getConfiguration('doracodelens').get<string>('pythonPath', 'python3');
 
       // Spawn Python process
       const pythonProcess = spawn(pythonPath, args, {
@@ -252,7 +252,7 @@ export class PythonService {
    * Get analyzer script path
    */
   public getAnalyzerScriptPath(scriptName: string): string {
-    const extensionPath = vscode.extensions.getExtension('doracodebird.doracodebird-view')?.extensionPath;
+    const extensionPath = vscode.extensions.getExtension('doracodelens.doracodelens')?.extensionPath;
     if (!extensionPath) {
       throw new Error('Extension path not found');
     }
@@ -306,7 +306,7 @@ export class PythonService {
     
     return new Promise((resolve, reject) => {
       // Get configured Python path
-      const pythonPath = vscode.workspace.getConfiguration('doracodebirdview').get<string>('pythonPath', 'python3');
+      const pythonPath = vscode.workspace.getConfiguration('doracodelens').get<string>('pythonPath', 'python3');
 
       const pythonProcess = spawn(pythonPath, [scriptPath, ...args], {
         cwd: options.cwd || path.dirname(scriptPath),

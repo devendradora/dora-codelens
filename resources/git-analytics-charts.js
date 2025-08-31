@@ -1,5 +1,5 @@
 /**
- * Git Analytics Charts for DoraCodeBirdView
+ * Git Analytics Charts for DoraCodeLens
  * 
  * This module provides Chart.js-based visualizations for Git analytics data
  * including author contributions, commit timelines, and module activity charts.

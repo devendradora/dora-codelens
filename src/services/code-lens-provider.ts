@@ -17,7 +17,7 @@ export interface CodeLensData {
 }
 
 /**
- * Code Lens Provider for DoraCodeBirdView
+ * Code Lens Provider for DoraCodeLens
  * Provides inline code metrics and navigation aids
  */
 export class DoraCodeLensProvider implements vscode.CodeLensProvider {
@@ -70,8 +70,8 @@ export class DoraCodeLensProvider implements vscode.CodeLensProvider {
             const testCodeLens = new vscode.CodeLens(
                 new vscode.Range(0, 0, 0, 0),
                 {
-                    title: '🔍 DoraCodeBird Code Lens Active',
-                    command: 'doracodebird.showMessage',
+                    title: '🔍 DoraCodeLens Code Lens Active',
+                    command: 'doracodelens.showMessage',
                     arguments: ['Code Lens is working!']
                 }
             );
@@ -267,7 +267,7 @@ export class DoraCodeLensProvider implements vscode.CodeLensProvider {
             
             const command: vscode.Command = {
                 title,
-                command: 'doracodebird.showFunctionDetails',
+                command: 'doracodelens.showFunctionDetails',
                 arguments: [func, document.uri]
             };
 
@@ -301,7 +301,7 @@ export class DoraCodeLensProvider implements vscode.CodeLensProvider {
             
             const command: vscode.Command = {
                 title,
-                command: 'doracodebird.showClassDetails',
+                command: 'doracodelens.showClassDetails',
                 arguments: [cls, document.uri]
             };
 
@@ -335,7 +335,7 @@ export class DoraCodeLensProvider implements vscode.CodeLensProvider {
             
             const command: vscode.Command = {
                 title,
-                command: 'doracodebird.showMethodDetails',
+                command: 'doracodelens.showMethodDetails',
                 arguments: [method, cls, document.uri]
             };
 
@@ -477,7 +477,7 @@ export class CodeLensManager {
             this.codeLensProvider.enable();
             
             // Save state
-            this.context.globalState.update('doracodebird.codeLensEnabled', true);
+            this.context.globalState.update('doracodelens.codeLensEnabled', true);
             
             vscode.window.showInformationMessage('Code Lens enabled');
             
@@ -510,7 +510,7 @@ export class CodeLensManager {
             }
             
             // Save state
-            this.context.globalState.update('doracodebird.codeLensEnabled', false);
+            this.context.globalState.update('doracodelens.codeLensEnabled', false);
             
             vscode.window.showInformationMessage('Code Lens disabled');
             
@@ -559,7 +559,7 @@ export class CodeLensManager {
      * Restore code lens state from saved preferences
      */
     public restoreState(): void {
-        const enabled = this.context.globalState.get('doracodebird.codeLensEnabled', false);
+        const enabled = this.context.globalState.get('doracodelens.codeLensEnabled', false);
         if (enabled) {
             this.enableCodeLens();
         }

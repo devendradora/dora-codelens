@@ -1,6 +1,6 @@
-# DoraCodeBirdView Examples and Screenshots
+# DoraCodeLens Examples and Screenshots
 
-This document provides detailed examples and visual guides for using DoraCodeBirdView features.
+This document provides detailed examples and visual guides for using DoraCodeLens features.
 
 ## Visual Guide
 
@@ -9,11 +9,11 @@ This document provides detailed examples and visual guides for using DoraCodeBir
 ### 1. Context Menu Structure
 
 **Screenshot Location**: `docs/images/context-menu.png`
-**Description**: Right-click context menu showing the organized DoraCodeBirdView submenu structure with all options expanded.
+**Description**: Right-click context menu showing the organized DoraCodeLens submenu structure with all options expanded.
 
 **What to show**:
 - Right-click on a Python file
-- DoraCodeBirdView submenu expanded
+- DoraCodeLens submenu expanded
 - All sub-options visible (Full Code Analysis, Git Commits, etc.)
 - Clean, organized menu structure
 
@@ -103,7 +103,7 @@ This document provides detailed examples and visual guides for using DoraCodeBir
 **Steps**:
 1. Open your Django project in VS Code
 2. Right-click on `models.py`
-3. Select **DoraCodeBirdView** → **Full Code Analysis** → **Graph View**
+3. Select **DoraCodeLens** → **Full Code Analysis** → **Graph View**
 
 **Expected Results**:
 - Module cards showing Django apps (products, orders, users, etc.)
@@ -142,7 +142,7 @@ Database Schema:
 **Steps**:
 1. Open your team's Python project
 2. Right-click on any Python file
-3. Select **DoraCodeBirdView** → **Git Commits** → **Author Statistics**
+3. Select **DoraCodeLens** → **Git Commits** → **Author Statistics**
 
 **Expected Results**:
 - Comprehensive author contribution data
@@ -191,7 +191,7 @@ Development Patterns:
 **Steps**:
 1. Open your Flask project with SQLAlchemy models
 2. Right-click on `models.py`
-3. Select **DoraCodeBirdView** → **DB Schema** → **Graph View**
+3. Select **DoraCodeLens** → **DB Schema** → **Graph View**
 
 **Expected Results**:
 - Visual representation of your database tables
@@ -242,7 +242,7 @@ Raw SQL Extracted:
 **Steps**:
 1. Open a file with messy JSON data
 2. Right-click in the editor
-3. Select **DoraCodeBirdView** → **JSON Utils** → **JSON Format**
+3. Select **DoraCodeLens** → **JSON Utils** → **JSON Format**
 4. Then select **JSON Tree View** to explore the structure
 
 **Before Formatting**:
@@ -301,7 +301,7 @@ Raw SQL Extracted:
 **Steps**:
 1. Open the Python file you want to analyze
 2. Right-click in the editor
-3. Select **DoraCodeBirdView** → **Current File Analysis** → **Graph View**
+3. Select **DoraCodeLens** → **Current File Analysis** → **Graph View**
 
 **Sample File**: `user_service.py`
 
@@ -391,7 +391,7 @@ Raw SQL Extracted:
 
 ### Example 7: CI/CD Integration
 
-**Scenario**: You want to integrate DoraCodeBirdView analysis into your continuous integration pipeline.
+**Scenario**: You want to integrate DoraCodeLens analysis into your continuous integration pipeline.
 
 **JSON Export for Automation**:
 ```json
@@ -453,4 +453,4 @@ Raw SQL Extracted:
 
 ---
 
-These examples demonstrate the full power of DoraCodeBirdView across different project types and use cases. Each feature is designed to provide actionable insights that improve code quality, team collaboration, and project understanding.
+These examples demonstrate the full power of DoraCodeLens across different project types and use cases. Each feature is designed to provide actionable insights that improve code quality, team collaboration, and project understanding.

@@ -22,7 +22,7 @@ export class JsonUtilitiesService {
 
     private constructor(errorHandler: ErrorHandler) {
         this.errorHandler = errorHandler;
-        this.outputChannel = vscode.window.createOutputChannel('DoraCodeBird JSON Utilities');
+        this.outputChannel = vscode.window.createOutputChannel('DoraCodeLens JSON Utilities');
         this.defaultOptions = {
             indent: 2,
             sortKeys: false,

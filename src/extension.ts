@@ -20,9 +20,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   try {
     // Create output channel first
-    outputChannel = vscode.window.createOutputChannel('DoraCodeBirdView');
+    outputChannel = vscode.window.createOutputChannel('DoraCodeLens');
     outputChannel.appendLine('='.repeat(50));
-    outputChannel.appendLine('DoraCodeBirdView Extension Starting...');
+    outputChannel.appendLine('DoraCodeLens Extension Starting...');
     outputChannel.appendLine(`Timestamp: ${new Date().toISOString()}`);
     outputChannel.appendLine('='.repeat(50));
 
@@ -92,22 +92,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     context.globalState.update('extensionInitialized', true);
 
     outputChannel.appendLine('='.repeat(50));
-    outputChannel.appendLine('DoraCodeBirdView Extension Activated Successfully');
+    outputChannel.appendLine('DoraCodeLens Extension Activated Successfully');
     outputChannel.appendLine(`State: ${stateManager.getStateSummary()}`);
     outputChannel.appendLine('='.repeat(50));
 
     // Show success message to user
     vscode.window.showInformationMessage(
-      'DoraCodeBirdView extension activated successfully!'
+      'DoraCodeLens extension activated successfully!'
     );
 
   } catch (error) {
-    const errorMessage = `Failed to activate DoraCodeBirdView extension: ${error}`;
+    const errorMessage = `Failed to activate DoraCodeLens extension: ${error}`;
     
     if (errorHandler) {
       errorHandler.logError('Extension activation failed', error, 'activate');
       errorHandler.showUserError(
-        'Failed to activate DoraCodeBirdView extension. Check the output for details.',
+        'Failed to activate DoraCodeLens extension. Check the output for details.',
         ['Open Output', 'Reload Window']
       );
     } else if (outputChannel) {
@@ -120,7 +120,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     // Show error to user
     vscode.window.showErrorMessage(
-      'DoraCodeBirdView extension failed to activate. Check the output for details.',
+      'DoraCodeLens extension failed to activate. Check the output for details.',
       'Open Output',
       'Reload Window'
     ).then(selection => {
@@ -163,7 +163,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 export async function deactivate(): Promise<void> {
   try {
     const errorHandler = ErrorHandler.getInstance();
-    errorHandler.logError('DoraCodeBirdView extension deactivating...', null, 'deactivate');
+    errorHandler.logError('DoraCodeLens extension deactivating...', null, 'deactivate');
 
     // Get instances for cleanup
     const commandManager = CommandManager.getInstance();
@@ -198,10 +198,10 @@ export async function deactivate(): Promise<void> {
       errorHandler.logError('Duplicate call guard cleared', null, 'deactivate');
     }
 
-    errorHandler.logError('DoraCodeBirdView extension deactivated successfully', null, 'deactivate');
+    errorHandler.logError('DoraCodeLens extension deactivated successfully', null, 'deactivate');
 
   } catch (error) {
-    console.error('Error during DoraCodeBirdView extension deactivation:', error);
+    console.error('Error during DoraCodeLens extension deactivation:', error);
     
     // Try to get error handler for logging
     try {

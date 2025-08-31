@@ -107,113 +107,113 @@ export class CommandManager {
 
       // Register full code analysis command
       const fullCodeAnalysisCommand = vscode.commands.registerCommand(
-        'doracodebirdview.analyzeFullCode',
+        'doracodelens.analyzeFullCode',
         () => this.handleFullCodeAnalysis()
       );
 
       // Register current file analysis command
       const currentFileAnalysisCommand = vscode.commands.registerCommand(
-        'doracodebirdview.analyzeCurrentFile',
+        'doracodelens.analyzeCurrentFile',
         () => this.handleCurrentFileAnalysis()
       );
 
       // Register git analytics command
       const gitAnalyticsCommand = vscode.commands.registerCommand(
-        'doracodebirdview.analyzeGitAnalytics',
+        'doracodelens.analyzeGitAnalytics',
         () => this.handleGitAnalytics()
       );
 
       // Register database schema analysis command
       const databaseSchemaCommand = vscode.commands.registerCommand(
-        'doracodebirdview.analyzeDatabaseSchema',
+        'doracodelens.analyzeDatabaseSchema',
         () => this.handleDatabaseSchemaAnalysis()
       );
 
       // Register HTML view command
       const renderHTMLCommand = vscode.commands.registerCommand(
-        'doracodebirdview.renderHTMLFile',
+        'doracodelens.renderHTMLFile',
         (uri?: vscode.Uri) => this.handleRenderHTMLFile(uri)
       );
 
       // Register settings command
       const openSettingsCommand = vscode.commands.registerCommand(
-        'doracodebirdview.openSettings',
+        'doracodelens.openSettings',
         () => this.handleOpenSettings()
       );
 
       // Register debug commands
       const debugStateCommand = vscode.commands.registerCommand(
-        'doracodebirdview.debugState',
+        'doracodelens.debugState',
         () => this.handleDebugState()
       );
 
       const resetStateCommand = vscode.commands.registerCommand(
-        'doracodebirdview.resetState',
+        'doracodelens.resetState',
         () => this.handleResetState()
       );
 
       // Register JSON utilities commands
       const jsonFormatCommand = vscode.commands.registerCommand(
-        'doracodebird.jsonFormat',
+        'doracodelens.jsonFormat',
         () => this.handleJsonFormat()
       );
 
       const jsonTreeViewCommand = vscode.commands.registerCommand(
-        'doracodebird.jsonTreeView',
+        'doracodelens.jsonTreeView',
         () => this.handleJsonTreeView()
       );
 
       const jsonFixCommand = vscode.commands.registerCommand(
-        'doracodebird.jsonFix',
+        'doracodelens.jsonFix',
         () => this.handleJsonFix()
       );
 
       const jsonMinifyCommand = vscode.commands.registerCommand(
-        'doracodebird.jsonMinify',
+        'doracodelens.jsonMinify',
         () => this.handleJsonMinify()
       );
 
       // Register code lens commands
       const toggleCodeLensCommand = vscode.commands.registerCommand(
-        'doracodebird.toggleCodeLens',
+        'doracodelens.toggleCodeLens',
         () => this.handleToggleCodeLens()
       );
 
       const enableCodeLensCommand = vscode.commands.registerCommand(
-        'doracodebird.enableCodeLens',
+        'doracodelens.enableCodeLens',
         () => this.handleEnableCodeLens()
       );
 
       const disableCodeLensCommand = vscode.commands.registerCommand(
-        'doracodebird.disableCodeLens',
+        'doracodelens.disableCodeLens',
         () => this.handleDisableCodeLens()
       );
 
       // Register code lens detail commands
       const showFunctionDetailsCommand = vscode.commands.registerCommand(
-        'doracodebird.showFunctionDetails',
+        'doracodelens.showFunctionDetails',
         (func: any, uri: vscode.Uri) => this.handleShowFunctionDetails(func, uri)
       );
 
       const showClassDetailsCommand = vscode.commands.registerCommand(
-        'doracodebird.showClassDetails',
+        'doracodelens.showClassDetails',
         (cls: any, uri: vscode.Uri) => this.handleShowClassDetails(cls, uri)
       );
 
       const showMethodDetailsCommand = vscode.commands.registerCommand(
-        'doracodebird.showMethodDetails',
+        'doracodelens.showMethodDetails',
         (method: any, cls: any, uri: vscode.Uri) => this.handleShowMethodDetails(method, cls, uri)
       );
 
       // Register code lens data update command (internal)
       const updateCodeLensDataCommand = vscode.commands.registerCommand(
-        'doracodebird.updateCodeLensData',
+        'doracodelens.updateCodeLensData',
         (analysisData: any) => this.handleUpdateCodeLensData(analysisData)
       );
 
       // Register show message command (for testing)
       const showMessageCommand = vscode.commands.registerCommand(
-        'doracodebird.showMessage',
+        'doracodelens.showMessage',
         (message: string) => this.handleShowMessage(message)
       );
 
@@ -541,8 +541,8 @@ export class CommandManager {
    */
   public async handleOpenSettings(): Promise<void> {
     try {
-      // Open VS Code settings focused on DoraCodeBirdView settings
-      await vscode.commands.executeCommand('workbench.action.openSettings', 'doracodebirdview');
+      // Open VS Code settings focused on DoraCodeLens settings
+      await vscode.commands.executeCommand('workbench.action.openSettings', 'doracodelens');
       
       this.errorHandler.logError('Settings opened successfully', null, 'handleOpenSettings');
     } catch (error) {

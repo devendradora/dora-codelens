@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Current File Analyzer for DoraCodeBirdView
+Current File Analyzer for DoraCodeLens
 
 This module provides analysis capabilities for individual Python files,
 including complexity metrics, dependency analysis, and framework pattern detection.

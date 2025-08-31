@@ -1,6 +1,6 @@
-# DoraCodeBirdView Tab Structure
+# DoraCodeLens Tab Structure
 
-This document outlines the tab structure for different analysis types in the DoraCodeBirdView extension.
+This document outlines the tab structure for different analysis types in the DoraCodeLens extension.
 
 ## Analysis Types and Their Tabs
 

@@ -1,6 +1,6 @@
-# DoraCodeBirdView Product Overview
+# DoraCodeLens Product Overview
 
-DoraCodeBirdView is a comprehensive VS Code extension for Python project analysis and visualization. It provides static code analysis, interactive graph visualizations, and development insights through multiple specialized views.
+DoraCodeLens is a comprehensive VS Code extension for Python project analysis and visualization. It provides static code analysis, interactive graph visualizations, and development insights through multiple specialized views.
 
 ## Core Features
 

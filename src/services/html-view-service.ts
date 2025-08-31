@@ -1,7 +1,7 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
-import * as fs from 'fs';
-import { ErrorHandler } from '../core/error-handler';
+import * as vscode from "vscode";
+import * as path from "path";
+import * as fs from "fs";
+import { ErrorHandler } from "../core/error-handler";
 
 /**
  * HTML view options
@@ -29,7 +29,7 @@ export class HTMLViewService {
   public static getInstance(errorHandler?: ErrorHandler): HTMLViewService {
     if (!HTMLViewService.instance) {
       if (!errorHandler) {
-        throw new Error('ErrorHandler required for first initialization');
+        throw new Error("ErrorHandler required for first initialization");
       }
       HTMLViewService.instance = new HTMLViewService(errorHandler);
     }
@@ -50,13 +50,17 @@ export class HTMLViewService {
       }
 
       // Read HTML content
-      const htmlContent = fs.readFileSync(htmlFilePath, 'utf8');
-      
+      const htmlContent = fs.readFileSync(htmlFilePath, "utf8");
+
       // Create webview panel
       const panel = this.createWebviewPanel(htmlFilePath, options);
-      
+
       // Process and set HTML content
-      const processedHTML = await this.processHTMLContent(htmlContent, htmlFilePath, panel.webview);
+      const processedHTML = await this.processHTMLContent(
+        htmlContent,
+        htmlFilePath,
+        panel.webview
+      );
       panel.webview.html = processedHTML;
 
       // Store active view
@@ -66,14 +70,25 @@ export class HTMLViewService {
       // Handle panel disposal
       panel.onDidDispose(() => {
         this.activeViews.delete(viewId);
-        this.errorHandler.logError('HTML view disposed', { htmlFilePath }, 'renderHTMLFile');
+        this.errorHandler.logError(
+          "HTML view disposed",
+          { htmlFilePath },
+          "renderHTMLFile"
+        );
       });
 
-      this.errorHandler.logError('HTML file rendered successfully', { htmlFilePath }, 'renderHTMLFile');
+      this.errorHandler.logError(
+        "HTML file rendered successfully",
+        { htmlFilePath },
+        "renderHTMLFile"
+      );
       return panel;
-
     } catch (error) {
-      this.errorHandler.logError('Failed to render HTML file', error, 'renderHTMLFile');
+      this.errorHandler.logError(
+        "Failed to render HTML file",
+        error,
+        "renderHTMLFile"
+      );
       throw error;
     }
   }
@@ -83,15 +98,19 @@ export class HTMLViewService {
    */
   public async renderHTMLContent(
     htmlContent: string,
-    title: string = 'HTML View',
+    title: string = "HTML View",
     options: HTMLViewOptions = {}
   ): Promise<vscode.WebviewPanel> {
     try {
       // Create webview panel
       const panel = this.createWebviewPanel(title, options);
-      
+
       // Process and set HTML content
-      const processedHTML = await this.processHTMLContent(htmlContent, '', panel.webview);
+      const processedHTML = await this.processHTMLContent(
+        htmlContent,
+        "",
+        panel.webview
+      );
       panel.webview.html = processedHTML;
 
       // Store active view
@@ -101,14 +120,25 @@ export class HTMLViewService {
       // Handle panel disposal
       panel.onDidDispose(() => {
         this.activeViews.delete(viewId);
-        this.errorHandler.logError('HTML content view disposed', { title }, 'renderHTMLContent');
+        this.errorHandler.logError(
+          "HTML content view disposed",
+          { title },
+          "renderHTMLContent"
+        );
       });
 
-      this.errorHandler.logError('HTML content rendered successfully', { title }, 'renderHTMLContent');
+      this.errorHandler.logError(
+        "HTML content rendered successfully",
+        { title },
+        "renderHTMLContent"
+      );
       return panel;
-
     } catch (error) {
-      this.errorHandler.logError('Failed to render HTML content', error, 'renderHTMLContent');
+      this.errorHandler.logError(
+        "Failed to render HTML content",
+        error,
+        "renderHTMLContent"
+      );
       throw error;
     }
   }
@@ -116,22 +146,40 @@ export class HTMLViewService {
   /**
    * Update existing HTML view
    */
-  public async updateHTMLView(viewId: string, htmlContent: string): Promise<boolean> {
+  public async updateHTMLView(
+    viewId: string,
+    htmlContent: string
+  ): Promise<boolean> {
     try {
       const panel = this.activeViews.get(viewId);
       if (!panel) {
-        this.errorHandler.logError('HTML view not found for update', { viewId }, 'updateHTMLView');
+        this.errorHandler.logError(
+          "HTML view not found for update",
+          { viewId },
+          "updateHTMLView"
+        );
         return false;
       }
 
-      const processedHTML = await this.processHTMLContent(htmlContent, '', panel.webview);
+      const processedHTML = await this.processHTMLContent(
+        htmlContent,
+        "",
+        panel.webview
+      );
       panel.webview.html = processedHTML;
 
-      this.errorHandler.logError('HTML view updated successfully', { viewId }, 'updateHTMLView');
+      this.errorHandler.logError(
+        "HTML view updated successfully",
+        { viewId },
+        "updateHTMLView"
+      );
       return true;
-
     } catch (error) {
-      this.errorHandler.logError('Failed to update HTML view', error, 'updateHTMLView');
+      this.errorHandler.logError(
+        "Failed to update HTML view",
+        error,
+        "updateHTMLView"
+      );
       return false;
     }
   }
@@ -144,20 +192,26 @@ export class HTMLViewService {
     options: HTMLViewOptions
   ): vscode.WebviewPanel {
     const title = options.title || path.basename(identifier);
-    const viewType = 'doracodebirdview.htmlView';
+    const viewType = "doracodelens.htmlView";
 
     // Determine local resource roots
     const localResourceRoots = options.localResourceRoots || [];
-    
+
     // Add extension resources
-    const extensionPath = vscode.extensions.getExtension('doracodebird.doracodebird-view')?.extensionPath;
+    const extensionPath = vscode.extensions.getExtension(
+      "doracodelens.doracodelens"
+    )?.extensionPath;
     if (extensionPath) {
-      localResourceRoots.push(vscode.Uri.file(path.join(extensionPath, 'resources')));
+      localResourceRoots.push(
+        vscode.Uri.file(path.join(extensionPath, "resources"))
+      );
     }
 
     // Add workspace roots
     if (vscode.workspace.workspaceFolders) {
-      localResourceRoots.push(...vscode.workspace.workspaceFolders.map(folder => folder.uri));
+      localResourceRoots.push(
+        ...vscode.workspace.workspaceFolders.map((folder) => folder.uri)
+      );
     }
 
     const panel = vscode.window.createWebviewPanel(
@@ -168,7 +222,7 @@ export class HTMLViewService {
         enableScripts: options.enableScripts !== false,
         enableForms: options.enableForms === true,
         retainContextWhenHidden: options.retainContextWhenHidden === true,
-        localResourceRoots
+        localResourceRoots,
       }
     );
 
@@ -189,11 +243,15 @@ export class HTMLViewService {
       // Convert relative paths to webview URIs
       if (htmlFilePath) {
         const htmlDir = path.dirname(htmlFilePath);
-        processedHTML = this.convertRelativePaths(processedHTML, htmlDir, webview);
+        processedHTML = this.convertRelativePaths(
+          processedHTML,
+          htmlDir,
+          webview
+        );
       }
 
       // Add CSP if not present
-      if (!processedHTML.includes('Content-Security-Policy')) {
+      if (!processedHTML.includes("Content-Security-Policy")) {
         processedHTML = this.addContentSecurityPolicy(processedHTML);
       }
 
@@ -201,9 +259,12 @@ export class HTMLViewService {
       processedHTML = this.addExtensionResources(processedHTML, webview);
 
       return processedHTML;
-
     } catch (error) {
-      this.errorHandler.logError('Failed to process HTML content', error, 'processHTMLContent');
+      this.errorHandler.logError(
+        "Failed to process HTML content",
+        error,
+        "processHTMLContent"
+      );
       return htmlContent; // Return original content as fallback
     }
   }
@@ -217,23 +278,28 @@ export class HTMLViewService {
     webview: vscode.Webview
   ): string {
     // Convert src attributes
-    htmlContent = htmlContent.replace(
-      /src=["']([^"']+)["']/g,
-      (match, src) => {
-        if (src.startsWith('http') || src.startsWith('data:') || src.startsWith('vscode-webview:')) {
-          return match;
-        }
-        const fullPath = path.resolve(baseDir, src);
-        const uri = webview.asWebviewUri(vscode.Uri.file(fullPath));
-        return `src="${uri}"`;
+    htmlContent = htmlContent.replace(/src=["']([^"']+)["']/g, (match, src) => {
+      if (
+        src.startsWith("http") ||
+        src.startsWith("data:") ||
+        src.startsWith("vscode-webview:")
+      ) {
+        return match;
       }
-    );
+      const fullPath = path.resolve(baseDir, src);
+      const uri = webview.asWebviewUri(vscode.Uri.file(fullPath));
+      return `src="${uri}"`;
+    });
 
     // Convert href attributes
     htmlContent = htmlContent.replace(
       /href=["']([^"']+)["']/g,
       (match, href) => {
-        if (href.startsWith('http') || href.startsWith('#') || href.startsWith('vscode-webview:')) {
+        if (
+          href.startsWith("http") ||
+          href.startsWith("#") ||
+          href.startsWith("vscode-webview:")
+        ) {
           return match;
         }
         const fullPath = path.resolve(baseDir, href);
@@ -261,10 +327,10 @@ export class HTMLViewService {
     `;
 
     // Insert CSP in head section
-    if (htmlContent.includes('<head>')) {
-      return htmlContent.replace('<head>', `<head>${csp}`);
-    } else if (htmlContent.includes('<html>')) {
-      return htmlContent.replace('<html>', `<html><head>${csp}</head>`);
+    if (htmlContent.includes("<head>")) {
+      return htmlContent.replace("<head>", `<head>${csp}`);
+    } else if (htmlContent.includes("<html>")) {
+      return htmlContent.replace("<html>", `<html><head>${csp}</head>`);
     } else {
       return `<head>${csp}</head>${htmlContent}`;
     }
@@ -273,20 +339,25 @@ export class HTMLViewService {
   /**
    * Add extension resources to HTML
    */
-  private addExtensionResources(htmlContent: string, webview: vscode.Webview): string {
-    const extensionPath = vscode.extensions.getExtension('doracodebird.doracodebird-view')?.extensionPath;
+  private addExtensionResources(
+    htmlContent: string,
+    webview: vscode.Webview
+  ): string {
+    const extensionPath = vscode.extensions.getExtension(
+      "doracodelens.doracodelens"
+    )?.extensionPath;
     if (!extensionPath) {
       return htmlContent;
     }
 
     // Add common CSS if not already present
-    const cssPath = path.join(extensionPath, 'resources', 'webview.css');
-    if (fs.existsSync(cssPath) && !htmlContent.includes('webview.css')) {
+    const cssPath = path.join(extensionPath, "resources", "webview.css");
+    if (fs.existsSync(cssPath) && !htmlContent.includes("webview.css")) {
       const cssUri = webview.asWebviewUri(vscode.Uri.file(cssPath));
       const cssLink = `<link rel="stylesheet" href="${cssUri}">`;
-      
-      if (htmlContent.includes('</head>')) {
-        htmlContent = htmlContent.replace('</head>', `${cssLink}</head>`);
+
+      if (htmlContent.includes("</head>")) {
+        htmlContent = htmlContent.replace("</head>", `${cssLink}</head>`);
       } else {
         htmlContent = `<head>${cssLink}</head>${htmlContent}`;
       }
@@ -299,7 +370,10 @@ export class HTMLViewService {
    * Generate unique view ID
    */
   private generateViewId(identifier: string): string {
-    return `html_view_${Date.now()}_${identifier.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    return `html_view_${Date.now()}_${identifier.replace(
+      /[^a-zA-Z0-9]/g,
+      "_"
+    )}`;
   }
 
   /**
@@ -336,7 +410,11 @@ export class HTMLViewService {
       try {
         panel.dispose();
       } catch (error) {
-        this.errorHandler.logError('Error closing HTML view', error, 'closeAllViews');
+        this.errorHandler.logError(
+          "Error closing HTML view",
+          error,
+          "closeAllViews"
+        );
       }
     }
     this.activeViews.clear();
@@ -353,34 +431,48 @@ export class HTMLViewService {
     try {
       // Validate analysis result
       if (!analysisResult) {
-        throw new Error('No analysis result provided');
+        throw new Error("No analysis result provided");
       }
 
       // Generate HTML content from analysis result
-      const htmlContent = this.generateAnalysisHTML(analysisResult, analysisType);
-      
+      const htmlContent = this.generateAnalysisHTML(
+        analysisResult,
+        analysisType
+      );
+
       const title = options.title || `${analysisType} Analysis Results`;
       const panel = await this.renderHTMLContent(htmlContent, title, {
         ...options,
-        enableScripts: true // Enable scripts for interactive visualizations
+        enableScripts: true, // Enable scripts for interactive visualizations
       });
 
-      this.errorHandler.logError('Analysis result rendered successfully', { analysisType, title }, 'renderAnalysisResult');
+      this.errorHandler.logError(
+        "Analysis result rendered successfully",
+        { analysisType, title },
+        "renderAnalysisResult"
+      );
       return panel;
-
     } catch (error) {
-      this.errorHandler.logError('Failed to render analysis result', error, 'renderAnalysisResult');
-      
+      this.errorHandler.logError(
+        "Failed to render analysis result",
+        error,
+        "renderAnalysisResult"
+      );
+
       // Show user-friendly error message
-      vscode.window.showErrorMessage(
-        `Failed to display ${analysisType} analysis results. Check the output for details.`,
-        'Open Output'
-      ).then(selection => {
-        if (selection === 'Open Output') {
-          vscode.commands.executeCommand('workbench.action.output.toggleOutput');
-        }
-      });
-      
+      vscode.window
+        .showErrorMessage(
+          `Failed to display ${analysisType} analysis results. Check the output for details.`,
+          "Open Output"
+        )
+        .then((selection) => {
+          if (selection === "Open Output") {
+            vscode.commands.executeCommand(
+              "workbench.action.output.toggleOutput"
+            );
+          }
+        });
+
       throw error;
     }
   }
@@ -388,9 +480,12 @@ export class HTMLViewService {
   /**
    * Generate HTML content from analysis result
    */
-  private generateAnalysisHTML(analysisResult: any, analysisType: string): string {
+  private generateAnalysisHTML(
+    analysisResult: any,
+    analysisType: string
+  ): string {
     const title = `${analysisType} Analysis Results`;
-    
+
     return `
       <!DOCTYPE html>
       <html lang="en">
@@ -463,7 +558,11 @@ export class HTMLViewService {
           
           <div class="section">
             <h2>Analysis Results</h2>
-            <div class="json-viewer">${JSON.stringify(analysisResult, null, 2)}</div>
+            <div class="json-viewer">${JSON.stringify(
+              analysisResult,
+              null,
+              2
+            )}</div>
           </div>
         </div>
       </body>
@@ -476,26 +575,30 @@ export class HTMLViewService {
    */
   private generateMetadataSection(analysisResult: any): string {
     const metadata = analysisResult.metadata || {};
-    
+
     return `
       <div class="section">
         <h2>Analysis Metadata</h2>
         <div class="metadata">
           <div class="metadata-item">
             <div class="metadata-label">Success</div>
-            <div>${analysisResult.success ? 'Yes' : 'No'}</div>
+            <div>${analysisResult.success ? "Yes" : "No"}</div>
           </div>
           <div class="metadata-item">
             <div class="metadata-label">Analysis Time</div>
-            <div>${metadata.analysis_time ? `${metadata.analysis_time.toFixed(2)}s` : 'N/A'}</div>
+            <div>${
+              metadata.analysis_time
+                ? `${metadata.analysis_time.toFixed(2)}s`
+                : "N/A"
+            }</div>
           </div>
           <div class="metadata-item">
             <div class="metadata-label">Total Files</div>
-            <div>${metadata.total_files || 'N/A'}</div>
+            <div>${metadata.total_files || "N/A"}</div>
           </div>
           <div class="metadata-item">
             <div class="metadata-label">Analyzed Files</div>
-            <div>${metadata.analyzed_files || 'N/A'}</div>
+            <div>${metadata.analyzed_files || "N/A"}</div>
           </div>
         </div>
       </div>

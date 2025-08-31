@@ -1,11 +1,11 @@
-# DoraCodeBirdView Troubleshooting Guide
+# DoraCodeLens Troubleshooting Guide
 
-This guide helps you resolve common issues with DoraCodeBirdView features.
+This guide helps you resolve common issues with DoraCodeLens features.
 
 ## General Issues
 
 ### Extension Not Loading
-**Symptoms**: DoraCodeBirdView menu doesn't appear in context menu
+**Symptoms**: DoraCodeLens menu doesn't appear in context menu
 
 **Solutions**:
 1. Ensure you're right-clicking on a Python file (.py extension)
@@ -204,14 +204,14 @@ This guide helps you resolve common issues with DoraCodeBirdView features.
 ### Debug Information
 When reporting issues, please include:
 1. VS Code version
-2. DoraCodeBirdView extension version
+2. DoraCodeLens extension version
 3. Python version
 4. Operating system
 5. Project size (number of files)
 6. Error messages from VS Code Output panel
 
 ### Where to Get Help
-1. **GitHub Issues**: [Report bugs and request features](https://github.com/your-username/doracodebird-extension/issues)
+1. **GitHub Issues**: [Report bugs and request features](https://github.com/your-username/doracodelens-extension/issues)
 2. **VS Code Output Panel**: Check for detailed error messages
 3. **Extension Settings**: Review configuration options
 4. **Documentation**: Refer to [User Guide](USER_GUIDE.md) and [Examples](EXAMPLES.md)
@@ -236,7 +236,7 @@ find . -name "*.sql"         # Find SQL files
 
 ### Reset Extension
 If all else fails, try resetting the extension:
-1. Disable DoraCodeBirdView extension
+1. Disable DoraCodeLens extension
 2. Reload VS Code window
 3. Re-enable the extension
 4. Clear any cached data

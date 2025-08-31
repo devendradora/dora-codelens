@@ -1,10 +1,10 @@
-# DoraCodeBirdView Developer Documentation
+# DoraCodeLens Developer Documentation
 
-This document provides detailed information about the DoraCodeBirdView extension architecture, development setup, and contribution guidelines.
+This document provides detailed information about the DoraCodeLens extension architecture, development setup, and contribution guidelines.
 
 ## Architecture Overview
 
-DoraCodeBirdView follows a hybrid architecture combining Python-based static analysis with TypeScript-based VS Code integration, enhanced with Git analytics, database schema analysis, and advanced visualization capabilities. The extension has been completely rebranded from DevCodeMonk to DoraCodeBirdView with significant architectural improvements and new features.
+DoraCodeLens follows a hybrid architecture combining Python-based static analysis with TypeScript-based VS Code integration, enhanced with Git analytics, database schema analysis, and advanced visualization capabilities. The extension has been completely rebranded from DevCodeMonk to DoraCodeLens with significant architectural improvements and new features.
 
 ### High-Level Components
 
@@ -30,11 +30,11 @@ DoraCodeBirdView follows a hybrid architecture combining Python-based static ana
 ## Project Structure
 
 ```
-doracodebird-extension/
+doracodelens-extension/
 ├── src/                          # TypeScript source code
-│   ├── extension.ts              # Main DoraCodeBirdExtension class
+│   ├── extension.ts              # Main DoraCodeLensExtension class
 │   ├── analyzer-runner.ts        # Python analyzer execution with enhanced options
-│   ├── sidebar-provider.ts       # Enhanced sidebar with DoraCodeBirdView branding
+│   ├── sidebar-provider.ts       # Enhanced sidebar with DoraCodeLens branding
 │   ├── webview-provider.ts       # Legacy graph visualization (maintained for compatibility)
 │   ├── tabbed-webview-provider.ts # Advanced tabbed interface with sub-tabs
 │   ├── json-utilities.ts         # Comprehensive JSON processing toolkit
@@ -44,7 +44,7 @@ doracodebird-extension/
 │       ├── run-comprehensive-tests.ts # Test runner
 │       └── runTest.ts            # VS Code test integration
 ├── analyzer/                     # Enhanced Python analysis engine
-│   ├── analyzer.py               # Main ProjectAnalyzer with DoraCodeBirdView features
+│   ├── analyzer.py               # Main ProjectAnalyzer with DoraCodeLens features
 │   ├── ast_parser.py             # Enhanced AST parsing with metadata extraction
 │   ├── complexity_analyzer.py    # Advanced complexity calculation with color coding
 │   ├── framework_detector.py     # Multi-framework pattern detection
@@ -106,7 +106,7 @@ doracodebird-extension/
 ├── .vscode-test/                 # VS Code test configuration
 ├── node_modules/                 # Node.js dependencies
 ├── out/                          # Compiled TypeScript output
-├── package.json                  # Extension manifest with DoraCodeBirdView metadata
+├── package.json                  # Extension manifest with DoraCodeLens metadata
 ├── package-lock.json             # Node.js dependency lock file
 ├── tsconfig.json                 # TypeScript configuration
 ├── .eslintrc.json                # ESLint configuration
@@ -126,8 +126,8 @@ doracodebird-extension/
 ### Initial Setup
 1. **Clone the repository**:
 ```bash
-git clone https://github.com/your-username/doracodebird-extension.git
-cd doracodebird-extension
+git clone https://github.com/your-username/doracodelens-extension.git
+cd doracodelens-extension
 ```
 
 2. **Install Node.js dependencies**:
@@ -159,7 +159,7 @@ npm run compile
 3. Compile TypeScript: `npm run compile`
 4. Press `F5` to launch the Extension Development Host
 5. Open a Python project in the new VS Code window
-6. Test DoraCodeBirdView functionality through context menu or command palette
+6. Test DoraCodeLens functionality through context menu or command palette
 
 #### Making Changes
 
@@ -233,7 +233,7 @@ cd examples/fastapi-todo && python -c "import main"
 ```
 
 **Manual Testing Checklist**
-- [ ] Context menu appears with DoraCodeBirdView submenu
+- [ ] Context menu appears with DoraCodeLens submenu
 - [ ] Full analysis generates tabbed interface
 - [ ] Module cards display with proper styling and colors
 - [ ] Git analytics show author contributions and timeline
@@ -247,7 +247,7 @@ cd examples/fastapi-todo && python -c "import main"
 
 ### 1. Enhanced Python Analyzer (`analyzer/`)
 
-The Python analyzer is the core engine that performs static analysis of Python projects with significant enhancements for DoraCodeBirdView.
+The Python analyzer is the core engine that performs static analysis of Python projects with significant enhancements for DoraCodeLens.
 
 #### Key Classes
 
@@ -259,7 +259,7 @@ The Python analyzer is the core engine that performs static analysis of Python p
 ```python
 class ProjectAnalyzer:
     def analyze_project(self, project_path: str) -> EnhancedAnalysisResult:
-        """Enhanced analysis entry point with DoraCodeBirdView features."""
+        """Enhanced analysis entry point with DoraCodeLens features."""
         # 1. Discover Python files and project structure
         # 2. Parse AST for each file with enhanced metadata
         # 3. Build dependency graph with module cards
@@ -543,18 +543,18 @@ JSON Serializer → Structured Output → Extension
 
 ### 2. Enhanced VS Code Extension (`src/`)
 
-The TypeScript extension provides comprehensive VS Code integration with DoraCodeBirdView branding and advanced features.
+The TypeScript extension provides comprehensive VS Code integration with DoraCodeLens branding and advanced features.
 
 #### Key Classes
 
-**DoraCodeBirdExtension** (`extension.ts`)
+**DoraCodeLensExtension** (`extension.ts`)
 - Main extension class managing the complete lifecycle
-- Coordinates all extension components with DoraCodeBirdView branding
+- Coordinates all extension components with DoraCodeLens branding
 - Handles context menu structure and command registration
 - Manages analysis workflows and error handling
 
 ```typescript
-export class DoraCodeBirdExtension {
+export class DoraCodeLensExtension {
     constructor(context: vscode.ExtensionContext)
     initialize(): void  // Register all commands and providers
     analyzeProject(): Promise<void>  // Main analysis workflow
@@ -621,38 +621,38 @@ export class JsonTreeViewProvider {
 
 #### Enhanced Command Registration
 
-The extension registers comprehensive commands for all DoraCodeBirdView features:
+The extension registers comprehensive commands for all DoraCodeLens features:
 
 ```typescript
 // Main analysis commands
-'doracodebird.analyzeProject'                    // Full project analysis
-'doracodebird.currentFileAnalysis'               // Single file analysis
-'doracodebird.showModuleGraph'                   // Enhanced module visualization
-'doracodebird.showCallHierarchy'                 // Call hierarchy analysis
+'doracodelens.analyzeProject'                    // Full project analysis
+'doracodelens.currentFileAnalysis'               // Single file analysis
+'doracodelens.showModuleGraph'                   // Enhanced module visualization
+'doracodelens.showCallHierarchy'                 // Call hierarchy analysis
 
 // Full Analysis submenu commands
-'doracodebird.fullAnalysisTechStack'             // Tech stack view
-'doracodebird.fullAnalysisGraphView'             // Enhanced graph view
-'doracodebird.fullAnalysisJsonView'              // JSON data view
+'doracodelens.fullAnalysisTechStack'             // Tech stack view
+'doracodelens.fullAnalysisGraphView'             // Enhanced graph view
+'doracodelens.fullAnalysisJsonView'              // JSON data view
 
 // Git Analytics submenu commands
-'doracodebird.gitAuthorStatistics'               // Author contribution stats
-'doracodebird.gitModuleContributions'            // Module-wise Git analytics
-'doracodebird.gitCommitTimeline'                 // Commit timeline visualization
+'doracodelens.gitAuthorStatistics'               // Author contribution stats
+'doracodelens.gitModuleContributions'            // Module-wise Git analytics
+'doracodelens.gitCommitTimeline'                 // Commit timeline visualization
 
 // Database Schema commands
-'doracodebird.dbSchemaGraphView'                 // Interactive schema graph
-'doracodebird.dbSchemaRawSQL'                    // Raw SQL statements view
+'doracodelens.dbSchemaGraphView'                 // Interactive schema graph
+'doracodelens.dbSchemaRawSQL'                    // Raw SQL statements view
 
 // JSON Utilities commands
-'doracodebird.jsonFormat'                        // JSON formatting in editor
-'doracodebird.jsonTreeView'                      // JSON tree visualization
+'doracodelens.jsonFormat'                        // JSON formatting in editor
+'doracodelens.jsonTreeView'                      // JSON tree visualization
 
 // Utility commands
-'doracodebird.refreshSidebar'                    // Refresh sidebar data
-'doracodebird.clearCache'                        // Clear analysis cache
-'doracodebird.cancelAnalysis'                    // Cancel running analysis
-'doracodebird.validateConfiguration'             // Validate extension settings
+'doracodelens.refreshSidebar'                    // Refresh sidebar data
+'doracodelens.clearCache'                        // Clear analysis cache
+'doracodelens.cancelAnalysis'                    // Cancel running analysis
+'doracodelens.validateConfiguration'             // Validate extension settings
 ```
 
 #### Context Menu Structure
@@ -661,7 +661,7 @@ The enhanced context menu provides organized access to all features:
 
 ```
 Right-click on Python file:
-├── DoraCodeBirdView ►
+├── DoraCodeLens ►
 │   ├── Full Code Analysis ►
 │   │   ├── Tech Stack
 │   │   ├── Graph View
@@ -687,7 +687,7 @@ Right-click on Python file:
 - Manages analysis progress and cancellation for new features
 
 **SidebarProvider** (`sidebar-provider.ts`)
-- Implements VS Code TreeDataProvider with DoraCodeBirdView branding
+- Implements VS Code TreeDataProvider with DoraCodeLens branding
 - Displays enhanced project structure in sidebar
 - Handles user interactions and navigation to new features
 
@@ -1064,7 +1064,7 @@ vsce publish
 - Verify with different Python versions
 - Test with various project sizes
 
-## DoraCodeBirdView Feature Enhancements
+## DoraCodeLens Feature Enhancements
 
 ### Comprehensive Git Analytics Engine
 - **Repository Analysis**: Deep Git log parsing with commit statistics and author tracking
@@ -1110,7 +1110,7 @@ vsce publish
 - **Performance Optimized**: Sub-second analysis for immediate feedback
 
 ### Enhanced Context Menu Structure
-- **Organized Submenus**: Clean hierarchical menu structure with DoraCodeBirdView branding
+- **Organized Submenus**: Clean hierarchical menu structure with DoraCodeLens branding
 - **Full Code Analysis**: Tech Stack, Graph View, and JSON View options
 - **Current File Analysis**: Quick single-file analysis options
 - **Git Analytics**: Author Statistics, Module Contributions, and Commit Timeline

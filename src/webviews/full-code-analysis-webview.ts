@@ -7,7 +7,7 @@ import { ErrorHandler } from "../core/error-handler";
  * Provides dedicated webview for displaying full codebase analysis results
  */
 export class FullCodeAnalysisWebview {
-  private static readonly VIEW_TYPE = "doracodebirdview.fullCodeAnalysis";
+  private static readonly VIEW_TYPE = "doracodelens.fullCodeAnalysis";
   private panel: vscode.WebviewPanel | null = null;
   private errorHandler: ErrorHandler;
   private extensionPath: string;
@@ -1333,7 +1333,7 @@ export class FullCodeAnalysisWebview {
           null,
           "FullCodeAnalysisWebview"
         );
-        vscode.commands.executeCommand('doracodebird.toggleCodeLens');
+        vscode.commands.executeCommand('doracodelens.toggleCodeLens');
         break;
       default:
         this.errorHandler.logError(

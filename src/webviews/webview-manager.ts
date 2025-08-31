@@ -187,7 +187,7 @@ export class WebviewManager {
     try {
       // Command to show full code analysis
       const showFullCodeCommand = vscode.commands.registerCommand(
-        'doracodebirdview.showFullCodeAnalysis',
+        'doracodelens.showFullCodeAnalysis',
         (analysisData: any) => {
           this.showFullCodeAnalysis(analysisData);
         }
@@ -195,7 +195,7 @@ export class WebviewManager {
 
       // Command to show current file analysis
       const showCurrentFileCommand = vscode.commands.registerCommand(
-        'doracodebirdview.showCurrentFileAnalysis',
+        'doracodelens.showCurrentFileAnalysis',
         (analysisData: any, filePath?: string) => {
           this.showCurrentFileAnalysis(analysisData, filePath);
         }
@@ -203,7 +203,7 @@ export class WebviewManager {
 
       // Command to show Git analytics
       const showGitAnalyticsCommand = vscode.commands.registerCommand(
-        'doracodebirdview.showGitAnalytics',
+        'doracodelens.showGitAnalytics',
         (analyticsData: any) => {
           this.showGitAnalytics(analyticsData);
         }
@@ -211,7 +211,7 @@ export class WebviewManager {
 
       // Command to show database schema
       const showDatabaseSchemaCommand = vscode.commands.registerCommand(
-        'doracodebirdview.showDatabaseSchema',
+        'doracodelens.showDatabaseSchema',
         (schemaData: any) => {
           this.showDatabaseSchema(schemaData);
         }
@@ -219,7 +219,7 @@ export class WebviewManager {
 
       // Command to close all webviews
       const closeAllWebviewsCommand = vscode.commands.registerCommand(
-        'doracodebirdview.closeAllWebviews',
+        'doracodelens.closeAllWebviews',
         () => {
           this.closeAllWebviews();
         }
@@ -227,7 +227,7 @@ export class WebviewManager {
 
       // Command to get webview status
       const getWebviewStatusCommand = vscode.commands.registerCommand(
-        'doracodebirdview.getWebviewStatus',
+        'doracodelens.getWebviewStatus',
         () => {
           return this.getWebviewStatus();
         }

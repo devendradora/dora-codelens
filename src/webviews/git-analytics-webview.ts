@@ -7,7 +7,7 @@ import { ErrorHandler } from '../core/error-handler';
  * Provides dedicated webview for displaying Git analytics and repository insights
  */
 export class GitAnalyticsWebview {
-  private static readonly VIEW_TYPE = 'doracodebirdview.gitAnalytics';
+  private static readonly VIEW_TYPE = 'doracodelens.gitAnalytics';
   private panel: vscode.WebviewPanel | null = null;
   private errorHandler: ErrorHandler;
   private extensionPath: string;
@@ -636,7 +636,7 @@ export class GitAnalyticsWebview {
         this.generateReport(message.data);
         break;
       case 'refreshAnalytics':
-        vscode.commands.executeCommand('doracodebirdview.analyzeGitAnalytics');
+        vscode.commands.executeCommand('doracodelens.analyzeGitAnalytics');
         break;
       default:
         this.errorHandler.logError('Unknown webview message', message, 'GitAnalyticsWebview');

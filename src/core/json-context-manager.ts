@@ -10,9 +10,9 @@ export class JsonContextManager {
     private errorHandler: ErrorHandler;
     private disposables: vscode.Disposable[] = [];
     private contextKeys = {
-        jsonContext: 'doracodebird.jsonContext',
-        jsonFile: 'doracodebird.jsonFile',
-        jsonAtCursor: 'doracodebird.jsonAtCursor'
+        jsonContext: 'doracodelens.jsonContext',
+        jsonFile: 'doracodelens.jsonFile',
+        jsonAtCursor: 'doracodelens.jsonAtCursor'
     };
 
     private constructor(errorHandler: ErrorHandler) {

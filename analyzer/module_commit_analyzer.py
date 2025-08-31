@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Module Commit Analyzer for DoraCodeBirdView
+Module Commit Analyzer for DoraCodeLens
 
 This module provides module-wise Git statistics analysis, tracking commits
 per module/folder and author contribution breakdown per module.

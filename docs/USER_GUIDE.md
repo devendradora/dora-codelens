@@ -1,6 +1,6 @@
-# DoraCodeBirdView User Guide
+# DoraCodeLens User Guide
 
-Welcome to DoraCodeBirdView, an advanced VS Code extension that provides comprehensive code analysis and visualization capabilities for Python projects. This guide will walk you through all the powerful features available in DoraCodeBirdView.
+Welcome to DoraCodeLens, an advanced VS Code extension that provides comprehensive code analysis and visualization capabilities for Python projects. This guide will walk you through all the powerful features available in DoraCodeLens.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ Welcome to DoraCodeBirdView, an advanced VS Code extension that provides compreh
 
 1. Open VS Code
 2. Go to Extensions (Ctrl+Shift+X)
-3. Search for "DoraCodeBirdView"
+3. Search for "DoraCodeLens"
 4. Click Install
 5. Reload VS Code when prompted
 
@@ -35,16 +35,16 @@ Welcome to DoraCodeBirdView, an advanced VS Code extension that provides compreh
 
 1. Open a Python project in VS Code
 2. Right-click on any Python file
-3. Select **DoraCodeBirdView** → **Full Code Analysis** → **Tech Stack**
+3. Select **DoraCodeLens** → **Full Code Analysis** → **Tech Stack**
 4. Wait for the analysis to complete
 5. Explore your project's insights!
 
 ## Context Menu Overview
 
-DoraCodeBirdView provides a comprehensive context menu when you right-click on Python files. Here's what each option does:
+DoraCodeLens provides a comprehensive context menu when you right-click on Python files. Here's what each option does:
 
 ```
-DoraCodeBirdView ►
+DoraCodeLens ►
 ├── Full Code Analysis ►
 │   ├── Tech Stack          # View detected libraries and frameworks
 │   ├── Graph View          # Interactive module dependency graph
@@ -84,7 +84,7 @@ The Tech Stack view shows you all the technologies detected in your project:
 
 **How to use:**
 1. Right-click on any Python file
-2. Select **DoraCodeBirdView** → **Full Code Analysis** → **Tech Stack**
+2. Select **DoraCodeLens** → **Full Code Analysis** → **Tech Stack**
 3. Browse the categorized list of detected technologies
 4. Click on any technology to see where it's used in your project
 
@@ -104,7 +104,7 @@ The Graph View provides an interactive visualization of your project's module st
 
 **How to use:**
 1. Right-click on any Python file
-2. Select **DoraCodeBirdView** → **Full Code Analysis** → **Graph View**
+2. Select **DoraCodeLens** → **Full Code Analysis** → **Graph View**
 3. Use mouse wheel to zoom in/out
 4. Drag to pan around the graph
 5. Click on module cards to navigate to the code
@@ -134,14 +134,14 @@ The JSON View displays the complete analysis data in a formatted, readable JSON 
 
 **How to use:**
 1. Right-click on any Python file
-2. Select **DoraCodeBirdView** → **Full Code Analysis** → **JSON View**
+2. Select **DoraCodeLens** → **Full Code Analysis** → **JSON View**
 3. Browse the structured data
 4. Use Ctrl+F to search for specific information
 5. Copy sections for external analysis or reporting
 
 ## Git Analytics Features
 
-DoraCodeBirdView provides powerful Git repository analysis to understand development patterns and team contributions.
+DoraCodeLens provides powerful Git repository analysis to understand development patterns and team contributions.
 
 ### Author Statistics
 
@@ -156,7 +156,7 @@ Get comprehensive insights into contributor activity across your project.
 
 **How to use:**
 1. Right-click on any Python file in a Git repository
-2. Select **DoraCodeBirdView** → **Git Commits** → **Author Statistics**
+2. Select **DoraCodeLens** → **Git Commits** → **Author Statistics**
 3. Review the contributor dashboard
 4. Use filters to focus on specific time periods or authors
 
@@ -184,7 +184,7 @@ Understand which team members work on which parts of your codebase.
 
 **How to use:**
 1. Right-click on any Python file
-2. Select **DoraCodeBirdView** → **Git Commits** → **Module Contributions**
+2. Select **DoraCodeLens** → **Git Commits** → **Module Contributions**
 3. Explore module-wise statistics
 4. Identify code ownership patterns
 5. Find modules that need more attention
@@ -216,14 +216,14 @@ Visualize your project's development history over time.
 
 **How to use:**
 1. Right-click on any Python file
-2. Select **DoraCodeBirdView** → **Git Commits** → **Commit Timeline**
+2. Select **DoraCodeLens** → **Git Commits** → **Commit Timeline**
 3. Analyze development patterns
 4. Identify busy periods and quiet phases
 5. Plan future development cycles
 
 ## Database Schema Analysis
 
-DoraCodeBirdView can analyze your database schema from Django models, SQLAlchemy models, and raw SQL files.
+DoraCodeLens can analyze your database schema from Django models, SQLAlchemy models, and raw SQL files.
 
 ### Graph View
 
@@ -238,7 +238,7 @@ Visualize your database structure as an interactive graph.
 
 **How to use:**
 1. Right-click on any Python file in a project with database models
-2. Select **DoraCodeBirdView** → **DB Schema** → **Graph View**
+2. Select **DoraCodeLens** → **DB Schema** → **Graph View**
 3. Explore your database structure visually
 4. Follow relationship lines to understand data flow
 5. Click on tables to see detailed column information
@@ -277,7 +277,7 @@ Browse all SQL statements extracted from your project.
 
 **How to use:**
 1. Right-click on any Python file
-2. Select **DoraCodeBirdView** → **DB Schema** → **Raw SQL**
+2. Select **DoraCodeLens** → **DB Schema** → **Raw SQL**
 3. Browse SQL statements by category
 4. Click on statements to navigate to their source files
 5. Use the search function to find specific SQL patterns
@@ -303,7 +303,7 @@ SELECT (45 statements)
 
 ## JSON Utilities
 
-DoraCodeBirdView includes powerful JSON processing tools for working with JSON data in your projects.
+DoraCodeLens includes powerful JSON processing tools for working with JSON data in your projects.
 
 ### JSON Format
 
@@ -318,7 +318,7 @@ Beautify and format JSON content in your current editor.
 **How to use:**
 1. Open a file containing JSON data
 2. Right-click in the editor
-3. Select **DoraCodeBirdView** → **JSON Utils** → **JSON Format**
+3. Select **DoraCodeLens** → **JSON Utils** → **JSON Format**
 4. Your JSON will be automatically formatted
 
 **Before formatting:**
@@ -356,7 +356,7 @@ Explore JSON data in an expandable tree structure.
 
 **How to use:**
 1. Select JSON content in your editor (or place cursor in JSON file)
-2. Right-click and select **DoraCodeBirdView** → **JSON Utils** → **JSON Tree View**
+2. Right-click and select **DoraCodeLens** → **JSON Utils** → **JSON Tree View**
 3. Explore the tree structure in the new panel
 4. Use the search box to find specific elements
 5. Click on values to see their full content
@@ -391,7 +391,7 @@ Analyze just the file you're currently working on for quick insights.
 **How to use:**
 1. Open any Python file
 2. Right-click in the editor
-3. Select **DoraCodeBirdView** → **Current File Analysis** → choose your view
+3. Select **DoraCodeLens** → **Current File Analysis** → choose your view
 4. Get instant insights about the current file
 
 **Example Output:**
@@ -417,7 +417,7 @@ Analyze just the file you're currently working on for quick insights.
 
 ## Export and Integration
 
-DoraCodeBirdView provides comprehensive export capabilities for sharing insights and integrating with other tools.
+DoraCodeLens provides comprehensive export capabilities for sharing insights and integrating with other tools.
 
 ### Export Formats
 
@@ -452,7 +452,7 @@ DoraCodeBirdView provides comprehensive export capabilities for sharing insights
 
 ### Integration APIs
 
-DoraCodeBirdView provides stable data structures for integration with external tools:
+DoraCodeLens provides stable data structures for integration with external tools:
 
 ```json
 {
@@ -480,7 +480,7 @@ DoraCodeBirdView provides stable data structures for integration with external t
 
 1. **Large Projects**: Use Current File Analysis for quick insights on large codebases
 2. **Git Repositories**: Git analytics work best with repositories that have regular commits
-3. **Caching**: DoraCodeBirdView caches results - subsequent analyses will be faster
+3. **Caching**: DoraCodeLens caches results - subsequent analyses will be faster
 4. **Selective Analysis**: Use specific analysis types rather than always running full analysis
 
 ### Workflow Integration
@@ -538,12 +538,12 @@ DoraCodeBirdView provides stable data structures for integration with external t
 
 ## What's Next?
 
-Now that you're familiar with DoraCodeBirdView's features, try:
+Now that you're familiar with DoraCodeLens's features, try:
 
 1. **Analyze Your Current Project**: Start with a Full Code Analysis to get an overview
 2. **Explore Git History**: Use Git Analytics to understand your team's contributions
 3. **Optimize Complex Code**: Focus on red (high complexity) modules for refactoring
 4. **Document Your Architecture**: Export graphs and share with your team
-5. **Integrate with Your Workflow**: Use DoraCodeBirdView regularly during development
+5. **Integrate with Your Workflow**: Use DoraCodeLens regularly during development
 
-Happy coding with DoraCodeBirdView! 🚀
+Happy coding with DoraCodeLens! 🚀

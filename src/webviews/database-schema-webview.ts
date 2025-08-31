@@ -7,7 +7,7 @@ import { ErrorHandler } from '../core/error-handler';
  * Provides dedicated webview for displaying database schema visualization
  */
 export class DatabaseSchemaWebview {
-  private static readonly VIEW_TYPE = 'doracodebirdview.databaseSchema';
+  private static readonly VIEW_TYPE = 'doracodelens.databaseSchema';
   private panel: vscode.WebviewPanel | null = null;
   private errorHandler: ErrorHandler;
   private extensionPath: string;
@@ -1857,7 +1857,7 @@ export class DatabaseSchemaWebview {
     switch (message.command) {
       case 'requestAnalysis':
         if (message.type === 'databaseSchema') {
-          vscode.commands.executeCommand('doracodebirdview.analyzeDatabaseSchema');
+          vscode.commands.executeCommand('doracodelens.analyzeDatabaseSchema');
         }
         break;
       case 'exportSchema':

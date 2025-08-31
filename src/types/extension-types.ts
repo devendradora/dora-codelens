@@ -1,5 +1,5 @@
 /**
- * Core extension types for the refactored DoraCodeBirdView extension
+ * Core extension types for the refactored DoraCodeLens extension
  */
 
 /**

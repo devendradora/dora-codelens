@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Git Analytics Runner for DoraCodeBirdView
+Git Analytics Runner for DoraCodeLens
 
 This script runs git analytics and outputs JSON results.
 """

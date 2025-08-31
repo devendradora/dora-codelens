@@ -19,7 +19,7 @@ export interface CurrentFileAnalysisOptions {
  * Current file analysis handler with Python integration
  */
 export class CurrentFileAnalysisHandler {
-  private static readonly COMMAND_ID = 'doracodebirdview.analyzeCurrentFile';
+  private static readonly COMMAND_ID = 'doracodelens.analyzeCurrentFile';
   private static readonly PYTHON_TIMEOUT = 30000; // 30 seconds
   private static readonly PYTHON_SCRIPT = 'current_file_analyzer.py';
 
@@ -163,7 +163,7 @@ export class CurrentFileAnalysisHandler {
       this.errorHandler.logError('Executing Python file analysis', { args }, CurrentFileAnalysisHandler.COMMAND_ID);
 
       // Get configured Python path
-      const pythonPath = vscode.workspace.getConfiguration('doracodebirdview').get<string>('pythonPath', 'python3');
+      const pythonPath = vscode.workspace.getConfiguration('doracodelens').get<string>('pythonPath', 'python3');
 
       // Spawn Python process
       const pythonProcess = spawn(pythonPath, args, {
@@ -298,7 +298,7 @@ export class CurrentFileAnalysisHandler {
    * Get analyzer script path
    */
   private getAnalyzerPath(): string {
-    const extensionPath = vscode.extensions.getExtension('doracodebird.doracodebird-view')?.extensionPath;
+    const extensionPath = vscode.extensions.getExtension('doracodelens.doracodelens')?.extensionPath;
     if (!extensionPath) {
       throw new Error('Extension path not found');
     }

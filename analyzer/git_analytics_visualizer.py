@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Git Analytics Data Visualization for DoraCodeBirdView
+Git Analytics Data Visualization for DoraCodeLens
 
 This module provides data visualization capabilities for Git analytics,
 including contribution graph data generation, timeline structures, and export functionality.

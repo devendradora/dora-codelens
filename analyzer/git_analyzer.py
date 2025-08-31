@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Git Analytics Engine for DoraCodeBirdView
+Git Analytics Engine for DoraCodeLens
 
 This module provides comprehensive Git repository analysis capabilities,
 including author contribution tracking, commit statistics, and module-wise analytics.

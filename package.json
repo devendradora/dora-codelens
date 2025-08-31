@@ -1,12 +1,12 @@
 {
-  "name": "doracodebird-view",
+  "name": "doracodelens",
   "scripts": {
     "compile": "tsc -p ."
   },
-  "displayName": "DoraCodeBirdEyeView",
+  "displayName": "DoraCodeLens",
   "description": "Advanced VS Code extension for comprehensive Python project analysis with Git analytics, enhanced visualizations, JSON utilities, and database schema analysis",
   "version": "0.1.0",
-  "publisher": "doracodebird",
+  "publisher": "doracodelens",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -38,15 +38,15 @@
   "main": "./out/extension.js",
   "contributes": {
     "configuration": {
-      "title": "DoraCodeBirdView",
+      "title": "DoraCodeLens",
       "properties": {
-        "doracodebirdview.pythonPath": {
+        "doracodelens.pythonPath": {
           "type": "string",
           "default": "python3",
           "description": "Path to Python executable (python3, python, or full path like /usr/bin/python3)",
           "scope": "resource"
         },
-        "doracodebirdview.analysisTimeout": {
+        "doracodelens.analysisTimeout": {
           "type": "number",
           "default": 120,
           "description": "Timeout for analysis operations in seconds",
@@ -54,7 +54,7 @@
           "maximum": 600,
           "scope": "resource"
         },
-        "doracodebirdview.enableDebugLogging": {
+        "doracodelens.enableDebugLogging": {
           "type": "boolean",
           "default": false,
           "description": "Enable debug logging for troubleshooting",
@@ -65,24 +65,24 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "doracodebird-explorer",
-          "title": "DoraCodeBirdView",
-          "icon": "resources/light/doracodebird.svg"
+          "id": "doracodelens-explorer",
+          "title": "DoraCodeLens",
+          "icon": "resources/light/doracodelens.svg"
         }
       ]
     },
     "submenus": [
       {
-        "id": "doracodebird.contextMenu",
-        "label": "DoraCodeBirdView"
+        "id": "doracodelens.contextMenu",
+        "label": "DoraCodeLens"
       }
     ],
     "views": {
-      "doracodebird-explorer": [
+      "doracodelens-explorer": [
         {
-          "id": "doracodebirdSidebar",
+          "id": "doracodelens-sidebar",
           "name": "Project Analysis",
-          "icon": "resources/light/doracodebird.svg",
+          "icon": "resources/light/doracodelens.svg",
           "contextualTitle": "Project Analysis"
         }
       ]
@@ -90,223 +90,223 @@
     "menus": {
       "editor/context": [
         {
-          "submenu": "doracodebird.contextMenu",
+          "submenu": "doracodelens.contextMenu",
           "group": "navigation"
         }
       ],
       "explorer/context": [
         {
-          "submenu": "doracodebird.contextMenu",
+          "submenu": "doracodelens.contextMenu",
           "group": "navigation"
         }
       ],
-      "doracodebird.contextMenu": [
+      "doracodelens.contextMenu": [
         {
-          "command": "doracodebirdview.analyzeCurrentFile",
+          "command": "doracodelens.analyzeCurrentFile",
           "group": "analyze@1",
           "when": "resourceLangId == python"
         },
         {
-          "command": "doracodebirdview.analyzeFullCode",
+          "command": "doracodelens.analyzeFullCode",
           "group": "analyze@2",
           "when": "resourceLangId == python"
         },
         {
-          "command": "doracodebirdview.analyzeDatabaseSchema",
+          "command": "doracodelens.analyzeDatabaseSchema",
           "group": "database@1",
           "when": "resourceLangId == python"
         },
         {
-          "command": "doracodebirdview.analyzeGitAnalytics",
+          "command": "doracodelens.analyzeGitAnalytics",
           "group": "git@1"
         },
         {
-          "command": "doracodebird.jsonFormat",
+          "command": "doracodelens.jsonFormat",
           "group": "json@1",
-          "when": "doracodebird.jsonContext"
+          "when": "doracodelens.jsonContext"
         },
         {
-          "command": "doracodebird.jsonTreeView",
+          "command": "doracodelens.jsonTreeView",
           "group": "json@2",
-          "when": "doracodebird.jsonContext"
+          "when": "doracodelens.jsonContext"
         },
         {
-          "command": "doracodebird.jsonFix",
+          "command": "doracodelens.jsonFix",
           "group": "json@3",
-          "when": "doracodebird.jsonContext"
+          "when": "doracodelens.jsonContext"
         },
         {
-          "command": "doracodebird.jsonMinify",
+          "command": "doracodelens.jsonMinify",
           "group": "json@4",
-          "when": "doracodebird.jsonContext"
+          "when": "doracodelens.jsonContext"
         },
         {
-          "command": "doracodebird.toggleCodeLens",
+          "command": "doracodelens.toggleCodeLens",
           "group": "codelens@1",
           "when": "resourceLangId == python"
         }
       ],
       "editor/title": [
         {
-          "command": "doracodebird.toggleCodeLens",
+          "command": "doracodelens.toggleCodeLens",
           "when": "resourceLangId == python",
           "group": "navigation@1"
         }
       ],
       "view/title": [
         {
-          "command": "doracodebird.refreshSidebar",
-          "when": "view == doracodebirdSidebar",
+          "command": "doracodelens.refreshSidebar",
+          "when": "view == doracodelens-sidebar",
           "group": "navigation"
         },
         {
-          "command": "doracodebirdview.openSettings",
-          "when": "view == doracodebirdSidebar",
+          "command": "doracodelens.openSettings",
+          "when": "view == doracodelens-sidebar",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "doracodebird.showDependencies",
-          "when": "view == doracodebirdSidebar && viewItem == module",
+          "command": "doracodelens.showDependencies",
+          "when": "view == doracodelens-sidebar && viewItem == module",
           "group": "inline"
         },
         {
-          "command": "doracodebird.showFunctionComplexityDetails",
-          "when": "view == doracodebirdSidebar && viewItem == function",
+          "command": "doracodelens.showFunctionComplexityDetails",
+          "when": "view == doracodelens-sidebar && viewItem == function",
           "group": "inline"
         }
       ]
     },
     "commands": [
       {
-        "command": "doracodebirdview.analyzeFullCode",
+        "command": "doracodelens.analyzeFullCode",
         "title": "Full Code Analysis",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(graph)"
       },
       {
-        "command": "doracodebirdview.analyzeCurrentFile",
+        "command": "doracodelens.analyzeCurrentFile",
         "title": "Current File Analysis",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(file-code)"
       },
       {
-        "command": "doracodebirdview.analyzeDatabaseSchema",
+        "command": "doracodelens.analyzeDatabaseSchema",
         "title": "Database Schema Analysis",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(database)"
       },
       {
-        "command": "doracodebirdview.analyzeGitAnalytics",
+        "command": "doracodelens.analyzeGitAnalytics",
         "title": "Git Analytics",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(git-compare)"
       },
       {
-        "command": "doracodebird.jsonFormat",
+        "command": "doracodelens.jsonFormat",
         "title": "JSON Format",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(json)"
       },
       {
-        "command": "doracodebird.jsonTreeView",
+        "command": "doracodelens.jsonTreeView",
         "title": "JSON Tree View",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(list-tree)"
       },
       {
-        "command": "doracodebird.jsonFix",
+        "command": "doracodelens.jsonFix",
         "title": "JSON Fix (Python Dict)",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(wrench)"
       },
       {
-        "command": "doracodebird.jsonMinify",
+        "command": "doracodelens.jsonMinify",
         "title": "JSON Minify",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(fold)"
       },
       {
-        "command": "doracodebird.refreshSidebar",
+        "command": "doracodelens.refreshSidebar",
         "title": "Refresh",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(refresh)"
       },
       {
-        "command": "doracodebirdview.openSettings",
+        "command": "doracodelens.openSettings",
         "title": "Settings",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(settings-gear)"
       },
       {
-        "command": "doracodebird.clearCache",
+        "command": "doracodelens.clearCache",
         "title": "Clear Cache",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(clear-all)"
       },
       {
-        "command": "doracodebird.cancelAnalysis",
+        "command": "doracodelens.cancelAnalysis",
         "title": "Cancel Analysis",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(stop)"
       },
       {
-        "command": "doracodebird.navigateToItem",
+        "command": "doracodelens.navigateToItem",
         "title": "Navigate to Item",
-        "category": "DoraCodeBirdView"
+        "category": "DoraCodeLens"
       },
       {
-        "command": "doracodebird.filterSidebar",
+        "command": "doracodelens.filterSidebar",
         "title": "Filter",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(filter)"
       },
       {
-        "command": "doracodebird.selectModule",
+        "command": "doracodelens.selectModule",
         "title": "Select Module",
-        "category": "DoraCodeBirdView"
+        "category": "DoraCodeLens"
       },
       {
-        "command": "doracodebird.clearSelection",
+        "command": "doracodelens.clearSelection",
         "title": "Clear Selection",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(clear-all)"
       },
       {
-        "command": "doracodebird.showDependencies",
+        "command": "doracodelens.showDependencies",
         "title": "Show Dependencies",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(references)"
       },
       {
-        "command": "doracodebird.showFunctionComplexityDetails",
+        "command": "doracodelens.showFunctionComplexityDetails",
         "title": "Show Function Complexity Details",
-        "category": "DoraCodeBirdView"
+        "category": "DoraCodeLens"
       },
       {
-        "command": "doracodebird.showGraphView",
+        "command": "doracodelens.showGraphView",
         "title": "Graph View",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(type-hierarchy)"
       },
 
       {
-        "command": "doracodebird.toggleCodeLens",
+        "command": "doracodelens.toggleCodeLens",
         "title": "Toggle Code Lens",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(eye)"
       },
       {
-        "command": "doracodebird.enableCodeLens",
+        "command": "doracodelens.enableCodeLens",
         "title": "Enable Code Lens",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(eye)"
       },
       {
-        "command": "doracodebird.disableCodeLens",
+        "command": "doracodelens.disableCodeLens",
         "title": "Disable Code Lens",
-        "category": "DoraCodeBirdView",
+        "category": "DoraCodeLens",
         "icon": "$(eye-closed)"
       }
     ],

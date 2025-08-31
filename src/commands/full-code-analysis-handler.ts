@@ -29,7 +29,7 @@ export interface PythonProcessInfo {
  * Full code analysis handler with robust Python integration
  */
 export class FullCodeAnalysisHandler {
-  private static readonly COMMAND_ID = 'doracodebirdview.analyzeFullCode';
+  private static readonly COMMAND_ID = 'doracodelens.analyzeFullCode';
   private static readonly PYTHON_TIMEOUT = 120000; // 2 minutes
   private static readonly PYTHON_SCRIPT = 'analyzer.py';
 
@@ -108,7 +108,7 @@ export class FullCodeAnalysisHandler {
 
             // Update code lens with analysis data
             try {
-              vscode.commands.executeCommand('doracodebird.updateCodeLensData', validatedResult);
+              vscode.commands.executeCommand('doracodelens.updateCodeLensData', validatedResult);
             } catch (codeLensError) {
               this.errorHandler.logError('Failed to update code lens data', codeLensError, FullCodeAnalysisHandler.COMMAND_ID);
             }
@@ -173,7 +173,7 @@ export class FullCodeAnalysisHandler {
       this.errorHandler.logError('Executing Python analysis', { args }, FullCodeAnalysisHandler.COMMAND_ID);
 
       // Get configured Python path
-      const pythonPath = vscode.workspace.getConfiguration('doracodebirdview').get<string>('pythonPath', 'python3');
+      const pythonPath = vscode.workspace.getConfiguration('doracodelens').get<string>('pythonPath', 'python3');
 
       // Spawn Python process
       const pythonProcess = spawn(pythonPath, args, {
@@ -301,7 +301,7 @@ export class FullCodeAnalysisHandler {
    * Get analyzer script path
    */
   private getAnalyzerPath(): string {
-    const extensionPath = vscode.extensions.getExtension('doracodebird.doracodebird-view')?.extensionPath;
+    const extensionPath = vscode.extensions.getExtension('doracodelens.doracodelens')?.extensionPath;
     if (!extensionPath) {
       throw new Error('Extension path not found');
     }

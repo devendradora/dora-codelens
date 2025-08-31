@@ -23,7 +23,7 @@ export interface GitAnalyticsOptions {
  * Git analytics handler with Python integration
  */
 export class GitAnalyticsHandler {
-  private static readonly COMMAND_ID = 'doracodebirdview.analyzeGitAnalytics';
+  private static readonly COMMAND_ID = 'doracodelens.analyzeGitAnalytics';
   private static readonly PYTHON_TIMEOUT = 60000; // 1 minute
   private static readonly PYTHON_SCRIPT = 'git_analytics_runner.py';
 
@@ -170,7 +170,7 @@ export class GitAnalyticsHandler {
       this.errorHandler.logError('Executing Python git analysis', { args }, GitAnalyticsHandler.COMMAND_ID);
 
       // Get configured Python path
-      const pythonPath = vscode.workspace.getConfiguration('doracodebirdview').get<string>('pythonPath', 'python3');
+      const pythonPath = vscode.workspace.getConfiguration('doracodelens').get<string>('pythonPath', 'python3');
 
       // Spawn Python process
       const pythonProcess = spawn(pythonPath, args, {
@@ -319,7 +319,7 @@ export class GitAnalyticsHandler {
    * Get analyzer script path
    */
   private getAnalyzerPath(): string {
-    const extensionPath = vscode.extensions.getExtension('doracodebird.doracodebird-view')?.extensionPath;
+    const extensionPath = vscode.extensions.getExtension('doracodelens.doracodelens')?.extensionPath;
     if (!extensionPath) {
       throw new Error('Extension path not found');
     }

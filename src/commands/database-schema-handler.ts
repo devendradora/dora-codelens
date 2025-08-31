@@ -21,7 +21,7 @@ export interface DatabaseSchemaOptions {
  * Database schema analysis handler with Python integration
  */
 export class DatabaseSchemaHandler {
-  private static readonly COMMAND_ID = 'doracodebirdview.analyzeDatabaseSchema';
+  private static readonly COMMAND_ID = 'doracodelens.analyzeDatabaseSchema';
   private static readonly PYTHON_TIMEOUT = 45000; // 45 seconds
   private static readonly PYTHON_SCRIPT = 'run_database_schema_analysis.py';
 
@@ -165,7 +165,7 @@ export class DatabaseSchemaHandler {
       this.errorHandler.logError('Executing Python database schema analysis', { args }, DatabaseSchemaHandler.COMMAND_ID);
 
       // Get configured Python path
-      const pythonPath = vscode.workspace.getConfiguration('doracodebirdview').get<string>('pythonPath', 'python3');
+      const pythonPath = vscode.workspace.getConfiguration('doracodelens').get<string>('pythonPath', 'python3');
 
       // Spawn Python process
       const pythonProcess = spawn(pythonPath, args, {
@@ -292,7 +292,7 @@ export class DatabaseSchemaHandler {
    * Get analyzer script path
    */
   private getAnalyzerPath(): string {
-    const extensionPath = vscode.extensions.getExtension('doracodebird.doracodebird-view')?.extensionPath;
+    const extensionPath = vscode.extensions.getExtension('doracodelens.doracodelens')?.extensionPath;
     if (!extensionPath) {
       throw new Error('Extension path not found');
     }

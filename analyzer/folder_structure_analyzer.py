@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Folder Structure Analyzer for DoraCodeBirdView analyzer.
+Folder Structure Analyzer for DoraCodeLens analyzer.
 
 This module provides functionality to detect and analyze project folder organization,
 identifying app/module/package folder types and creating hierarchical structures.

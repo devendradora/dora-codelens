@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Module Card Generator for DoraCodeBirdView analyzer.
+Module Card Generator for DoraCodeLens analyzer.
 
 This module provides functionality to generate styled module representations
 with complexity-based color coding and folder-based grouping.

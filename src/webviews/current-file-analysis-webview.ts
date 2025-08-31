@@ -7,7 +7,7 @@ import { ErrorHandler } from '../core/error-handler';
  * Provides dedicated webview for displaying current file analysis results
  */
 export class CurrentFileAnalysisWebview {
-  private static readonly VIEW_TYPE = 'doracodebirdview.currentFileAnalysis';
+  private static readonly VIEW_TYPE = 'doracodelens.currentFileAnalysis';
   private panel: vscode.WebviewPanel | null = null;
   private errorHandler: ErrorHandler;
   private extensionPath: string;
@@ -902,7 +902,7 @@ export class CurrentFileAnalysisWebview {
     switch (message.command) {
       case 'refreshAnalysis':
         if (message.filePath) {
-          vscode.commands.executeCommand('doracodebirdview.analyzeCurrentFile');
+          vscode.commands.executeCommand('doracodelens.analyzeCurrentFile');
         }
         break;
       case 'openFile':

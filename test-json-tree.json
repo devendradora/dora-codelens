@@ -1,0 +1,34 @@
+{
+  "name": "DoraCodeLens Test",
+  "version": "1.0.0",
+  "features": {
+    "analysis": {
+      "types": ["full", "current", "git"],
+      "complexity": true,
+      "frameworks": ["django", "flask", "fastapi"]
+    },
+    "visualization": {
+      "graphs": true,
+      "trees": true,
+      "charts": ["bar", "line", "pie"]
+    },
+    "utilities": {
+      "json": {
+        "format": true,
+        "validate": true,
+        "tree_view": true
+      },
+      "export": ["json", "csv", "html"]
+    }
+  },
+  "metadata": {
+    "created": "2024-01-15",
+    "author": "DoraCodeLens Team",
+    "tags": ["vscode", "extension", "analysis"],
+    "stats": {
+      "lines": 1000,
+      "files": 50,
+      "complexity": 7.2
+    }
+  }
+}

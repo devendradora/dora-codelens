@@ -1,9 +1,9 @@
-# DoraCodeBirdView Quick Reference
+# DoraCodeLens Quick Reference
 
 ## Context Menu Quick Access
 
 ```
-Right-click on Python file → DoraCodeBirdView →
+Right-click on Python file → DoraCodeLens →
 ```
 
 | Feature | Path | What it does |
@@ -85,7 +85,7 @@ Right-click on Python file → DoraCodeBirdView →
 
 ## Common File Patterns
 
-DoraCodeBirdView automatically detects:
+DoraCodeLens automatically detects:
 
 | Pattern | Framework |
 |---------|-----------|
@@ -147,7 +147,7 @@ DoraCodeBirdView automatically detects:
 
 ## Quick Start Checklist
 
-- [ ] Install DoraCodeBirdView extension
+- [ ] Install DoraCodeLens extension
 - [ ] Open a Python project
 - [ ] Right-click any .py file
 - [ ] Try **Full Code Analysis → Tech Stack**

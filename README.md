@@ -1,8 +1,8 @@
-# DoraCodeBirdView VS Code Extension
+# DoraCodeLens VS Code Extension
 
-An advanced VS Code extension that provides comprehensive code analysis and visualization capabilities for Python projects. DoraCodeBirdView creates interactive graph visualizations of project structure, dependencies, and code complexity while supporting framework-specific patterns for Django, Flask, and FastAPI. Enhanced with Git analytics, database schema analysis, and JSON utilities for complete project insights.
+An advanced VS Code extension that provides comprehensive code analysis and visualization capabilities for Python projects. DoraCodeLens creates interactive graph visualizations of project structure, dependencies, and code complexity while supporting framework-specific patterns for Django, Flask, and FastAPI. Enhanced with Git analytics, database schema analysis, and JSON utilities for complete project insights.
 
-![DoraCodeBirdView Demo](https://via.placeholder.com/800x400/1e1e1e/ffffff?text=DoraCodeBirdView+Demo)
+![DoraCodeLens Demo](https://via.placeholder.com/800x400/1e1e1e/ffffff?text=DoraCodeLens+Demo)
 
 ## Features
 
@@ -49,14 +49,14 @@ An advanced VS Code extension that provides comprehensive code analysis and visu
 ### From VS Code Marketplace
 1. Open VS Code
 2. Go to Extensions (Ctrl+Shift+X)
-3. Search for "DoraCodeBirdView"
+3. Search for "DoraCodeLens"
 4. Click Install
 
 ### From Source
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/doracodebird-extension.git
-cd doracodebird-extension
+git clone https://github.com/your-username/doracodelens-extension.git
+cd doracodelens-extension
 ```
 
 2. Install dependencies:
@@ -69,7 +69,7 @@ pip install -r requirements.txt
 3. Build and install:
 ```bash
 npm run compile
-code --install-extension doracodebird-*.vsix
+code --install-extension doracodelens-*.vsix
 ```
 
 ## Usage
@@ -77,11 +77,11 @@ code --install-extension doracodebird-*.vsix
 ### Quick Start
 1. Open a Python project in VS Code
 2. Right-click on any Python file
-3. Select **DoraCodeBirdView** → **Full Code Analysis** → **Tech Stack**
+3. Select **DoraCodeLens** → **Full Code Analysis** → **Tech Stack**
 4. Explore your project's insights in the tabbed interface!
 
 ### Enhanced Context Menu
-DoraCodeBirdView provides a comprehensive right-click context menu with organized options:
+DoraCodeLens provides a comprehensive right-click context menu with organized options:
 
 - **Full Code Analysis**: Complete project analysis with Tech Stack, Graph View, and JSON View
 - **Current File Analysis**: Quick analysis of just the current file
@@ -126,12 +126,12 @@ DoraCodeBirdView provides a comprehensive right-click context menu with organize
 ## Configuration
 
 ### Extension Settings
-Access settings via File → Preferences → Settings → Extensions → DoraCodeBirdView
+Access settings via File → Preferences → Settings → Extensions → DoraCodeLens
 
-- `doracodebird.enableCodeLens`: Enable/disable CodeLens complexity annotations
-- `doracodebird.complexityThresholds`: Customize complexity color thresholds
-- `doracodebird.cacheEnabled`: Enable/disable analysis result caching
-- `doracodebird.maxProjectSize`: Maximum project size for analysis
+- `doracodelens.enableCodeLens`: Enable/disable CodeLens complexity annotations
+- `doracodelens.complexityThresholds`: Customize complexity color thresholds
+- `doracodelens.cacheEnabled`: Enable/disable analysis result caching
+- `doracodelens.maxProjectSize`: Maximum project size for analysis
 
 ### Python Dependencies
 The extension automatically manages Python dependencies, but you can manually install them:
@@ -176,7 +176,7 @@ Each example includes setup instructions and demonstrates different framework pa
 - Restart VS Code and try again
 
 ### Getting Help
-- Check the [GitHub Issues](https://github.com/your-username/doracodebird-extension/issues)
+- Check the [GitHub Issues](https://github.com/your-username/doracodelens-extension/issues)
 - Review the [Developer Documentation](docs/DEVELOPER.md)
 - Submit bug reports with project details and error logs
 
@@ -203,7 +203,7 @@ python -m pytest
 
 ## Architecture
 
-DoraCodeBirdView uses a hybrid architecture:
+DoraCodeLens uses a hybrid architecture:
 
 - **Python Analyzer**: Static analysis engine using AST parsing
 - **TypeScript Extension**: VS Code integration and UI
