@@ -1,18 +1,26 @@
 import * as vscode from 'vscode';
 import { ErrorHandler } from '../core/error-handler';
 import { CodeLensManager } from '../services/code-lens-provider';
+import { CodeLensSuggestion } from '../services/code-lens-suggestion-engine';
+import { CodeLensCommandManager } from '../core/code-lens-command-manager';
 
 /**
- * Code Lens Command Handler
- * Handles code lens toggle and detail view commands
+ * Enhanced Code Lens Command Handler
+ * Handles professional code lens commands with dynamic titles and suggestions
  */
 export class CodeLensHandler {
     private errorHandler: ErrorHandler;
     private codeLensManager: CodeLensManager;
+    private commandManager: CodeLensCommandManager;
+    private guidanceCommandHandler: any = null;
 
     constructor(errorHandler: ErrorHandler, context: vscode.ExtensionContext) {
         this.errorHandler = errorHandler;
         this.codeLensManager = CodeLensManager.getInstance(errorHandler, context);
+        this.commandManager = CodeLensCommandManager.getInstance(errorHandler, context);
+        
+        // Initialize dynamic commands
+        this.commandManager.registerDynamicCommands();
     }
 
     /**
@@ -320,9 +328,141 @@ export class CodeLensHandler {
     }
 
     /**
+     * Handle apply suggestion command
+     */
+    public async handleApplySuggestion(suggestion: CodeLensSuggestion, func: any, uri: vscode.Uri): Promise<void> {
+        try {
+            this.errorHandler.logError(
+                'Apply suggestion command initiated',
+                { type: suggestion.type, message: suggestion.message },
+                'CodeLensHandler'
+            );
+
+            await this.codeLensManager.applySuggestion(suggestion, func, uri);
+
+        } catch (error) {
+            this.errorHandler.logError(
+                'Apply suggestion command failed',
+                error,
+                'CodeLensHandler'
+            );
+            vscode.window.showErrorMessage('Failed to apply suggestion. Check the output for details.');
+        }
+    }
+
+    /**
+     * Handle show suggestion details command
+     */
+    public async handleShowSuggestionDetails(suggestion: CodeLensSuggestion, func: any, uri: vscode.Uri): Promise<void> {
+        try {
+            this.errorHandler.logError(
+                'Show suggestion details command initiated',
+                { type: suggestion.type, message: suggestion.message },
+                'CodeLensHandler'
+            );
+
+            await this.codeLensManager.showSuggestionDetails(suggestion, func, uri);
+
+        } catch (error) {
+            this.errorHandler.logError(
+                'Show suggestion details command failed',
+                error,
+                'CodeLensHandler'
+            );
+            vscode.window.showErrorMessage('Failed to show suggestion details.');
+        }
+    }
+
+    /**
+     * Handle code lens state changed event
+     */
+    public handleCodeLensStateChanged(enabled: boolean): void {
+        try {
+            this.commandManager.updateCommandState(enabled);
+            
+            this.errorHandler.logError(
+                'Code lens state changed',
+                { enabled },
+                'CodeLensHandler'
+            );
+
+        } catch (error) {
+            this.errorHandler.logError(
+                'Failed to handle code lens state change',
+                error,
+                'CodeLensHandler'
+            );
+        }
+    }
+
+    /**
+     * Get dynamic command manager
+     */
+    public getCommandManager(): CodeLensCommandManager {
+        return this.commandManager;
+    }
+
+    /**
+     * Update code lens configuration
+     */
+    public updateConfig(config: any): void {
+        this.codeLensManager.updateConfig(config);
+    }
+
+    /**
+     * Get current configuration
+     */
+    public getConfig(): any {
+        return this.codeLensManager.getConfig();
+    }
+
+
+
+    /**
+     * Handle code lens enablement with auto-run support
+     */
+    public async handleEnableCodeLensWithAutoRun(): Promise<void> {
+        try {
+            // Enable code lens first
+            await this.handleEnableCodeLens();
+            
+            // Then check if auto-run is enabled
+            if (this.guidanceCommandHandler) {
+                await this.guidanceCommandHandler.handleAutoRunAnalysis();
+            }
+        } catch (error) {
+            this.errorHandler.logError(
+                'Error enabling code lens with auto-run',
+                error,
+                'CodeLensHandler'
+            );
+        }
+    }
+
+    /**
+     * Set guidance command handler for integration
+     */
+    public setGuidanceCommandHandler(guidanceCommandHandler: any): void {
+        this.guidanceCommandHandler = guidanceCommandHandler;
+        this.errorHandler.logError(
+            'Guidance command handler set for code lens handler',
+            null,
+            'CodeLensHandler'
+        );
+    }
+
+    /**
+     * Get guidance command handler
+     */
+    public getGuidanceCommandHandler(): any {
+        return this.guidanceCommandHandler;
+    }
+
+    /**
      * Dispose of resources
      */
     public dispose(): void {
+        this.commandManager.dispose();
         this.codeLensManager.dispose();
     }
 }

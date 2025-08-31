@@ -1,11 +1,17 @@
 {
   "name": "doracodelens",
   "scripts": {
-    "compile": "tsc -p ."
+    "compile": "tsc -p .",
+    "test": "npm run compile && node ./out/test/runTest.js",
+    "test:unit": "npm run compile && mocha out/test/**/*.test.js --timeout 10000",
+    "test:integration": "npm run compile && mocha out/test/code-lens-integration.test.js --timeout 15000",
+    "test:performance": "npm run compile && mocha out/test/performance.test.js --timeout 20000",
+    "test:e2e": "npm run compile && mocha out/test/end-to-end.test.js --timeout 30000",
+    "pretest": "npm run compile"
   },
   "displayName": "DoraCodeLens",
   "description": "Advanced VS Code extension for comprehensive Python project analysis with Git analytics, enhanced visualizations, JSON utilities, and database schema analysis",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "DevendraDora",
   "repository": {
     "type": "git",
@@ -18,7 +24,6 @@
   "engines": {
     "vscode": "^1.74.0"
   },
-
   "categories": [
     "Visualization",
     "Other"
@@ -64,6 +69,75 @@
           "type": "boolean",
           "default": false,
           "description": "Enable debug logging for troubleshooting",
+          "scope": "resource"
+        },
+        "doracodelens.codeLens.complexityThresholds.low": {
+          "type": "number",
+          "default": 5,
+          "description": "Threshold for low complexity (green indicator)",
+          "minimum": 1,
+          "maximum": 50,
+          "scope": "resource"
+        },
+        "doracodelens.codeLens.complexityThresholds.medium": {
+          "type": "number",
+          "default": 10,
+          "description": "Threshold for medium complexity (yellow indicator)",
+          "minimum": 1,
+          "maximum": 50,
+          "scope": "resource"
+        },
+        "doracodelens.codeLens.complexityThresholds.high": {
+          "type": "number",
+          "default": 11,
+          "description": "Threshold for high complexity (red indicator)",
+          "minimum": 1,
+          "maximum": 50,
+          "scope": "resource"
+        },
+        "doracodelens.codeLens.showComplexity": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show complexity indicators in code lens",
+          "scope": "resource"
+        },
+        "doracodelens.codeLens.showSuggestions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show actionable suggestions in code lens",
+          "scope": "resource"
+        },
+        "doracodelens.codeLens.maxSuggestionsPerFunction": {
+          "type": "number",
+          "default": 3,
+          "description": "Maximum number of suggestions to show per function",
+          "minimum": 1,
+          "maximum": 10,
+          "scope": "resource"
+        },
+        "doracodelens.guidance.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable code lens activation guidance",
+          "scope": "resource"
+        },
+        "doracodelens.guidance.preferredAnalysisType": {
+          "type": "string",
+          "enum": ["current-file", "full-project", "ask-each-time"],
+          "default": "ask-each-time",
+          "description": "Default analysis type when enabling code lens",
+          "scope": "resource"
+        },
+        "doracodelens.guidance.autoRunAnalysisOnEnable": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically run analysis when code lens is enabled",
+          "scope": "resource"
+        },
+        "doracodelens.guidance.showWelcomeMessage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show welcome message for first-time users",
           "scope": "resource"
         }
       }
@@ -145,6 +219,18 @@
           "command": "doracodelens.jsonMinify",
           "group": "json@4",
           "when": "doracodelens.jsonContext"
+        },
+        {
+          "command": "doracodelens.setupPythonPath",
+          "group": "setup@1"
+        },
+        {
+          "command": "doracodelens.detectPythonPath",
+          "group": "setup@2"
+        },
+        {
+          "command": "doracodelens.openSettings",
+          "group": "setup@3"
         },
         {
           "command": "doracodelens.toggleCodeLens",
@@ -296,7 +382,6 @@
         "category": "DoraCodeLens",
         "icon": "$(type-hierarchy)"
       },
-
       {
         "command": "doracodelens.toggleCodeLens",
         "title": "Toggle Code Lens",
@@ -314,6 +399,84 @@
         "title": "Disable Code Lens",
         "category": "DoraCodeLens",
         "icon": "$(eye-closed)"
+      },
+      {
+        "command": "doracodelens.applySuggestion",
+        "title": "Apply Code Lens Suggestion",
+        "category": "DoraCodeLens",
+        "icon": "$(lightbulb)"
+      },
+      {
+        "command": "doracodelens.showSuggestionDetails",
+        "title": "Show Code Lens Suggestion Details",
+        "category": "DoraCodeLens",
+        "icon": "$(info)"
+      },
+      {
+        "command": "doracodelens.guidance.showWelcome",
+        "title": "Show Welcome Guidance",
+        "category": "DoraCodeLens",
+        "icon": "$(star)"
+      },
+      {
+        "command": "doracodelens.guidance.analyzeCurrentFile",
+        "title": "Analyze Current File (Guidance)",
+        "category": "DoraCodeLens",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "doracodelens.guidance.analyzeFullProject",
+        "title": "Analyze Full Project (Guidance)",
+        "category": "DoraCodeLens",
+        "icon": "$(project)"
+      },
+      {
+        "command": "doracodelens.guidance.refreshAnalysis",
+        "title": "Refresh Analysis (Guidance)",
+        "category": "DoraCodeLens",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "doracodelens.guidance.retryAnalysis",
+        "title": "Retry Analysis (Guidance)",
+        "category": "DoraCodeLens",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "doracodelens.guidance.showProgress",
+        "title": "Show Analysis Progress",
+        "category": "DoraCodeLens",
+        "icon": "$(loading)"
+      },
+      {
+        "command": "doracodelens.guidance.changePreferences",
+        "title": "Change Guidance Preferences",
+        "category": "DoraCodeLens",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "doracodelens.guidance.setPreferredAnalysis",
+        "title": "Set Preferred Analysis Type",
+        "category": "DoraCodeLens",
+        "icon": "$(settings)"
+      },
+      {
+        "command": "doracodelens.guidance.showErrorDetails",
+        "title": "Show Error Details",
+        "category": "DoraCodeLens",
+        "icon": "$(info)"
+      },
+      {
+        "command": "doracodelens.setupPythonPath",
+        "title": "Setup Python Path",
+        "category": "DoraCodeLens",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "doracodelens.detectPythonPath",
+        "title": "Auto-Detect Python Path",
+        "category": "DoraCodeLens",
+        "icon": "$(search)"
       }
     ],
     "scripts": {

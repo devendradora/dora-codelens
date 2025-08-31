@@ -239,19 +239,46 @@ export class FullCodeAnalysisWebview {
                       <option value="random">Random</option>
                     </select>
                   </div>
-                  <!-- Code Lens Toggle -->
+                  <!-- Search -->
                   <div style="display: flex; align-items: center; gap: 8px;">
-                    <button id="toggle-code-lens-btn" style="padding: 8px 12px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: 600;" title="Toggle Code Lens">
-                      📊 Toggle Code Lens
-                    </button>
+                    <input type="text" id="search-input" placeholder="Search folders and files..." 
+                           style="padding: 6px 8px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); border-radius: 3px; font-size: 12px; width: 200px;">
+                    <div id="search-results" style="font-size: 11px; color: var(--vscode-descriptionForeground); min-width: 100px;"></div>
                   </div>
                 </div>
               </div>
               <div class="section-content" style="position: relative; padding: 0;">
+
+
+                <!-- Enhanced Loading with Progress -->
                 <div id="graph-loading" style="text-align: center; padding: 40px; font-size: 16px;">
-                  <div style="margin-bottom: 16px;">🔄</div>
-                  <div>Initializing interactive code graph...</div>
+                  <div style="margin-bottom: 24px;">
+                    <div id="loading-icon" style="font-size: 32px; margin-bottom: 16px;">🔄</div>
+                    <div id="loading-message" style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Initializing interactive code graph...</div>
+                    <div id="loading-details" style="font-size: 14px; color: var(--vscode-descriptionForeground); margin-bottom: 16px;">Analyzing data structure...</div>
+                  </div>
+                  
+                  <!-- Progress Bar -->
+                  <div id="progress-container" style="width: 300px; margin: 0 auto 16px; display: none;">
+                    <div style="background: var(--vscode-progressBar-background); height: 8px; border-radius: 4px; overflow: hidden;">
+                      <div id="progress-bar" style="background: var(--vscode-progressBar-foreground); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div id="progress-text" style="font-size: 12px; margin-top: 4px; color: var(--vscode-descriptionForeground);">0%</div>
+                  </div>
+                  
+                  <!-- Performance Info -->
+                  <div id="performance-info" style="font-size: 12px; color: var(--vscode-descriptionForeground); margin-top: 16px; display: none;">
+                    <div>Data size: <span id="data-size">Calculating...</span></div>
+                    <div>Optimization mode: <span id="optimization-mode">Standard</span></div>
+                    <div>Processing time: <span id="processing-time">0s</span></div>
+                  </div>
+                  
+                  <!-- Cancel Button -->
+                  <div id="cancel-container" style="margin-top: 20px; display: none;">
+                    <button id="cancel-btn" style="padding: 8px 16px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; border-radius: 3px; cursor: pointer; font-size: 14px;">Cancel Loading</button>
+                  </div>
                 </div>
+                
                 <div id="enhanced-graph" style="width: 100%; height: 600px; border: 1px solid var(--vscode-panel-border); display: none;"></div>
                 
 
@@ -336,6 +363,11 @@ export class FullCodeAnalysisWebview {
             });
           }
 
+          // Global variables for performance optimization
+          let loadingCancelled = false;
+          let loadingStartTime = Date.now();
+          let processingTimeout = null;
+
           function initializeGraph() {
             // Check if Cytoscape is available
             if (typeof cytoscape === 'undefined') {
@@ -345,12 +377,8 @@ export class FullCodeAnalysisWebview {
             }
 
             console.log('Cytoscape loaded, initializing graph...');
-            console.log('DOM elements check:');
-            console.log('- layout-select:', !!document.getElementById('layout-select'));
-            console.log('- zoom-in-btn:', !!document.getElementById('zoom-in-btn'));
-            console.log('- zoom-out-btn:', !!document.getElementById('zoom-out-btn'));
-            console.log('- expand-all-btn:', !!document.getElementById('expand-all-btn'));
-            console.log('- collapse-all-btn:', !!document.getElementById('collapse-all-btn'));
+            loadingStartTime = Date.now();
+            loadingCancelled = false;
             
             const container = document.getElementById('enhanced-graph');
             const loadingElement = document.getElementById('graph-loading');
@@ -360,17 +388,85 @@ export class FullCodeAnalysisWebview {
               return;
             }
 
-            // Get project data
+            // Get project data and optimization info
             const projectData = graphData?.state?.projectData || [];
+            const isLargeDataset = graphData?.state?.isLargeDataset || false;
+            const originalDataSize = graphData?.state?.originalDataSize || 0;
+            
             console.log('Project data:', projectData.length, 'folders');
+            console.log('Large dataset:', isLargeDataset);
+            console.log('Original data size:', (originalDataSize / 1024 / 1024).toFixed(2), 'MB');
+
+            // Update performance info
+            updatePerformanceInfo(originalDataSize, isLargeDataset);
+            
+
 
             if (projectData.length === 0) {
               showEmptyState();
               return;
             }
 
+            // Set up timeout protection for large datasets
+            if (isLargeDataset) {
+              setupTimeoutProtection();
+            }
+
+            // Start progressive loading
+            initializeGraphProgressively(container, loadingElement, projectData, isLargeDataset);
+          }
+
+          function updatePerformanceInfo(dataSize, isLargeDataset) {
+            const dataSizeElement = document.getElementById('data-size');
+            const optimizationModeElement = document.getElementById('optimization-mode');
+            const performanceInfoElement = document.getElementById('performance-info');
+            
+            if (dataSizeElement) {
+              dataSizeElement.textContent = (dataSize / 1024 / 1024).toFixed(2) + ' MB';
+            }
+            if (optimizationModeElement) {
+              optimizationModeElement.textContent = isLargeDataset ? 'Large Dataset Optimization' : 'Standard';
+            }
+            if (performanceInfoElement) {
+              performanceInfoElement.style.display = 'block';
+            }
+          }
+
+          function setupTimeoutProtection() {
+            const cancelContainer = document.getElementById('cancel-container');
+            const cancelBtn = document.getElementById('cancel-btn');
+            
+            if (cancelContainer) {
+              cancelContainer.style.display = 'block';
+            }
+            
+            if (cancelBtn) {
+              cancelBtn.addEventListener('click', function() {
+                loadingCancelled = true;
+                if (processingTimeout) {
+                  clearTimeout(processingTimeout);
+                }
+                showCancelledState();
+              });
+            }
+            
+            // Set timeout for very long operations (30 seconds)
+            processingTimeout = setTimeout(() => {
+              if (!window.graphInitialized) {
+                console.warn('Graph initialization timed out');
+                showTimeoutState();
+              }
+            }, 30000);
+          }
+
+          async function initializeGraphProgressively(container, loadingElement, projectData, isLargeDataset) {
             try {
-              // Create Cytoscape instance with exact dora.html configuration
+              // Update loading message
+              updateLoadingMessage('Creating graph instance...', 10);
+              
+              if (loadingCancelled) return;
+
+              // Create Cytoscape instance with optimized settings
               const cy = cytoscape({
                 container: container,
                 style: [
@@ -378,6 +474,7 @@ export class FullCodeAnalysisWebview {
                   { selector: 'node[type="file"]', style: { shape:'rectangle','background-color':'skyblue', label:'data(name)','text-valign':'center','text-halign':'center','border-width':1,'border-color':'#000','width':120,'height':60 } },
                   { selector: 'node[type="class"]', style: { shape:'hexagon','background-color':'orange', label:'data(name)','text-valign':'center','text-halign':'center','width':100,'height':60 } },
                   { selector: 'node[type="function"]', style: { shape:'ellipse', 'color':'#fff', label:'data(name)','text-valign':'center','text-halign':'center','width':60,'height':40,'font-size':10 } },
+                  { selector: 'node[type="summary"]', style: { shape:'round-rectangle','background-color':'lightgray', label:'data(name)','text-valign':'center','text-halign':'center','border-width':1,'border-color':'#666','width':200,'height':40,'font-size':12 } },
                   { selector: 'node[complexity="low"]', style: { 'background-color':'green' } },
                   { selector: 'node[complexity="medium"]', style: { 'background-color':'orange' } },
                   { selector: 'node[complexity="high"]', style: { 'background-color':'red' } },
@@ -385,8 +482,19 @@ export class FullCodeAnalysisWebview {
                   { selector: 'edge[type="calls"]', style: { width:2,'line-color':'red','target-arrow-shape':'triangle','target-arrow-color':'red','curve-style':'bezier' } },
                   { selector: 'edge[label]', style: { label:'data(label)','text-rotation':'autorotate','text-margin-y':-10,'font-size':10 } }
                 ],
-                layout: { name:'preset' }
+                layout: { name:'preset' },
+                // Performance optimizations for large datasets
+                renderer: {
+                  showFps: false,
+                  motionBlur: !isLargeDataset,
+                  textureOnViewport: isLargeDataset,
+                  wheelSensitivity: isLargeDataset ? 0.5 : 1
+                }
               });
+
+              updateLoadingMessage('Calculating positions...', 30);
+              
+              if (loadingCancelled) return;
 
               const expanded = {};
               const width = container.offsetWidth || 800;
@@ -397,69 +505,368 @@ export class FullCodeAnalysisWebview {
               window.expanded = expanded;
               window.projectData = projectData;
 
-              // Position folders in corners and edges for better distribution
-              const positions = [
-                { x: 150, y: 150 },           // Top-left
-                { x: width - 150, y: 150 },   // Top-right
-                { x: 150, y: height - 150 },  // Bottom-left
-                { x: width - 150, y: height - 150 }, // Bottom-right
-                { x: width / 2, y: 150 },     // Top-center
-                { x: width / 2, y: height - 150 }, // Bottom-center
-                { x: 150, y: height / 2 },    // Left-center
-                { x: width - 150, y: height / 2 }, // Right-center
-              ];
+              // Add nodes in chunks for better performance
+              await addNodesInChunks(cy, projectData, width, height, isLargeDataset);
+              
+              if (loadingCancelled) return;
 
-              // Add top-level folder nodes positioned in corners/edges
-              projectData.forEach((folder, i) => {
-                const position = positions[i % positions.length];
-                // If more folders than positions, create a spiral pattern
-                if (i >= positions.length) {
-                  const angle = (i - positions.length) * 0.5;
-                  const radius = 200 + (Math.floor((i - positions.length) / 8) * 100);
-                  position.x = width / 2 + Math.cos(angle) * radius;
-                  position.y = height / 2 + Math.sin(angle) * radius;
-                }
-                cy.add({ 
-                  data: { id: folder.name, name: folder.name, type: 'folder' }, 
-                  position: position 
-                });
-              });
+              updateLoadingMessage('Setting up interactions...', 80);
 
-              // Folder expansion logic
+              // Folder expansion logic - shows files only
               cy.on('tap', 'node[type="folder"]', function(evt) {
                 const folderId = evt.target.id();
                 console.log('Folder clicked:', folderId);
+                
+                // Prevent event bubbling
+                evt.stopPropagation();
+                
+                // Clear any search highlighting
+                cy.nodes().removeClass('highlighted');
+                
+                // Toggle folder to show/hide files
                 toggleFolder(cy, folderId, expanded, projectData);
+              });
+
+              // File expansion logic - shows classes and functions
+              cy.on('tap', 'node[type="file"]', function(evt) {
+                const fileId = evt.target.id();
+                console.log('File clicked:', fileId);
+                
+                // Prevent event bubbling
+                evt.stopPropagation();
+                
+                // Clear any search highlighting
+                cy.nodes().removeClass('highlighted');
+                
+                // Toggle file to show/hide classes and functions
+                toggleFile(cy, fileId, expanded, projectData);
               });
 
               // Setup zoom and pan controls
               setupGraphControls(cy);
               
-              // Test basic functionality
-              console.log('🧪 Testing basic functionality...');
+              // Setup search functionality
+              setupSearchFunctionality(cy, projectData);
+              
+              updateLoadingMessage('Finalizing...', 95);
+              
+              // Final setup
               setTimeout(() => {
-                console.log('Current graph state:');
-                console.log('- Total nodes:', cy.nodes().length);
-                console.log('- Total edges:', cy.edges().length);
-                console.log('- Folder nodes:', cy.nodes('[type="folder"]').length);
-                console.log('- Expanded folders:', Object.keys(window.expanded).filter(id => window.expanded[id]));
-              }, 1000);
-
-              // Show graph and legend, hide loading
-              container.style.display = 'block';
-              loadingElement.style.display = 'none';
-              
-              const legendElement = document.querySelector('.legend');
-              if (legendElement) {
-                legendElement.style.display = 'block';
-              }
-              
-              console.log('✅ Graph initialized successfully');
-              window.graphInitialized = true;
+                if (loadingCancelled) return;
+                
+                // Show graph and legend, hide loading
+                container.style.display = 'block';
+                loadingElement.style.display = 'none';
+                
+                const legendElement = document.querySelector('.legend');
+                if (legendElement) {
+                  legendElement.style.display = 'block';
+                }
+                
+                // Update processing time
+                const processingTime = (Date.now() - loadingStartTime) / 1000;
+                const processingTimeElement = document.getElementById('processing-time');
+                if (processingTimeElement) {
+                  processingTimeElement.textContent = processingTime.toFixed(1) + 's';
+                }
+                
+                console.log('✅ Graph initialized successfully in', processingTime.toFixed(1), 'seconds');
+                window.graphInitialized = true;
+                
+                if (processingTimeout) {
+                  clearTimeout(processingTimeout);
+                }
+              }, 100);
 
             } catch (error) {
               console.error('Error initializing graph:', error);
               showErrorState(error.message);
+            }
+          }
+
+          async function addNodesInChunks(cy, projectData, width, height, isLargeDataset) {
+            const chunkSize = isLargeDataset ? 20 : 50; // Reasonable chunks for large datasets
+            const totalNodes = projectData.length;
+            
+            console.log(\`Adding \${totalNodes} root folders to graph...\`);
+            
+            // Position folders in a more distributed pattern
+            const positions = [
+              { x: 150, y: 150 },           // Top-left
+              { x: width - 150, y: 150 },   // Top-right
+              { x: 150, y: height - 150 },  // Bottom-left
+              { x: width - 150, y: height - 150 }, // Bottom-right
+              { x: width / 2, y: 150 },     // Top-center
+              { x: width / 2, y: height - 150 }, // Bottom-center
+              { x: 150, y: height / 2 },    // Left-center
+              { x: width - 150, y: height / 2 }, // Right-center
+            ];
+
+            for (let i = 0; i < totalNodes; i += chunkSize) {
+              if (loadingCancelled) return;
+              
+              const chunk = projectData.slice(i, i + chunkSize);
+              const progress = 30 + ((i / totalNodes) * 40); // 30-70% for node addition
+              
+              updateLoadingMessage(\`Adding folders (\${i + 1}-\${Math.min(i + chunkSize, totalNodes)} of \${totalNodes})...\`, progress);
+              
+              // Add chunk of nodes
+              chunk.forEach((folder, chunkIndex) => {
+                const globalIndex = i + chunkIndex;
+                let position = positions[globalIndex % positions.length];
+                
+                // If more folders than positions, create a spiral pattern
+                if (globalIndex >= positions.length) {
+                  const angle = (globalIndex - positions.length) * 0.8;
+                  const radius = 200 + (Math.floor((globalIndex - positions.length) / 8) * 80);
+                  position = {
+                    x: width / 2 + Math.cos(angle) * radius,
+                    y: height / 2 + Math.sin(angle) * radius
+                  };
+                }
+                
+                // Ensure position is within bounds
+                position.x = Math.max(100, Math.min(width - 100, position.x));
+                position.y = Math.max(100, Math.min(height - 100, position.y));
+                
+                const nodeData = { 
+                  id: folder.name, 
+                  name: folder.name, 
+                  type: folder.type || 'folder',
+                  _simplified: folder._simplified || false,
+                  _originalChildCount: folder._originalChildCount || 0,
+                  _hasChildren: folder.children && folder.children.length > 0
+                };
+                
+                console.log(\`Adding folder: \${folder.name} (type: \${nodeData.type}, children: \${folder.children?.length || 0})\`);
+                
+                cy.add({ 
+                  data: nodeData, 
+                  position: position 
+                });
+              });
+              
+              // Allow UI to update between chunks
+              await new Promise(resolve => setTimeout(resolve, isLargeDataset ? 30 : 10));
+            }
+            
+            console.log(\`Successfully added \${cy.nodes().length} nodes to graph\`);
+          }
+
+          function updateLoadingMessage(message, progress) {
+            const loadingMessageElement = document.getElementById('loading-message');
+            const loadingDetailsElement = document.getElementById('loading-details');
+            const progressContainer = document.getElementById('progress-container');
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            
+            if (loadingDetailsElement) {
+              loadingDetailsElement.textContent = message;
+            }
+            
+            if (progress !== undefined) {
+              if (progressContainer) {
+                progressContainer.style.display = 'block';
+              }
+              if (progressBar) {
+                progressBar.style.width = progress + '%';
+              }
+              if (progressText) {
+                progressText.textContent = Math.round(progress) + '%';
+              }
+            }
+          }
+
+          function setupSearchFunctionality(cy, projectData) {
+            const searchInput = document.getElementById('search-input');
+            const searchResults = document.getElementById('search-results');
+            
+            if (!searchInput || !searchResults) {
+              console.warn('Search elements not found');
+              return;
+            }
+            
+            let searchIndex = [];
+            
+            // Build search index for folders and files only
+            function buildSearchIndex() {
+              searchIndex = [];
+              
+              function indexNode(node, path = [], parentFolder = null) {
+                const currentPath = [...path, node.name];
+                
+                // Only index folders and files (not functions or classes)
+                if (node.type === 'folder' || node.type === 'file') {
+                  searchIndex.push({
+                    name: node.name,
+                    type: node.type,
+                    path: currentPath.join(' > '),
+                    parentFolder: parentFolder,
+                    node: node
+                  });
+                }
+                
+                if (node.children && !node._truncated) {
+                  node.children.forEach(child => {
+                    const folder = node.type === 'folder' ? node.name : parentFolder;
+                    indexNode(child, currentPath, folder);
+                  });
+                }
+              }
+              
+              projectData.forEach(folder => indexNode(folder));
+              console.log('Search index built with', searchIndex.length, 'folders and files');
+            }
+            
+            buildSearchIndex();
+            
+            function performSearch(query) {
+              if (!query.trim()) {
+                searchResults.textContent = '';
+                cy.nodes().removeClass('highlighted');
+                return;
+              }
+              
+              const queryLower = query.toLowerCase();
+              const results = searchIndex.filter(item => 
+                item.name.toLowerCase().includes(queryLower)
+              );
+              
+              const folders = results.filter(r => r.type === 'folder');
+              const files = results.filter(r => r.type === 'file');
+              
+              if (results.length === 0) {
+                searchResults.textContent = 'No results';
+                cy.nodes().removeClass('highlighted');
+                return;
+              }
+              
+              searchResults.textContent = \`\${folders.length} folders, \${files.length} files\`;
+              
+              // Highlight matching nodes in graph
+              cy.nodes().removeClass('highlighted');
+              
+              // Find folders that contain matching results or are matches themselves
+              const foldersToHighlight = new Set();
+              results.forEach(result => {
+                if (result.type === 'folder') {
+                  foldersToHighlight.add(result.name);
+                } else if (result.parentFolder) {
+                  foldersToHighlight.add(result.parentFolder);
+                }
+              });
+              
+              // Highlight visible folder nodes
+              foldersToHighlight.forEach(folderName => {
+                const node = cy.getElementById(folderName);
+                if (node.length > 0) {
+                  node.addClass('highlighted');
+                }
+              });
+              
+              // Fit to highlighted nodes if any
+              const highlightedNodes = cy.nodes('.highlighted');
+              if (highlightedNodes.length > 0) {
+                cy.fit(highlightedNodes, 50);
+              }
+            }
+            
+            // Real-time search as user types (debounced)
+            let searchTimeout;
+            searchInput.addEventListener('input', (e) => {
+              clearTimeout(searchTimeout);
+              searchTimeout = setTimeout(() => {
+                performSearch(e.target.value);
+              }, 300);
+            });
+            
+            searchInput.addEventListener('keypress', (e) => {
+              if (e.key === 'Enter') {
+                performSearch(searchInput.value);
+              }
+            });
+            
+            // Add highlighted style
+            cy.style().selector('.highlighted').style({
+              'border-width': 4,
+              'border-color': '#ff6b6b',
+              'background-color': '#ffe066',
+              'z-index': 999
+            }).update();
+            
+            // Add debug functionality
+            const debugBtn = document.getElementById('debug-btn');
+            const debugInfo = document.getElementById('debug-info');
+            
+            if (debugBtn && debugInfo) {
+              debugBtn.addEventListener('click', () => {
+                if (debugInfo.style.display === 'none') {
+                  // Show debug info
+                  const totalNodes = cy.nodes().length;
+                  const totalEdges = cy.edges().length;
+                  const folderNodes = cy.nodes('[type="folder"]').length;
+                  const fileNodes = cy.nodes('[type="file"]').length;
+                  const functionNodes = cy.nodes('[type="function"]').length;
+                  const classNodes = cy.nodes('[type="class"]').length;
+                  
+                  let debugText = \`Graph Debug Info:\\n\`;
+                  debugText += \`• Total nodes in graph: \${totalNodes}\\n\`;
+                  debugText += \`• Total edges in graph: \${totalEdges}\\n\`;
+                  debugText += \`• Folder nodes: \${folderNodes}\\n\`;
+                  debugText += \`• File nodes: \${fileNodes}\\n\`;
+                  debugText += \`• Function nodes: \${functionNodes}\\n\`;
+                  debugText += \`• Class nodes: \${classNodes}\\n\`;
+                  debugText += \`• Search index size: \${searchIndex.length}\\n\`;
+                  debugText += \`• Project data folders: \${projectData.length}\\n\`;
+                  debugText += \`• Expanded folders: \${Object.keys(window.expanded || {}).filter(k => window.expanded[k]).length}\\n\`;
+                  
+                  // Show first few folder names
+                  const folderNames = cy.nodes('[type="folder"]').map(n => n.data('name')).slice(0, 10);
+                  debugText += \`• First 10 folders: \${folderNames.join(', ')}\\n\`;
+                  
+                  // Show project data structure
+                  debugText += \`• Project data sample: \${projectData.slice(0, 3).map(f => f.name).join(', ')}\\n\`;
+                  
+                  debugInfo.textContent = debugText;
+                  debugInfo.style.display = 'block';
+                  debugBtn.textContent = '🐛 Hide Debug';
+                } else {
+                  // Hide debug info
+                  debugInfo.style.display = 'none';
+                  debugBtn.textContent = '🐛 Debug';
+                }
+              });
+            }
+          }
+
+          function showCancelledState() {
+            const loadingElement = document.getElementById('graph-loading');
+            if (loadingElement) {
+              loadingElement.innerHTML = \`
+                <div style="text-align: center; padding: 40px;">
+                  <div style="font-size: 32px; margin-bottom: 16px;">⏹️</div>
+                  <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Loading Cancelled</div>
+                  <div style="font-size: 14px; color: var(--vscode-descriptionForeground);">Graph initialization was cancelled by user</div>
+                  <button onclick="location.reload()" style="margin-top: 16px; padding: 8px 16px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer;">Retry</button>
+                </div>
+              \`;
+            }
+          }
+
+          function showTimeoutState() {
+            const loadingElement = document.getElementById('graph-loading');
+            if (loadingElement) {
+              loadingElement.innerHTML = \`
+                <div style="text-align: center; padding: 40px;">
+                  <div style="font-size: 32px; margin-bottom: 16px;">⏰</div>
+                  <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Loading Timeout</div>
+                  <div style="font-size: 14px; color: var(--vscode-descriptionForeground); margin-bottom: 16px;">
+                    The dataset is too large to process in a reasonable time.<br>
+                    Try using a smaller dataset or contact support.
+                  </div>
+                  <button onclick="location.reload()" style="margin-top: 16px; padding: 8px 16px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer;">Retry</button>
+                </div>
+              \`;
             }
           }
 
@@ -507,13 +914,7 @@ export class FullCodeAnalysisWebview {
               collapseAllFolders(cy, window.expanded);
             });
 
-            // Code Lens Toggle
-            safeAddEventListener('toggle-code-lens-btn', 'click', function() {
-              console.log('Code lens toggle clicked');
-              vscode.postMessage({
-                command: 'toggleCodeLens'
-              });
-            });
+
 
             // Layout Selection (if exists)
             safeAddEventListener('layout-select', 'change', function() {
@@ -593,11 +994,21 @@ export class FullCodeAnalysisWebview {
           }
 
           function toggleFolder(cy, folderId, expanded, projectData) {
+            console.log('Toggle folder called:', folderId, 'currently expanded:', !!expanded[folderId]);
+            
+            // Ensure we have the required parameters
+            if (!cy || !folderId || !projectData) {
+              console.error('Missing required parameters for toggleFolder');
+              return;
+            }
+            
             if (expanded[folderId]) {
               // Collapse
+              console.log('Collapsing folder:', folderId);
               collapseFolder(cy, folderId, expanded);
             } else {
               // Expand
+              console.log('Expanding folder:', folderId);
               expandFolder(cy, folderId, expanded, projectData);
             }
           }
@@ -605,7 +1016,7 @@ export class FullCodeAnalysisWebview {
           function expandFolder(cy, folderId, expanded, projectData) {
             console.log('Expanding folder:', folderId);
             
-            const folderData = projectData.find(f => f.name === folderId);
+            const folderData = findNodeInProjectData(projectData, folderId);
             if (!folderData) {
               console.warn('Folder data not found for:', folderId);
               return;
@@ -616,16 +1027,132 @@ export class FullCodeAnalysisWebview {
               return;
             }
             
-            console.log('Adding', folderData.children.length, 'children to folder:', folderId);
-            folderData.children.forEach((child, i) => {
-              addNode(cy, folderId, child, folderId, 1, i);
+            // Only add files and folders (not functions or classes)
+            const filesToAdd = folderData.children.filter(child => 
+              child.type === 'file' || child.type === 'folder'
+            );
+            
+            console.log('Adding', filesToAdd.length, 'files/folders to folder:', folderId);
+            
+            let addedNodes = 0;
+            filesToAdd.forEach((child, i) => {
+              try {
+                addNode(cy, folderId, child, folderId, 1, i);
+                addedNodes++;
+              } catch (error) {
+                console.warn('Failed to add child node:', child.name, error);
+              }
             });
             
             expanded[folderId] = true;
-            console.log('Folder expanded successfully:', folderId);
+            console.log('Folder expanded successfully:', folderId, 'added', addedNodes, 'files/folders');
             
-            // Use a gentler layout that doesn't move everything
-            cy.layout({ name:'cose', fit:false, animate:true, randomize:false }).run();
+            // Use a gentler layout
+            setTimeout(() => {
+              cy.layout({ name:'cose', fit:false, animate:true, randomize:false, nodeRepulsion: 4000 }).run();
+            }, 100);
+          }
+
+          function toggleFile(cy, fileId, expanded, projectData) {
+            console.log('Toggle file called:', fileId, 'currently expanded:', !!expanded[fileId]);
+            
+            if (expanded[fileId]) {
+              // Collapse
+              console.log('Collapsing file:', fileId);
+              collapseFile(cy, fileId, expanded);
+            } else {
+              // Expand
+              console.log('Expanding file:', fileId);
+              expandFile(cy, fileId, expanded, projectData);
+            }
+          }
+
+          function expandFile(cy, fileId, expanded, projectData) {
+            console.log('Expanding file:', fileId);
+            
+            const fileData = findNodeInProjectData(projectData, fileId);
+            if (!fileData) {
+              console.warn('File data not found for:', fileId);
+              return;
+            }
+            
+            if (!fileData.children || fileData.children.length === 0) {
+              console.log('No children found for file:', fileId);
+              return;
+            }
+            
+            // Only add classes and functions (not files or folders)
+            const codeElementsToAdd = fileData.children.filter(child => 
+              child.type === 'class' || child.type === 'function'
+            );
+            
+            console.log('Adding', codeElementsToAdd.length, 'classes/functions to file:', fileId);
+            
+            let addedNodes = 0;
+            codeElementsToAdd.forEach((child, i) => {
+              try {
+                addNode(cy, fileId, child, fileId, 1, i);
+                addedNodes++;
+              } catch (error) {
+                console.warn('Failed to add child node:', child.name, error);
+              }
+            });
+            
+            expanded[fileId] = true;
+            console.log('File expanded successfully:', fileId, 'added', addedNodes, 'classes/functions');
+            
+            // Use a gentler layout
+            setTimeout(() => {
+              cy.layout({ name:'cose', fit:false, animate:true, randomize:false, nodeRepulsion: 4000 }).run();
+            }, 100);
+          }
+
+          function collapseFile(cy, fileId, expanded) {
+            console.log('Collapsing file:', fileId);
+            
+            // Remove all child nodes and edges for this file
+            const nodesToRemove = cy.nodes().filter(n => n.data('folder') === fileId);
+            const edgesToRemove = cy.edges().filter(e => e.data('folder') === fileId);
+            
+            console.log('Removing', nodesToRemove.length, 'nodes and', edgesToRemove.length, 'edges');
+            
+            cy.remove(nodesToRemove);
+            cy.remove(edgesToRemove);
+            
+            expanded[fileId] = false;
+            console.log('File collapsed successfully:', fileId);
+          }
+
+          // Helper function to find node data recursively
+          function findNodeInProjectData(projectData, nodeId) {
+            for (const folder of projectData) {
+              if (folder.name === nodeId) {
+                return folder;
+              }
+              
+              // Search recursively in children
+              const found = findNodeRecursively(folder.children || [], nodeId);
+              if (found) {
+                return found;
+              }
+            }
+            return null;
+          }
+
+          function findNodeRecursively(children, nodeId) {
+            for (const child of children) {
+              if (child.name === nodeId) {
+                return child;
+              }
+              
+              if (child.children) {
+                const found = findNodeRecursively(child.children, nodeId);
+                if (found) {
+                  return found;
+                }
+              }
+            }
+            return null;
           }
 
           function collapseFolder(cy, folderId, expanded) {
@@ -643,6 +1170,26 @@ export class FullCodeAnalysisWebview {
             
             expanded[folderId] = false;
             console.log('Folder collapsed successfully:', folderId);
+            
+            // Update search results with success message
+            const searchResults = document.getElementById('search-results');
+            if (searchResults) {
+              searchResults.innerHTML = \`<span style="color: var(--vscode-descriptionForeground);">
+                🔄 Collapsed folder "\${folderId}" - removed \${nodesToRemove.length} items.
+                <br>Total nodes in graph: \${cy.nodes().length}
+              </span>\`;
+            }
+            
+            // Update debug info if visible
+            const debugInfo = document.getElementById('debug-info');
+            if (debugInfo && debugInfo.style.display !== 'none') {
+              // Trigger debug update
+              const debugBtn = document.getElementById('debug-btn');
+              if (debugBtn) {
+                debugBtn.click();
+                setTimeout(() => debugBtn.click(), 100); // Refresh debug info
+              }
+            }
           }
 
           function expandAllFolders(cy, expanded, projectData) {
@@ -794,58 +1341,567 @@ export class FullCodeAnalysisWebview {
   }
 
   /**
+   * Calculate comprehensive tech stack statistics from code_graph_json
+   */
+  private calculateTechStackStats(analysisData: any): {
+    totalFiles: number;
+    totalFolders: number;
+    totalClasses: number;
+    totalFunctions: number;
+    totalLanguages: number;
+    packageManager: string;
+  } {
+    const stats = {
+      totalFiles: 0,
+      totalFolders: 0,
+      totalClasses: 0,
+      totalFunctions: 0,
+      totalLanguages: 0,
+      packageManager: 'Unknown'
+    };
+
+    try {
+      // Count nodes from code_graph_json if available
+      if (analysisData.code_graph_json && Array.isArray(analysisData.code_graph_json)) {
+        this.countNodesRecursively(analysisData.code_graph_json, stats);
+      }
+
+      // Fallback to tech_stack data if code_graph_json doesn't provide counts
+      if (stats.totalFiles === 0 && analysisData.tech_stack?.languages) {
+        stats.totalFiles = Object.values(analysisData.tech_stack.languages).reduce(
+          (sum: number, count: any) => sum + (typeof count === "number" ? count : 0), 0
+        );
+      }
+
+      // Calculate total languages from file extensions in code_graph_json
+      const languageExtensions = new Set<string>();
+      if (analysisData.code_graph_json && Array.isArray(analysisData.code_graph_json)) {
+        this.extractLanguagesFromCodeGraph(analysisData.code_graph_json, languageExtensions);
+      }
+      stats.totalLanguages = languageExtensions.size;
+
+    } catch (error) {
+      this.errorHandler.logError(
+        "Error calculating tech stack statistics",
+        error,
+        "FullCodeAnalysisWebview"
+      );
+    }
+
+    return stats;
+  }
+
+  /**
+   * Calculate language statistics from code graph
+   */
+  private calculateLanguageStats(analysisData: any): { [key: string]: number } {
+    const languageCounts: { [key: string]: number } = {};
+    
+    if (analysisData.code_graph_json && Array.isArray(analysisData.code_graph_json)) {
+      this.countLanguagesFromCodeGraph(analysisData.code_graph_json, languageCounts);
+    }
+    
+    return languageCounts;
+  }
+
+  /**
+   * Count languages from code graph by analyzing file extensions
+   */
+  private countLanguagesFromCodeGraph(nodes: any[], languageCounts: { [key: string]: number }): void {
+    if (!Array.isArray(nodes)) {
+      return;
+    }
+
+    try {
+      nodes.forEach((node: any) => {
+        if (!node || typeof node !== 'object') {
+          return;
+        }
+
+        // If it's a file, extract language from extension
+        if (node.type === 'file' && node.name) {
+          const extension = node.name.split('.').pop()?.toLowerCase();
+          if (extension) {
+            // Map extensions to language names
+            const languageMap: { [key: string]: string } = {
+              'py': 'Python',
+              'js': 'JavaScript',
+              'ts': 'TypeScript',
+              'java': 'Java',
+              'cpp': 'C++',
+              'c': 'C',
+              'cs': 'C#',
+              'php': 'PHP',
+              'rb': 'Ruby',
+              'go': 'Go',
+              'rs': 'Rust',
+              'swift': 'Swift',
+              'kt': 'Kotlin',
+              'scala': 'Scala',
+              'html': 'HTML',
+              'css': 'CSS',
+              'scss': 'SCSS',
+              'sass': 'Sass',
+              'less': 'Less',
+              'json': 'JSON',
+              'xml': 'XML',
+              'yaml': 'YAML',
+              'yml': 'YAML',
+              'md': 'Markdown',
+              'sql': 'SQL',
+              'sh': 'Shell',
+              'bash': 'Bash',
+              'zsh': 'Zsh',
+              'ps1': 'PowerShell',
+              'r': 'R',
+              'matlab': 'MATLAB',
+              'm': 'MATLAB'
+            };
+            
+            const language = languageMap[extension] || extension.toUpperCase();
+            languageCounts[language] = (languageCounts[language] || 0) + 1;
+          }
+        }
+
+        // Recursively process children
+        if (node.children && Array.isArray(node.children)) {
+          this.countLanguagesFromCodeGraph(node.children, languageCounts);
+        }
+      });
+    } catch (error) {
+      this.errorHandler.logError(
+        "Error counting languages from code graph",
+        error,
+        "FullCodeAnalysisWebview"
+      );
+    }
+  }
+
+  /**
+   * Extract languages from code graph by analyzing file extensions
+   */
+  private extractLanguagesFromCodeGraph(nodes: any[], languageExtensions: Set<string>): void {
+    if (!Array.isArray(nodes)) {
+      return;
+    }
+
+    try {
+      nodes.forEach((node: any) => {
+        if (!node || typeof node !== 'object') {
+          return;
+        }
+
+        // If it's a file, extract language from extension
+        if (node.type === 'file' && node.name) {
+          const extension = node.name.split('.').pop()?.toLowerCase();
+          if (extension) {
+            // Map extensions to language names
+            const languageMap: { [key: string]: string } = {
+              'py': 'Python',
+              'js': 'JavaScript',
+              'ts': 'TypeScript',
+              'java': 'Java',
+              'cpp': 'C++',
+              'c': 'C',
+              'cs': 'C#',
+              'php': 'PHP',
+              'rb': 'Ruby',
+              'go': 'Go',
+              'rs': 'Rust',
+              'swift': 'Swift',
+              'kt': 'Kotlin',
+              'scala': 'Scala',
+              'html': 'HTML',
+              'css': 'CSS',
+              'scss': 'SCSS',
+              'sass': 'Sass',
+              'less': 'Less',
+              'json': 'JSON',
+              'xml': 'XML',
+              'yaml': 'YAML',
+              'yml': 'YAML',
+              'md': 'Markdown',
+              'sql': 'SQL',
+              'sh': 'Shell',
+              'bash': 'Bash',
+              'zsh': 'Zsh',
+              'ps1': 'PowerShell',
+              'r': 'R',
+              'matlab': 'MATLAB',
+              'm': 'MATLAB'
+            };
+            
+            const language = languageMap[extension] || extension.toUpperCase();
+            languageExtensions.add(language);
+          }
+        }
+
+        // Recursively process children
+        if (node.children && Array.isArray(node.children)) {
+          this.extractLanguagesFromCodeGraph(node.children, languageExtensions);
+        }
+      });
+    } catch (error) {
+      this.errorHandler.logError(
+        "Error extracting languages from code graph",
+        error,
+        "FullCodeAnalysisWebview"
+      );
+    }
+  }
+
+  /**
+   * Recursively count nodes in the code graph structure
+   */
+  private countNodesRecursively(nodes: any[], stats: {
+    totalFiles: number;
+    totalFolders: number;
+    totalClasses: number;
+    totalFunctions: number;
+    totalLanguages: number;
+    packageManager: string;
+  }): void {
+    if (!Array.isArray(nodes)) {
+      return;
+    }
+
+    try {
+      nodes.forEach((node: any) => {
+        if (!node || typeof node !== 'object') {
+          return;
+        }
+
+        // Count based on node type
+        switch (node.type) {
+          case 'file':
+            stats.totalFiles++;
+            break;
+          case 'folder':
+            stats.totalFolders++;
+            break;
+          case 'class':
+            stats.totalClasses++;
+            break;
+          case 'function':
+            stats.totalFunctions++;
+            break;
+        }
+
+        // Recursively process children
+        if (node.children && Array.isArray(node.children)) {
+          this.countNodesRecursively(node.children, stats);
+        }
+      });
+    } catch (error) {
+      this.errorHandler.logError(
+        "Error in recursive node counting",
+        error,
+        "FullCodeAnalysisWebview"
+      );
+    }
+  }
+
+  /**
+   * Detect package manager with priority-based detection
+   */
+  private detectPackageManager(analysisData: any): string {
+    const packageManagerPriority = [
+      { file: 'poetry.lock', manager: 'Poetry' },
+      { file: 'Pipfile', manager: 'Pipenv' },
+      { file: 'requirements.txt', manager: 'pip' },
+      { file: 'yarn.lock', manager: 'Yarn' },
+      { file: 'package.json', manager: 'npm' }
+    ];
+
+    try {
+      // Check if package manager is already detected in tech_stack
+      if (analysisData.tech_stack?.package_manager && typeof analysisData.tech_stack.package_manager === 'string') {
+        return analysisData.tech_stack.package_manager;
+      }
+      
+      // Also check for package_managers array (legacy format)
+      if (analysisData.tech_stack?.package_managers && Array.isArray(analysisData.tech_stack.package_managers)) {
+        if (analysisData.tech_stack.package_managers.length > 0) {
+          return analysisData.tech_stack.package_managers[0];
+        }
+      }
+
+      // Search for package manager files in project structure
+      if (analysisData.code_graph_json) {
+        for (const pm of packageManagerPriority) {
+          if (this.findFileInProject(analysisData.code_graph_json, pm.file)) {
+            return pm.manager;
+          }
+        }
+      }
+
+      return 'Unknown';
+    } catch (error) {
+      this.errorHandler.logError(
+        "Error detecting package manager",
+        error,
+        "FullCodeAnalysisWebview"
+      );
+      return 'Unknown';
+    }
+  }
+
+  /**
+   * Search for a specific file in the project structure
+   */
+  private findFileInProject(nodes: any[], fileName: string): boolean {
+    if (!Array.isArray(nodes)) {
+      return false;
+    }
+
+    try {
+      for (const node of nodes) {
+        if (!node || typeof node !== 'object') {
+          continue;
+        }
+
+        // Check if current node matches the file name
+        if (node.type === 'file' && node.name === fileName) {
+          return true;
+        }
+
+        // Recursively search in children
+        if (node.children && Array.isArray(node.children)) {
+          if (this.findFileInProject(node.children, fileName)) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    } catch (error) {
+      this.errorHandler.logError(
+        "Error searching for file in project",
+        error,
+        "FullCodeAnalysisWebview"
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Filter frameworks to show only major Python frameworks
+   */
+  private filterMajorFrameworks(frameworks: any): [string, any][] {
+    const majorPythonFrameworks = [
+      'django', 'flask', 'fastapi', 'tornado', 'pyramid', 'bottle',
+      'cherrypy', 'web2py', 'falcon', 'sanic', 'quart', 'starlette'
+    ];
+
+    try {
+      if (!frameworks) {
+        return [];
+      }
+
+      const filteredFrameworks: [string, any][] = [];
+      
+      // Handle array format
+      if (Array.isArray(frameworks)) {
+        frameworks.forEach((framework) => {
+          if (typeof framework === 'string') {
+            if (majorPythonFrameworks.includes(framework.toLowerCase())) {
+              filteredFrameworks.push([framework, 'detected']);
+            }
+          } else if (typeof framework === 'object' && framework.name) {
+            if (majorPythonFrameworks.includes(framework.name.toLowerCase())) {
+              filteredFrameworks.push([framework.name, framework.version || 'detected']);
+            }
+          }
+        });
+      }
+      // Handle object format
+      else if (typeof frameworks === 'object') {
+        Object.entries(frameworks).forEach(([name, version]) => {
+          if (majorPythonFrameworks.includes(name.toLowerCase())) {
+            filteredFrameworks.push([name, version]);
+          }
+        });
+      }
+
+      return filteredFrameworks;
+    } catch (error) {
+      this.errorHandler.logError(
+        "Error filtering major frameworks",
+        error,
+        "FullCodeAnalysisWebview"
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Detect DevOps tools in the project
+   */
+  private detectDevOpsTools(analysisData: any): {
+    docker: boolean;
+    kubernetes: boolean;
+    other: string[];
+  } {
+    const devOpsTools = {
+      docker: false,
+      kubernetes: false,
+      other: [] as string[]
+    };
+
+    try {
+      // Check for Docker files
+      if (analysisData.code_graph_json) {
+        devOpsTools.docker = this.findFileInProject(analysisData.code_graph_json, 'Dockerfile') ||
+                            this.findFileInProject(analysisData.code_graph_json, 'docker-compose.yml') ||
+                            this.findFileInProject(analysisData.code_graph_json, 'docker-compose.yaml');
+
+        // Check for Kubernetes files
+        devOpsTools.kubernetes = this.findFileInProject(analysisData.code_graph_json, 'deployment.yaml') ||
+                                 this.findFileInProject(analysisData.code_graph_json, 'deployment.yml') ||
+                                 this.findFileInProject(analysisData.code_graph_json, 'k8s.yaml') ||
+                                 this.findFileInProject(analysisData.code_graph_json, 'k8s.yml');
+      }
+
+      // Check for other DevOps tools in tech_stack
+      const devOpsCategories = ['build_tools', 'dev_tools', 'config_files'];
+      const devOpsKeywords = ['jenkins', 'gitlab-ci', 'github-actions', 'circleci', 'travis', 'ansible', 'terraform', 'vagrant', 'helm'];
+
+      devOpsCategories.forEach(category => {
+        if (analysisData.tech_stack?.[category] && Array.isArray(analysisData.tech_stack[category])) {
+          analysisData.tech_stack[category].forEach((tool: string) => {
+            const toolLower = tool.toLowerCase();
+            if (devOpsKeywords.some(keyword => toolLower.includes(keyword))) {
+              if (!devOpsTools.other.includes(tool)) {
+                devOpsTools.other.push(tool);
+              }
+            }
+          });
+        }
+      });
+
+    } catch (error) {
+      this.errorHandler.logError(
+        "Error detecting DevOps tools",
+        error,
+        "FullCodeAnalysisWebview"
+      );
+    }
+
+    return devOpsTools;
+  }
+
+  /**
+   * Process and sort libraries handling multiple data formats
+   */
+  private processAndSortLibraries(libraries: any): { name: string; version: string }[] {
+    try {
+      if (!libraries) {
+        return [];
+      }
+
+      let libraryList: { name: string; version: string }[] = [];
+
+      // Handle different data formats
+      if (Array.isArray(libraries)) {
+        libraries.forEach((lib: any) => {
+          if (typeof lib === 'string') {
+            libraryList.push({ name: lib, version: '' });
+          } else if (typeof lib === 'object' && lib !== null) {
+            const libName = lib.name || lib.library || lib.package || 'Unknown';
+            const libVersion = lib.version || '';
+            libraryList.push({ name: libName, version: libVersion });
+          }
+        });
+      } else if (typeof libraries === 'object') {
+        Object.entries(libraries).forEach(([library, version]) => {
+          libraryList.push({ 
+            name: library, 
+            version: typeof version === 'string' ? version : String(version || '') 
+          });
+        });
+      }
+
+      // Sort alphabetically by name
+      libraryList.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+
+      return libraryList;
+    } catch (error) {
+      this.errorHandler.logError(
+        "Error processing and sorting libraries",
+        error,
+        "FullCodeAnalysisWebview"
+      );
+      return [];
+    }
+  }
+
+  /**
    * Generate tech stack content
    */
   private generateTechStackContent(analysisData: any): string {
-    if (!analysisData?.tech_stack) {
-      return '<div class="empty-state"><div class="empty-icon">🛠️</div><h3>No Tech Stack Data</h3><p>No technology stack information available.</p></div>';
-    }
+    try {
+      if (!analysisData?.tech_stack) {
+        return '<div class="empty-state"><div class="empty-icon">🛠️</div><h3>No Tech Stack Data</h3><p>No technology stack information available.</p></div>';
+      }
 
-    let html = '<div class="tech-overview">';
+      let html = '<div class="tech-overview">';
 
-    // Project Summary
+      // Calculate comprehensive statistics using new helper methods
+      const stats = this.calculateTechStackStats(analysisData);
+      const packageManager = this.detectPackageManager(analysisData);
+
+      // Add package manager to stats
+      stats.packageManager = packageManager;
+
+      // Debug logging for data flow analysis
+      this.errorHandler.logError(
+        `Tech Stack Analysis - Languages calculated: ${stats.totalLanguages}, Files: ${stats.totalFiles}, Frameworks detected: ${this.filterMajorFrameworks(analysisData.tech_stack?.frameworks || []).length}`,
+        null,
+        "FullCodeAnalysisWebview"
+      );
+      
+
+
+    // Project Summary with enhanced statistics
     html += '<div class="tech-summary">';
     html += "<h3>📊 Project Overview</h3>";
     html += '<div class="summary-grid">';
+    html += `<div class="summary-item"><div class="summary-value">${stats.totalFolders}</div><div class="summary-label">Folders</div></div>`;
+    html += `<div class="summary-item"><div class="summary-value">${stats.totalFiles}</div><div class="summary-label">Files</div></div>`;
+    html += `<div class="summary-item"><div class="summary-value">${stats.totalClasses}</div><div class="summary-label">Classes</div></div>`;
+    html += `<div class="summary-item"><div class="summary-value">${stats.totalFunctions}</div><div class="summary-label">Functions</div></div>`;
 
-    // Calculate totals
-    const totalFiles = analysisData.tech_stack.languages
-      ? Object.values(analysisData.tech_stack.languages).reduce(
-          (sum: number, count: any) =>
-            sum + (typeof count === "number" ? count : 0),
-          0
-        )
-      : 0;
-    const totalLanguages = analysisData.tech_stack.languages
-      ? Object.keys(analysisData.tech_stack.languages).length
-      : 0;
-    const totalFrameworks = analysisData.tech_stack.frameworks
-      ? Object.keys(analysisData.tech_stack.frameworks).length
-      : 0;
-    const totalLibraries = analysisData.tech_stack.libraries
-      ? Object.keys(analysisData.tech_stack.libraries).length
-      : 0;
+    // Third row: DevOps tools (if present)
+    const devOpsTools = this.detectDevOpsTools(analysisData);
+    if (devOpsTools.docker || devOpsTools.kubernetes || devOpsTools.other.length > 0) {
+      if (devOpsTools.docker) {
+        html += `<div class="summary-item"><div class="summary-value">✓</div><div class="summary-label">Docker</div></div>`;
+      }
+      if (devOpsTools.kubernetes) {
+        html += `<div class="summary-item"><div class="summary-value">✓</div><div class="summary-label">Kubernetes</div></div>`;
+      }
+      if (devOpsTools.other.length > 0) {
+        html += `<div class="summary-item"><div class="summary-value">${devOpsTools.other.length}</div><div class="summary-label">DevOps Tools</div></div>`;
+      }
+    }
 
-    html += `<div class="summary-item"><div class="summary-value">${totalFiles}</div><div class="summary-label">Total Files</div></div>`;
-    html += `<div class="summary-item"><div class="summary-value">${totalLanguages}</div><div class="summary-label">Languages</div></div>`;
-    html += `<div class="summary-item"><div class="summary-value">${totalFrameworks}</div><div class="summary-label">Frameworks</div></div>`;
-    html += `<div class="summary-item"><div class="summary-value">${totalLibraries}</div><div class="summary-label">Libraries</div></div>`;
     html += "</div></div>";
 
     html += '<div class="tech-grid">';
 
-    // Languages with detailed breakdown
-    if (analysisData.tech_stack.languages) {
+    // Languages with detailed breakdown - calculate from code graph
+    const languageCounts = this.calculateLanguageStats(analysisData);
+    if (Object.keys(languageCounts).length > 0) {
       html +=
         '<div class="tech-section"><h4>🔤 Programming Languages</h4><div class="tech-items">';
-      const sortedLanguages = Object.entries(
-        analysisData.tech_stack.languages
-      ).sort(([, a], [, b]) => (b as number) - (a as number));
+      
+      const sortedLanguages = Object.entries(languageCounts)
+        .sort(([, a], [, b]) => b - a);
 
       sortedLanguages.forEach(([lang, count]) => {
         const percentage =
-          totalFiles > 0
-            ? (((count as number) / totalFiles) * 100).toFixed(1)
+          stats.totalFiles > 0
+            ? ((count / stats.totalFiles) * 100).toFixed(1)
             : "0";
         html += `<div class="tech-item">
           <div class="tech-info">
@@ -863,42 +1919,32 @@ export class FullCodeAnalysisWebview {
       html += "</div></div>";
     }
 
-    // Frameworks with versions
-    if (analysisData.tech_stack.frameworks) {
+    // Major Python Frameworks only (renamed from "Frameworks & Platforms")
+    const frameworks = this.filterMajorFrameworks(analysisData.tech_stack.frameworks);
+    if (frameworks.length > 0) {
       html +=
-        '<div class="tech-section"><h4>🚀 Frameworks & Platforms</h4><div class="tech-items">';
-      Object.entries(analysisData.tech_stack.frameworks).forEach(
-        ([framework, version]) => {
-          html += `<div class="tech-item">
+        '<div class="tech-section"><h4>🚀 Frameworks</h4><div class="tech-items">';
+      frameworks.forEach(([framework, version]) => {
+        html += `<div class="tech-item">
           <div class="tech-info">
             <span class="tech-name">${framework}</span>
             <span class="tech-version">v${version}</span>
           </div>
         </div>`;
-        }
-      );
-      html += "</div></div>";
-    }
-
-    // Libraries and Dependencies
-    if (analysisData.tech_stack.libraries) {
-      html +=
-        '<div class="tech-section"><h4>📚 Libraries & Dependencies</h4><div class="tech-items">';
-      Object.entries(analysisData.tech_stack.libraries).forEach(
-        ([library, version]) => {
-          html += `<div class="tech-item">
-          <div class="tech-info">
-            <span class="tech-name">${library}</span>
-            <span class="tech-version">${version}</span>
-          </div>
-        </div>`;
-        }
-      );
+      });
       html += "</div></div>";
     }
 
     // Package Managers
-    if (analysisData.tech_stack.package_managers) {
+    if (analysisData.tech_stack.package_manager) {
+      html +=
+        '<div class="tech-section"><h4>📦 Package Manager</h4><div class="tech-items">';
+      html += `<div class="tech-item">
+        <span class="tech-name">${analysisData.tech_stack.package_manager}</span>
+      </div>`;
+      html += "</div></div>";
+    } else if (analysisData.tech_stack.package_managers && Array.isArray(analysisData.tech_stack.package_managers)) {
+      // Legacy format support
       html +=
         '<div class="tech-section"><h4>📦 Package Managers</h4><div class="tech-items">';
       analysisData.tech_stack.package_managers.forEach((pm: string) => {
@@ -907,6 +1953,28 @@ export class FullCodeAnalysisWebview {
         </div>`;
       });
       html += "</div></div>";
+    }
+
+    // Libraries and Dependencies with enhanced grid layout
+    if (analysisData.tech_stack.libraries) {
+      const processedLibraries = this.processAndSortLibraries(analysisData.tech_stack.libraries);
+      
+      if (processedLibraries.length > 0) {
+        html +=
+          '<div class="tech-section"><h4>📚 Libraries & Dependencies</h4><div class="tech-libraries-grid">';
+        
+        // Generate grid items with responsive layout
+        processedLibraries.forEach((lib) => {
+          html += `<div class="tech-library-item">
+            <div class="tech-info">
+              <span class="tech-name">${lib.name}</span>
+              ${lib.version ? `<span class="tech-version">${lib.version}</span>` : ''}
+            </div>
+          </div>`;
+        });
+        
+        html += "</div></div>";
+      }
     }
 
     // Build Tools
@@ -971,6 +2039,15 @@ export class FullCodeAnalysisWebview {
 
     html += "</div></div>";
     return html;
+
+    } catch (error) {
+      this.errorHandler.logError(
+        "Error generating tech stack content",
+        error,
+        "FullCodeAnalysisWebview"
+      );
+      return '<div class="empty-state"><div class="empty-icon">⚠️</div><h3>Error Loading Tech Stack</h3><p>An error occurred while processing the tech stack data.</p></div>';
+    }
   }
 
   /**
@@ -989,21 +2066,272 @@ export class FullCodeAnalysisWebview {
   }
 
   /**
-   * Prepare graph data from analysis data
+   * Prepare graph data from analysis data with performance optimization
    */
   private prepareGraphData(analysisData: any): any {
     // Use code_graph_json directly as projectData (no transformation needed)
     const projectData = analysisData?.code_graph_json || [];
+    
+    // Calculate data size for optimization decisions
+    const dataSize = this.calculateDataSize(analysisData);
+    const isLargeDataset = dataSize > 1024 * 1024; // 1MB threshold
+    
+    console.log(`Data size: ${(dataSize / 1024 / 1024).toFixed(2)}MB, Large dataset: ${isLargeDataset}`);
+    
+    // Apply optimizations for large datasets
+    let optimizedProjectData = projectData;
+    if (isLargeDataset) {
+      optimizedProjectData = this.optimizeForLargeDataset(projectData, dataSize);
+    }
 
     return {
       elements: [],
       style: [],
       layout: { name: "preset" },
       state: {
-        projectData: projectData,
+        projectData: optimizedProjectData,
         expanded: {},
+        isLargeDataset: isLargeDataset,
+        originalDataSize: dataSize,
+        optimizationApplied: isLargeDataset,
       },
     };
+  }
+
+  /**
+   * Calculate the size of the analysis data in bytes
+   */
+  private calculateDataSize(data: any): number {
+    try {
+      return JSON.stringify(data).length;
+    } catch (error) {
+      console.warn('Failed to calculate data size:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Optimize project data for large datasets
+   */
+  private optimizeForLargeDataset(projectData: any[], dataSize: number): any[] {
+    console.log('Applying large dataset optimizations...');
+    
+    // For extremely large datasets (>50MB), show only top-level folders initially
+    if (dataSize > 50 * 1024 * 1024) {
+      console.log('Extremely large dataset detected, showing simplified structure');
+      return this.createSimplifiedStructure(projectData);
+    }
+    
+    // For very large datasets (>20MB), be more aggressive with limiting
+    if (dataSize > 20 * 1024 * 1024) {
+      console.log('Very large dataset detected, applying aggressive limits');
+      return this.limitDatasetComplexity(projectData);
+    }
+    
+    // For moderately large datasets (1-20MB), apply gentle optimizations
+    console.log('Moderately large dataset detected, applying gentle optimizations');
+    return this.applyGentleOptimizations(projectData);
+  }
+
+  /**
+   * Apply gentle optimizations for moderately large datasets
+   */
+  private applyGentleOptimizations(projectData: any[]): any[] {
+    // For datasets like our 6MB test file, we want to show most content but optimize performance
+    // Only limit extremely deep nesting (>8 levels) and huge child counts (>200)
+    const maxDepth = 8;
+    const maxChildrenPerNode = 200;
+    
+    const optimizeNode = (node: any, currentDepth: number): any => {
+      if (currentDepth >= maxDepth) {
+        const childCount = node.children ? this.countTotalNodes(node.children) : 0;
+        if (childCount > 10) { // Only truncate if there are many children
+          return {
+            ...node,
+            children: [{
+              name: `... ${childCount} more items (deep nesting)`,
+              type: 'summary',
+              _truncated: true,
+              _reason: 'deep'
+            }]
+          };
+        }
+      }
+      
+      if (node.children && node.children.length > maxChildrenPerNode) {
+        const visibleChildren = node.children.slice(0, maxChildrenPerNode);
+        const hiddenCount = node.children.length - maxChildrenPerNode;
+        
+        return {
+          ...node,
+          children: [
+            ...visibleChildren.map((child: any) => optimizeNode(child, currentDepth + 1)),
+            {
+              name: `... ${hiddenCount} more items`,
+              type: 'summary',
+              _truncated: true,
+              _hiddenCount: hiddenCount
+            }
+          ]
+        };
+      }
+      
+      return {
+        ...node,
+        children: node.children ? node.children.map((child: any) => optimizeNode(child, currentDepth + 1)) : []
+      };
+    };
+    
+    return projectData.map(folder => optimizeNode(folder, 0));
+  }
+
+  /**
+   * Create a simplified structure for very large datasets
+   */
+  private createSimplifiedStructure(projectData: any[]): any[] {
+    return projectData.map(folder => ({
+      name: folder.name,
+      type: folder.type,
+      children: folder.children ? this.summarizeChildren(folder.children) : [],
+      _originalChildCount: folder.children ? this.countTotalNodes(folder.children) : 0,
+      _simplified: true
+    }));
+  }
+
+  /**
+   * Summarize children for simplified view
+   */
+  private summarizeChildren(children: any[]): any[] {
+    const summary = {
+      files: 0,
+      folders: 0,
+      functions: 0,
+      classes: 0
+    };
+    
+    const countNodes = (nodes: any[]) => {
+      nodes.forEach(node => {
+        switch (node.type) {
+          case 'file': summary.files++; break;
+          case 'folder': summary.folders++; break;
+          case 'function': summary.functions++; break;
+          case 'class': summary.classes++; break;
+        }
+        if (node.children) {
+          countNodes(node.children);
+        }
+      });
+    };
+    
+    countNodes(children);
+    
+    // Return summary nodes
+    const summaryNodes = [];
+    if (summary.folders > 0) {
+      summaryNodes.push({
+        name: `📁 ${summary.folders} folders`,
+        type: 'summary',
+        _count: summary.folders,
+        _type: 'folders'
+      });
+    }
+    if (summary.files > 0) {
+      summaryNodes.push({
+        name: `📄 ${summary.files} files`,
+        type: 'summary',
+        _count: summary.files,
+        _type: 'files'
+      });
+    }
+    if (summary.functions > 0) {
+      summaryNodes.push({
+        name: `⚙️ ${summary.functions} functions`,
+        type: 'summary',
+        _count: summary.functions,
+        _type: 'functions'
+      });
+    }
+    if (summary.classes > 0) {
+      summaryNodes.push({
+        name: `🏛️ ${summary.classes} classes`,
+        type: 'summary',
+        _count: summary.classes,
+        _type: 'classes'
+      });
+    }
+    
+    return summaryNodes;
+  }
+
+  /**
+   * Limit dataset complexity for moderately large datasets
+   */
+  private limitDatasetComplexity(projectData: any[]): any[] {
+    // For large datasets, we'll be less aggressive - only limit very deep nesting and huge child counts
+    const maxDepth = 5; // Increased from 3 to show more structure
+    const maxChildrenPerNode = 100; // Increased from 50 to show more items
+    
+    const limitNode = (node: any, currentDepth: number): any => {
+      // Only truncate at very deep levels
+      if (currentDepth >= maxDepth) {
+        const childCount = node.children ? this.countTotalNodes(node.children) : 0;
+        if (childCount > 0) {
+          return {
+            ...node,
+            children: [{
+              name: `... ${childCount} more items (depth limit reached)`,
+              type: 'summary',
+              _truncated: true,
+              _reason: 'depth'
+            }]
+          };
+        }
+      }
+      
+      // Only truncate if there are way too many children
+      if (node.children && node.children.length > maxChildrenPerNode) {
+        const visibleChildren = node.children.slice(0, maxChildrenPerNode);
+        const hiddenCount = node.children.length - maxChildrenPerNode;
+        
+        return {
+          ...node,
+          children: [
+            ...visibleChildren.map((child: any) => limitNode(child, currentDepth + 1)),
+            {
+              name: `... ${hiddenCount} more items (showing first ${maxChildrenPerNode})`,
+              type: 'summary',
+              _truncated: true,
+              _hiddenCount: hiddenCount,
+              _reason: 'count'
+            }
+          ]
+        };
+      }
+      
+      return {
+        ...node,
+        children: node.children ? node.children.map((child: any) => limitNode(child, currentDepth + 1)) : []
+      };
+    };
+    
+    return projectData.map(folder => limitNode(folder, 0));
+  }
+
+  /**
+   * Count total nodes in a tree structure
+   */
+  private countTotalNodes(nodes: any[]): number {
+    let count = 0;
+    const countRecursive = (nodeList: any[]) => {
+      nodeList.forEach(node => {
+        count++;
+        if (node.children) {
+          countRecursive(node.children);
+        }
+      });
+    };
+    countRecursive(nodes);
+    return count;
   }
 
   /**
@@ -1045,6 +2373,69 @@ export class FullCodeAnalysisWebview {
         cursor: pointer;
         font-size: 14px;
         font-family: inherit;
+      }
+
+      .nav-link:hover {
+        background: var(--vscode-tab-hoverBackground);
+        color: var(--vscode-tab-activeForeground);
+      }
+
+      .nav-link.active {
+        background: var(--vscode-tab-activeBackground);
+        color: var(--vscode-tab-activeForeground);
+        border-bottom-color: var(--vscode-tab-activeBorder);
+      }
+
+      /* Search container styles */
+      #search-container {
+        background: var(--vscode-editor-background);
+        border-bottom: 1px solid var(--vscode-panel-border);
+      }
+
+      #search-input {
+        background: var(--vscode-input-background);
+        color: var(--vscode-input-foreground);
+        border: 1px solid var(--vscode-input-border);
+      }
+
+      #search-input:focus {
+        outline: none;
+        border-color: var(--vscode-focusBorder);
+      }
+
+      /* Progress bar styles */
+      #progress-container {
+        background: var(--vscode-editor-background);
+      }
+
+      #progress-bar {
+        background: var(--vscode-progressBar-foreground);
+        transition: width 0.3s ease;
+      }
+
+      /* Performance info styles */
+      #performance-info {
+        background: var(--vscode-editor-background);
+        padding: 12px;
+        border-radius: 4px;
+        border: 1px solid var(--vscode-panel-border);
+      }
+
+      /* Loading animation */
+      #loading-icon {
+        animation: spin 2s linear infinite;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      /* Highlighted search results */
+      .highlighted {
+        border-width: 4px !important;
+        border-color: #ff6b6b !important;
+        background-color: #ffe066 !important;
       }
 
       .nav-link:hover {
@@ -1111,8 +2502,34 @@ export class FullCodeAnalysisWebview {
 
       .summary-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 12px;
+        max-width: 100%;
+        margin-bottom: 20px;
+      }
+
+      @media (max-width: 1200px) {
+        .summary-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      @media (max-width: 800px) {
+        .summary-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (max-width: 600px) {
+        .summary-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (max-width: 400px) {
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
       }
 
       .summary-item {
@@ -1227,6 +2644,92 @@ export class FullCodeAnalysisWebview {
         background: linear-gradient(90deg, var(--vscode-progressBar-background), var(--vscode-focusBorder));
         border-radius: 2px;
         transition: width 0.3s ease;
+      }
+
+      /* Enhanced responsive libraries grid layout */
+      .tech-libraries-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        max-width: 100%;
+      }
+
+      /* Tablet: 3 columns */
+      @media (max-width: 800px) {
+        .tech-libraries-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      /* Mobile: 2 columns */
+      @media (max-width: 600px) {
+        .tech-libraries-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      /* Small Mobile: 1 column */
+      @media (max-width: 400px) {
+        .tech-libraries-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .tech-library-item {
+        padding: 10px 14px;
+        background: var(--vscode-editor-background);
+        border: 1px solid var(--vscode-panel-border);
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        min-height: 50px;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .tech-library-item:hover {
+        background: var(--vscode-list-hoverBackground);
+        border-color: var(--vscode-focusBorder);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .tech-library-item:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .tech-library-item .tech-info {
+        margin-bottom: 0;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+      }
+
+      .tech-library-item .tech-name {
+        font-size: 13px;
+        font-weight: 600;
+        display: block;
+        color: var(--vscode-editor-foreground);
+        line-height: 1.3;
+      }
+
+      .tech-library-item .tech-version {
+        font-size: 11px;
+        display: block;
+        color: var(--vscode-badge-foreground);
+        background: var(--vscode-badge-background);
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-weight: 500;
+        align-self: center;
+        text-align: center;
+        margin-top: 4px;
+        width: fit-content;
       }
 
       .empty-state {

@@ -1,16 +1,16 @@
-import * as vscode from 'vscode';
-import { ErrorHandler } from './error-handler';
-import { DuplicateCallGuard } from './duplicate-call-guard';
-import { AnalysisStateManager } from './analysis-state-manager';
-import { FullCodeAnalysisHandler } from '../commands/full-code-analysis-handler';
-import { CurrentFileAnalysisHandler } from '../commands/current-file-analysis-handler';
-import { GitAnalyticsHandler } from '../commands/git-analytics-handler';
-import { DatabaseSchemaHandler } from '../commands/database-schema-handler';
-import { JsonUtilitiesHandler } from '../commands/json-utilities-handler';
-import { CodeLensHandler } from '../commands/code-lens-handler';
-import { WebviewManager } from '../webviews/webview-manager';
-import { PythonService } from '../services/python-service';
-import { HTMLViewService } from '../services/html-view-service';
+import * as vscode from "vscode";
+import { ErrorHandler } from "./error-handler";
+import { DuplicateCallGuard } from "./duplicate-call-guard";
+import { AnalysisStateManager } from "./analysis-state-manager";
+import { FullCodeAnalysisHandler } from "../commands/full-code-analysis-handler";
+import { CurrentFileAnalysisHandler } from "../commands/current-file-analysis-handler";
+import { GitAnalyticsHandler } from "../commands/git-analytics-handler";
+import { DatabaseSchemaHandler } from "../commands/database-schema-handler";
+import { JsonUtilitiesHandler } from "../commands/json-utilities-handler";
+import { CodeLensHandler } from "../commands/code-lens-handler";
+import { WebviewManager } from "../webviews/webview-manager";
+import { PythonService } from "../services/python-service";
+import { HTMLViewService } from "../services/html-view-service";
 
 /**
  * Consolidated command manager with dedicated handlers and Python integration
@@ -90,10 +90,22 @@ export class CommandManager {
     webviewManager?: WebviewManager
   ): CommandManager {
     if (!CommandManager.instance) {
-      if (!context || !errorHandler || !duplicateCallGuard || !stateManager || !webviewManager) {
-        throw new Error('All parameters required for first initialization');
+      if (
+        !context ||
+        !errorHandler ||
+        !duplicateCallGuard ||
+        !stateManager ||
+        !webviewManager
+      ) {
+        throw new Error("All parameters required for first initialization");
       }
-      CommandManager.instance = new CommandManager(context, errorHandler, duplicateCallGuard, stateManager, webviewManager);
+      CommandManager.instance = new CommandManager(
+        context,
+        errorHandler,
+        duplicateCallGuard,
+        stateManager,
+        webviewManager
+      );
     }
     return CommandManager.instance;
   }
@@ -103,117 +115,153 @@ export class CommandManager {
    */
   public registerAllCommands(): void {
     try {
-      this.errorHandler.logError('Registering all commands', null, 'registerAllCommands');
+      this.errorHandler.logError(
+        "Registering all commands",
+        null,
+        "registerAllCommands"
+      );
 
       // Register full code analysis command
       const fullCodeAnalysisCommand = vscode.commands.registerCommand(
-        'doracodelens.analyzeFullCode',
+        "doracodelens.analyzeFullCode",
         () => this.handleFullCodeAnalysis()
       );
 
       // Register current file analysis command
       const currentFileAnalysisCommand = vscode.commands.registerCommand(
-        'doracodelens.analyzeCurrentFile',
+        "doracodelens.analyzeCurrentFile",
         () => this.handleCurrentFileAnalysis()
       );
 
       // Register git analytics command
       const gitAnalyticsCommand = vscode.commands.registerCommand(
-        'doracodelens.analyzeGitAnalytics',
+        "doracodelens.analyzeGitAnalytics",
         () => this.handleGitAnalytics()
       );
 
       // Register database schema analysis command
       const databaseSchemaCommand = vscode.commands.registerCommand(
-        'doracodelens.analyzeDatabaseSchema',
+        "doracodelens.analyzeDatabaseSchema",
         () => this.handleDatabaseSchemaAnalysis()
       );
 
       // Register HTML view command
       const renderHTMLCommand = vscode.commands.registerCommand(
-        'doracodelens.renderHTMLFile',
+        "doracodelens.renderHTMLFile",
         (uri?: vscode.Uri) => this.handleRenderHTMLFile(uri)
       );
 
       // Register settings command
       const openSettingsCommand = vscode.commands.registerCommand(
-        'doracodelens.openSettings',
+        "doracodelens.openSettings",
         () => this.handleOpenSettings()
+      );
+
+      // Register Python setup commands
+      const setupPythonPathCommand = vscode.commands.registerCommand(
+        "doracodelens.setupPythonPath",
+        () => this.handleSetupPythonPath()
+      );
+
+      const detectPythonPathCommand = vscode.commands.registerCommand(
+        "doracodelens.detectPythonPath",
+        () => this.handleDetectPythonPath()
       );
 
       // Register debug commands
       const debugStateCommand = vscode.commands.registerCommand(
-        'doracodelens.debugState',
+        "doracodelens.debugState",
         () => this.handleDebugState()
       );
 
       const resetStateCommand = vscode.commands.registerCommand(
-        'doracodelens.resetState',
+        "doracodelens.resetState",
         () => this.handleResetState()
       );
 
       // Register JSON utilities commands
       const jsonFormatCommand = vscode.commands.registerCommand(
-        'doracodelens.jsonFormat',
+        "doracodelens.jsonFormat",
         () => this.handleJsonFormat()
       );
 
       const jsonTreeViewCommand = vscode.commands.registerCommand(
-        'doracodelens.jsonTreeView',
+        "doracodelens.jsonTreeView",
         () => this.handleJsonTreeView()
       );
 
       const jsonFixCommand = vscode.commands.registerCommand(
-        'doracodelens.jsonFix',
+        "doracodelens.jsonFix",
         () => this.handleJsonFix()
       );
 
       const jsonMinifyCommand = vscode.commands.registerCommand(
-        'doracodelens.jsonMinify',
+        "doracodelens.jsonMinify",
         () => this.handleJsonMinify()
       );
 
       // Register code lens commands
       const toggleCodeLensCommand = vscode.commands.registerCommand(
-        'doracodelens.toggleCodeLens',
+        "doracodelens.toggleCodeLens",
         () => this.handleToggleCodeLens()
       );
 
       const enableCodeLensCommand = vscode.commands.registerCommand(
-        'doracodelens.enableCodeLens',
+        "doracodelens.enableCodeLens",
         () => this.handleEnableCodeLens()
       );
 
       const disableCodeLensCommand = vscode.commands.registerCommand(
-        'doracodelens.disableCodeLens',
+        "doracodelens.disableCodeLens",
         () => this.handleDisableCodeLens()
       );
 
       // Register code lens detail commands
       const showFunctionDetailsCommand = vscode.commands.registerCommand(
-        'doracodelens.showFunctionDetails',
-        (func: any, uri: vscode.Uri) => this.handleShowFunctionDetails(func, uri)
+        "doracodelens.showFunctionDetails",
+        (func: any, uri: vscode.Uri) =>
+          this.handleShowFunctionDetails(func, uri)
       );
 
       const showClassDetailsCommand = vscode.commands.registerCommand(
-        'doracodelens.showClassDetails',
+        "doracodelens.showClassDetails",
         (cls: any, uri: vscode.Uri) => this.handleShowClassDetails(cls, uri)
       );
 
       const showMethodDetailsCommand = vscode.commands.registerCommand(
-        'doracodelens.showMethodDetails',
-        (method: any, cls: any, uri: vscode.Uri) => this.handleShowMethodDetails(method, cls, uri)
+        "doracodelens.showMethodDetails",
+        (method: any, cls: any, uri: vscode.Uri) =>
+          this.handleShowMethodDetails(method, cls, uri)
+      );
+
+      // Register enhanced code lens suggestion commands
+      const applySuggestionCommand = vscode.commands.registerCommand(
+        "doracodelens.applySuggestion",
+        (suggestion: any, func: any, uri: vscode.Uri) =>
+          this.handleApplySuggestion(suggestion, func, uri)
+      );
+
+      const showSuggestionDetailsCommand = vscode.commands.registerCommand(
+        "doracodelens.showSuggestionDetails",
+        (suggestion: any, func: any, uri: vscode.Uri) =>
+          this.handleShowSuggestionDetails(suggestion, func, uri)
+      );
+
+      // Register code lens state change command (internal)
+      const codeLensStateChangedCommand = vscode.commands.registerCommand(
+        "doracodelens.codeLensStateChanged",
+        (enabled: boolean) => this.handleCodeLensStateChanged(enabled)
       );
 
       // Register code lens data update command (internal)
       const updateCodeLensDataCommand = vscode.commands.registerCommand(
-        'doracodelens.updateCodeLensData',
+        "doracodelens.updateCodeLensData",
         (analysisData: any) => this.handleUpdateCodeLensData(analysisData)
       );
 
       // Register show message command (for testing)
       const showMessageCommand = vscode.commands.registerCommand(
-        'doracodelens.showMessage',
+        "doracodelens.showMessage",
         (message: string) => this.handleShowMessage(message)
       );
 
@@ -225,6 +273,8 @@ export class CommandManager {
         databaseSchemaCommand,
         renderHTMLCommand,
         openSettingsCommand,
+        setupPythonPathCommand,
+        detectPythonPathCommand,
         debugStateCommand,
         resetStateCommand,
         jsonFormatCommand,
@@ -237,6 +287,9 @@ export class CommandManager {
         showFunctionDetailsCommand,
         showClassDetailsCommand,
         showMethodDetailsCommand,
+        applySuggestionCommand,
+        showSuggestionDetailsCommand,
+        codeLensStateChangedCommand,
         updateCodeLensDataCommand,
         showMessageCommand
       );
@@ -244,11 +297,20 @@ export class CommandManager {
       // Add to context subscriptions
       this.context.subscriptions.push(...this.disposables);
 
-      this.errorHandler.logError('All commands registered successfully', null, 'registerAllCommands');
-
+      this.errorHandler.logError(
+        "All commands registered successfully",
+        null,
+        "registerAllCommands"
+      );
     } catch (error) {
-      this.errorHandler.logError('Failed to register commands', error, 'registerAllCommands');
-      this.errorHandler.showUserError('Failed to register extension commands. Please reload the window.');
+      this.errorHandler.logError(
+        "Failed to register commands",
+        error,
+        "registerAllCommands"
+      );
+      this.errorHandler.showUserError(
+        "Failed to register extension commands. Please reload the window."
+      );
     }
   }
 
@@ -260,7 +322,11 @@ export class CommandManager {
       // Execute analysis - the handler will display results via WebviewManager
       await this.fullCodeAnalysisHandler.execute();
     } catch (error) {
-      this.errorHandler.logError('Full code analysis command failed', error, 'handleFullCodeAnalysis');
+      this.errorHandler.logError(
+        "Full code analysis command failed",
+        error,
+        "handleFullCodeAnalysis"
+      );
       // Error handling is done in the handler
     }
   }
@@ -273,19 +339,25 @@ export class CommandManager {
       // Check if current file is Python
       const activeEditor = vscode.window.activeTextEditor;
       if (!activeEditor) {
-        vscode.window.showWarningMessage('No active file found.');
+        vscode.window.showWarningMessage("No active file found.");
         return;
       }
 
-      if (activeEditor.document.languageId !== 'python') {
-        vscode.window.showWarningMessage('Current file analysis is only available for Python files.');
+      if (activeEditor.document.languageId !== "python") {
+        vscode.window.showWarningMessage(
+          "Current file analysis is only available for Python files."
+        );
         return;
       }
 
       // Execute analysis - the handler will display results via WebviewManager
       await this.currentFileAnalysisHandler.execute();
     } catch (error) {
-      this.errorHandler.logError('Current file analysis command failed', error, 'handleCurrentFileAnalysis');
+      this.errorHandler.logError(
+        "Current file analysis command failed",
+        error,
+        "handleCurrentFileAnalysis"
+      );
       // Error handling is done in the handler
     }
   }
@@ -298,7 +370,11 @@ export class CommandManager {
       // Execute analysis - the handler will display results via WebviewManager
       await this.gitAnalyticsHandler.execute();
     } catch (error) {
-      this.errorHandler.logError('Git analytics command failed', error, 'handleGitAnalytics');
+      this.errorHandler.logError(
+        "Git analytics command failed",
+        error,
+        "handleGitAnalytics"
+      );
       // Error handling is done in the handler
     }
   }
@@ -311,14 +387,20 @@ export class CommandManager {
       // Check if we're in a Python project context
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
       if (!workspaceFolder) {
-        vscode.window.showWarningMessage('Database schema analysis requires an open workspace.');
+        vscode.window.showWarningMessage(
+          "Database schema analysis requires an open workspace."
+        );
         return;
       }
 
       // Execute analysis - the handler will display results via WebviewManager
       await this.databaseSchemaHandler.execute();
     } catch (error) {
-      this.errorHandler.logError('Database schema analysis command failed', error, 'handleDatabaseSchemaAnalysis');
+      this.errorHandler.logError(
+        "Database schema analysis command failed",
+        error,
+        "handleDatabaseSchemaAnalysis"
+      );
       // Error handling is done in the handler
     }
   }
@@ -330,7 +412,11 @@ export class CommandManager {
     try {
       await this.jsonUtilitiesHandler.handleFormatJson();
     } catch (error) {
-      this.errorHandler.logError('JSON format command failed', error, 'handleJsonFormat');
+      this.errorHandler.logError(
+        "JSON format command failed",
+        error,
+        "handleJsonFormat"
+      );
       // Error handling is done in the handler
     }
   }
@@ -342,7 +428,11 @@ export class CommandManager {
     try {
       await this.jsonUtilitiesHandler.handleJsonTreeView();
     } catch (error) {
-      this.errorHandler.logError('JSON tree view command failed', error, 'handleJsonTreeView');
+      this.errorHandler.logError(
+        "JSON tree view command failed",
+        error,
+        "handleJsonTreeView"
+      );
       // Error handling is done in the handler
     }
   }
@@ -354,7 +444,11 @@ export class CommandManager {
     try {
       await this.jsonUtilitiesHandler.handleFixJson();
     } catch (error) {
-      this.errorHandler.logError('JSON fix command failed', error, 'handleJsonFix');
+      this.errorHandler.logError(
+        "JSON fix command failed",
+        error,
+        "handleJsonFix"
+      );
       // Error handling is done in the handler
     }
   }
@@ -366,7 +460,11 @@ export class CommandManager {
     try {
       await this.jsonUtilitiesHandler.handleMinifyJson();
     } catch (error) {
-      this.errorHandler.logError('JSON minify command failed', error, 'handleJsonMinify');
+      this.errorHandler.logError(
+        "JSON minify command failed",
+        error,
+        "handleJsonMinify"
+      );
       // Error handling is done in the handler
     }
   }
@@ -379,18 +477,24 @@ export class CommandManager {
       // Check if current file is Python
       const activeEditor = vscode.window.activeTextEditor;
       if (!activeEditor) {
-        vscode.window.showWarningMessage('No active file found.');
+        vscode.window.showWarningMessage("No active file found.");
         return;
       }
 
-      if (activeEditor.document.languageId !== 'python') {
-        vscode.window.showWarningMessage('Code lens is only available for Python files.');
+      if (activeEditor.document.languageId !== "python") {
+        vscode.window.showWarningMessage(
+          "Code lens is only available for Python files."
+        );
         return;
       }
 
       await this.codeLensHandler.handleToggleCodeLens();
     } catch (error) {
-      this.errorHandler.logError('Toggle code lens command failed', error, 'handleToggleCodeLens');
+      this.errorHandler.logError(
+        "Toggle code lens command failed",
+        error,
+        "handleToggleCodeLens"
+      );
       // Error handling is done in the handler
     }
   }
@@ -403,18 +507,24 @@ export class CommandManager {
       // Check if current file is Python
       const activeEditor = vscode.window.activeTextEditor;
       if (!activeEditor) {
-        vscode.window.showWarningMessage('No active file found.');
+        vscode.window.showWarningMessage("No active file found.");
         return;
       }
 
-      if (activeEditor.document.languageId !== 'python') {
-        vscode.window.showWarningMessage('Code lens is only available for Python files.');
+      if (activeEditor.document.languageId !== "python") {
+        vscode.window.showWarningMessage(
+          "Code lens is only available for Python files."
+        );
         return;
       }
 
       await this.codeLensHandler.handleEnableCodeLens();
     } catch (error) {
-      this.errorHandler.logError('Enable code lens command failed', error, 'handleEnableCodeLens');
+      this.errorHandler.logError(
+        "Enable code lens command failed",
+        error,
+        "handleEnableCodeLens"
+      );
       // Error handling is done in the handler
     }
   }
@@ -427,18 +537,24 @@ export class CommandManager {
       // Check if current file is Python
       const activeEditor = vscode.window.activeTextEditor;
       if (!activeEditor) {
-        vscode.window.showWarningMessage('No active file found.');
+        vscode.window.showWarningMessage("No active file found.");
         return;
       }
 
-      if (activeEditor.document.languageId !== 'python') {
-        vscode.window.showWarningMessage('Code lens is only available for Python files.');
+      if (activeEditor.document.languageId !== "python") {
+        vscode.window.showWarningMessage(
+          "Code lens is only available for Python files."
+        );
         return;
       }
 
       await this.codeLensHandler.handleDisableCodeLens();
     } catch (error) {
-      this.errorHandler.logError('Disable code lens command failed', error, 'handleDisableCodeLens');
+      this.errorHandler.logError(
+        "Disable code lens command failed",
+        error,
+        "handleDisableCodeLens"
+      );
       // Error handling is done in the handler
     }
   }
@@ -446,11 +562,18 @@ export class CommandManager {
   /**
    * Handles show function details command
    */
-  public async handleShowFunctionDetails(func: any, uri: vscode.Uri): Promise<void> {
+  public async handleShowFunctionDetails(
+    func: any,
+    uri: vscode.Uri
+  ): Promise<void> {
     try {
       await this.codeLensHandler.handleShowFunctionDetails(func, uri);
     } catch (error) {
-      this.errorHandler.logError('Show function details command failed', error, 'handleShowFunctionDetails');
+      this.errorHandler.logError(
+        "Show function details command failed",
+        error,
+        "handleShowFunctionDetails"
+      );
       // Error handling is done in the handler
     }
   }
@@ -458,11 +581,18 @@ export class CommandManager {
   /**
    * Handles show class details command
    */
-  public async handleShowClassDetails(cls: any, uri: vscode.Uri): Promise<void> {
+  public async handleShowClassDetails(
+    cls: any,
+    uri: vscode.Uri
+  ): Promise<void> {
     try {
       await this.codeLensHandler.handleShowClassDetails(cls, uri);
     } catch (error) {
-      this.errorHandler.logError('Show class details command failed', error, 'handleShowClassDetails');
+      this.errorHandler.logError(
+        "Show class details command failed",
+        error,
+        "handleShowClassDetails"
+      );
       // Error handling is done in the handler
     }
   }
@@ -470,11 +600,19 @@ export class CommandManager {
   /**
    * Handles show method details command
    */
-  public async handleShowMethodDetails(method: any, cls: any, uri: vscode.Uri): Promise<void> {
+  public async handleShowMethodDetails(
+    method: any,
+    cls: any,
+    uri: vscode.Uri
+  ): Promise<void> {
     try {
       await this.codeLensHandler.handleShowMethodDetails(method, cls, uri);
     } catch (error) {
-      this.errorHandler.logError('Show method details command failed', error, 'handleShowMethodDetails');
+      this.errorHandler.logError(
+        "Show method details command failed",
+        error,
+        "handleShowMethodDetails"
+      );
       // Error handling is done in the handler
     }
   }
@@ -485,9 +623,76 @@ export class CommandManager {
   public async handleUpdateCodeLensData(analysisData: any): Promise<void> {
     try {
       this.codeLensHandler.updateFromAnalysisData(analysisData);
-      this.errorHandler.logError('Code lens data updated successfully', null, 'handleUpdateCodeLensData');
+      this.errorHandler.logError(
+        "Code lens data updated successfully",
+        null,
+        "handleUpdateCodeLensData"
+      );
     } catch (error) {
-      this.errorHandler.logError('Update code lens data command failed', error, 'handleUpdateCodeLensData');
+      this.errorHandler.logError(
+        "Update code lens data command failed",
+        error,
+        "handleUpdateCodeLensData"
+      );
+    }
+  }
+
+  /**
+   * Handles apply suggestion command
+   */
+  public async handleApplySuggestion(
+    suggestion: any,
+    func: any,
+    uri: vscode.Uri
+  ): Promise<void> {
+    try {
+      await this.codeLensHandler.handleApplySuggestion(suggestion, func, uri);
+    } catch (error) {
+      this.errorHandler.logError(
+        "Apply suggestion command failed",
+        error,
+        "handleApplySuggestion"
+      );
+      // Error handling is done in the handler
+    }
+  }
+
+  /**
+   * Handles show suggestion details command
+   */
+  public async handleShowSuggestionDetails(
+    suggestion: any,
+    func: any,
+    uri: vscode.Uri
+  ): Promise<void> {
+    try {
+      await this.codeLensHandler.handleShowSuggestionDetails(
+        suggestion,
+        func,
+        uri
+      );
+    } catch (error) {
+      this.errorHandler.logError(
+        "Show suggestion details command failed",
+        error,
+        "handleShowSuggestionDetails"
+      );
+      // Error handling is done in the handler
+    }
+  }
+
+  /**
+   * Handles code lens state changed event
+   */
+  public handleCodeLensStateChanged(enabled: boolean): void {
+    try {
+      this.codeLensHandler.handleCodeLensStateChanged(enabled);
+    } catch (error) {
+      this.errorHandler.logError(
+        "Code lens state changed handler failed",
+        error,
+        "handleCodeLensStateChanged"
+      );
     }
   }
 
@@ -511,28 +716,36 @@ export class CommandManager {
         // Get current active file
         const activeEditor = vscode.window.activeTextEditor;
         if (!activeEditor) {
-          vscode.window.showErrorMessage('No active file found.');
+          vscode.window.showErrorMessage("No active file found.");
           return;
         }
         htmlFilePath = activeEditor.document.uri.fsPath;
       }
 
       // Check if it's an HTML file
-      if (!htmlFilePath.toLowerCase().endsWith('.html') && !htmlFilePath.toLowerCase().endsWith('.htm')) {
-        vscode.window.showErrorMessage('Selected file is not an HTML file.');
+      if (
+        !htmlFilePath.toLowerCase().endsWith(".html") &&
+        !htmlFilePath.toLowerCase().endsWith(".htm")
+      ) {
+        vscode.window.showErrorMessage("Selected file is not an HTML file.");
         return;
       }
 
       // Render HTML file
       await this.htmlViewService.renderHTMLFile(htmlFilePath, {
-        title: `HTML View - ${require('path').basename(htmlFilePath)}`,
+        title: `HTML View - ${require("path").basename(htmlFilePath)}`,
         enableScripts: true,
-        retainContextWhenHidden: true
+        retainContextWhenHidden: true,
       });
-
     } catch (error) {
-      this.errorHandler.logError('Failed to render HTML file', error, 'handleRenderHTMLFile');
-      this.errorHandler.showUserError('Failed to render HTML file. Check the output for details.');
+      this.errorHandler.logError(
+        "Failed to render HTML file",
+        error,
+        "handleRenderHTMLFile"
+      );
+      this.errorHandler.showUserError(
+        "Failed to render HTML file. Check the output for details."
+      );
     }
   }
 
@@ -542,12 +755,134 @@ export class CommandManager {
   public async handleOpenSettings(): Promise<void> {
     try {
       // Open VS Code settings focused on DoraCodeLens settings
-      await vscode.commands.executeCommand('workbench.action.openSettings', 'doracodelens');
-      
-      this.errorHandler.logError('Settings opened successfully', null, 'handleOpenSettings');
+      await vscode.commands.executeCommand(
+        "workbench.action.openSettings",
+        "doracodelens"
+      );
+
+      this.errorHandler.logError(
+        "Settings opened successfully",
+        null,
+        "handleOpenSettings"
+      );
     } catch (error) {
-      this.errorHandler.logError('Failed to open settings', error, 'handleOpenSettings');
-      this.errorHandler.showUserError('Failed to open settings. Please try opening VS Code settings manually.');
+      this.errorHandler.logError(
+        "Failed to open settings",
+        error,
+        "handleOpenSettings"
+      );
+      this.errorHandler.showUserError(
+        "Failed to open settings. Please try opening VS Code settings manually."
+      );
+    }
+  }
+
+  /**
+   * Handles setup Python path command
+   */
+  public async handleSetupPythonPath(): Promise<void> {
+    try {
+      this.errorHandler.logError(
+        "Starting Python path setup wizard",
+        null,
+        "handleSetupPythonPath"
+      );
+
+      const { PythonSetupService } = await import(
+        "../services/python-setup-service"
+      );
+      const pythonSetupService = PythonSetupService.getInstance(
+        this.errorHandler
+      );
+
+      await pythonSetupService.showSetupWizard();
+    } catch (error) {
+      this.errorHandler.logError(
+        "Failed to setup Python path",
+        error,
+        "handleSetupPythonPath"
+      );
+      this.errorHandler.showUserError(
+        "Failed to setup Python path. Check the output for details."
+      );
+    }
+  }
+
+  /**
+   * Handles detect Python path command
+   */
+  public async handleDetectPythonPath(): Promise<void> {
+    try {
+      this.errorHandler.logError(
+        "Auto-detecting Python path",
+        null,
+        "handleDetectPythonPath"
+      );
+
+      const { PythonSetupService } = await import(
+        "../services/python-setup-service"
+      );
+      const pythonSetupService = PythonSetupService.getInstance(
+        this.errorHandler
+      );
+
+      // Get current configuration
+      const currentPath = pythonSetupService.getCurrentPythonPath();
+
+      // Show current status and options
+      const action = await vscode.window.showInformationMessage(
+        `Current Python path: ${currentPath}\n\nWhat would you like to do?`,
+        "Auto-Detect & Set",
+        "Test Current",
+        "Manual Setup",
+        "Open Settings"
+      );
+
+      if (action === "Auto-Detect & Set") {
+        const installations = await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: "Detecting Python installations...",
+            cancellable: false,
+          },
+          async () => {
+            return await pythonSetupService.detectPythonInstallations();
+          }
+        );
+
+        if (installations.length > 0) {
+          const validInstallations = installations.filter((i) => i.isValid);
+          if (validInstallations.length > 0) {
+            // Use the first valid installation
+            const bestInstallation = validInstallations[0];
+            await pythonSetupService.setPythonPath(bestInstallation.path);
+          } else {
+            vscode.window.showWarningMessage(
+              "No valid Python 3 installations found."
+            );
+          }
+        } else {
+          vscode.window.showWarningMessage("No Python installations detected.");
+        }
+      } else if (action === "Test Current") {
+        await pythonSetupService.testCurrentConfiguration();
+      } else if (action === "Manual Setup") {
+        await pythonSetupService.showSetupWizard();
+      } else if (action === "Open Settings") {
+        vscode.commands.executeCommand(
+          "workbench.action.openSettings",
+          "doracodelens.pythonPath"
+        );
+      }
+    } catch (error) {
+      this.errorHandler.logError(
+        "Failed to detect Python path",
+        error,
+        "handleDetectPythonPath"
+      );
+      this.errorHandler.showUserError(
+        "Failed to detect Python path. Check the output for details."
+      );
     }
   }
 
@@ -559,22 +894,29 @@ export class CommandManager {
       const state = this.stateManager.getState();
       const summary = this.stateManager.getStateSummary();
       const activeCommands = this.duplicateCallGuard.getActiveCommands();
-      
+
       const debugInfo = {
         summary,
         state,
         activeCommands,
-        isValid: this.stateManager.validateState()
+        isValid: this.stateManager.validateState(),
       };
-      
-      this.errorHandler.logError('Debug state requested', debugInfo, 'handleDebugState');
-      
+
+      this.errorHandler.logError(
+        "Debug state requested",
+        debugInfo,
+        "handleDebugState"
+      );
+
       vscode.window.showInformationMessage(
         `State: ${summary}. Check output for details.`
       );
-      
     } catch (error) {
-      this.errorHandler.logError('Error getting debug state', error, 'handleDebugState');
+      this.errorHandler.logError(
+        "Error getting debug state",
+        error,
+        "handleDebugState"
+      );
     }
   }
 
@@ -583,28 +925,50 @@ export class CommandManager {
    */
   public async handleResetState(): Promise<void> {
     try {
-      this.errorHandler.logError('Resetting extension state', null, 'handleResetState');
-      
+      this.errorHandler.logError(
+        "Resetting extension state",
+        null,
+        "handleResetState"
+      );
+
       this.duplicateCallGuard.clearAllActiveCommands();
       this.stateManager.resetState();
-      
-      vscode.window.showInformationMessage('Extension state has been reset.');
-      
+
+      vscode.window.showInformationMessage("Extension state has been reset.");
     } catch (error) {
-      this.errorHandler.logError('Error resetting state', error, 'handleResetState');
-      this.errorHandler.showUserError('Failed to reset state. Check the output for details.');
+      this.errorHandler.logError(
+        "Error resetting state",
+        error,
+        "handleResetState"
+      );
+      this.errorHandler.showUserError(
+        "Failed to reset state. Check the output for details."
+      );
     }
   }
 
   /**
-   * Initialize code lens state on startup
+   * Initialize enhanced code lens state on startup
    */
   public initializeCodeLens(): void {
     try {
       this.codeLensHandler.restoreState();
-      this.errorHandler.logError('Code lens state initialized', null, 'initializeCodeLens');
+
+      // Restore dynamic command state
+      const commandManager = this.codeLensHandler.getCommandManager();
+      commandManager.restoreState();
+
+      this.errorHandler.logError(
+        "Enhanced code lens state initialized",
+        null,
+        "initializeCodeLens"
+      );
     } catch (error) {
-      this.errorHandler.logError('Failed to initialize code lens state', error, 'initializeCodeLens');
+      this.errorHandler.logError(
+        "Failed to initialize enhanced code lens state",
+        error,
+        "initializeCodeLens"
+      );
     }
   }
 
@@ -614,9 +978,17 @@ export class CommandManager {
   public updateCodeLensAnalysisData(analysisData: any): void {
     try {
       this.codeLensHandler.updateFromAnalysisData(analysisData);
-      this.errorHandler.logError('Code lens analysis data updated', null, 'updateCodeLensAnalysisData');
+      this.errorHandler.logError(
+        "Code lens analysis data updated",
+        null,
+        "updateCodeLensAnalysisData"
+      );
     } catch (error) {
-      this.errorHandler.logError('Failed to update code lens analysis data', error, 'updateCodeLensAnalysisData');
+      this.errorHandler.logError(
+        "Failed to update code lens analysis data",
+        error,
+        "updateCodeLensAnalysisData"
+      );
     }
   }
 
@@ -625,30 +997,66 @@ export class CommandManager {
    */
   public async validateDependencies(): Promise<boolean> {
     try {
+      // Log current Python configuration for debugging
+      const config = vscode.workspace.getConfiguration("doracodelens");
+      const pythonPath = config.get<string>("pythonPath", "python3");
+      this.errorHandler.logError(
+        "Validating dependencies with Python path",
+        { pythonPath },
+        "validateDependencies"
+      );
+
       // Check Python availability
-      const pythonAvailable = await this.pythonService.checkPythonAvailability();
+      const pythonAvailable =
+        await this.pythonService.checkPythonAvailability();
       if (!pythonAvailable) {
-        this.errorHandler.showUserError(
-          'Python 3 is required but not found. Please install Python 3 and ensure it\'s in your PATH.',
-          ['Install Python', 'Ignore']
+        this.errorHandler.logError(
+          "Python availability check failed",
+          { pythonPath },
+          "validateDependencies"
         );
+
+        // Only show error notification if Python path is still default
+        if (pythonPath === "python3" || pythonPath === "python") {
+          this.errorHandler.showUserError(
+            "Python 3 is required but not found. Please install Python 3 and ensure it's in your PATH.",
+            ["Install Python", "Ignore"]
+          );
+        } else {
+          this.errorHandler.logError(
+            "Python not available at configured path, but not showing notification",
+            { pythonPath },
+            "validateDependencies"
+          );
+        }
         return false;
       }
 
       // Validate analyzer dependencies
-      const { valid, missing } = await this.pythonService.validateAnalyzerDependencies();
+      const { valid, missing } =
+        await this.pythonService.validateAnalyzerDependencies();
       if (!valid) {
         this.errorHandler.showUserError(
-          `Missing analyzer dependencies: ${missing.join(', ')}. Please reinstall the extension.`,
-          ['Reinstall Extension', 'Ignore']
+          `Missing analyzer dependencies: ${missing.join(
+            ", "
+          )}. Please reinstall the extension.`,
+          ["Reinstall Extension", "Ignore"]
         );
         return false;
       }
 
-      this.errorHandler.logError('All dependencies validated successfully', null, 'validateDependencies');
+      this.errorHandler.logError(
+        "All dependencies validated successfully",
+        null,
+        "validateDependencies"
+      );
       return true;
     } catch (error) {
-      this.errorHandler.logError('Dependency validation failed', error, 'validateDependencies');
+      this.errorHandler.logError(
+        "Dependency validation failed",
+        error,
+        "validateDependencies"
+      );
       return false;
     }
   }
@@ -663,7 +1071,7 @@ export class CommandManager {
       gitAnalytics: this.gitAnalyticsHandler,
       databaseSchema: this.databaseSchemaHandler,
       jsonUtilities: this.jsonUtilitiesHandler,
-      codeLens: this.codeLensHandler
+      codeLens: this.codeLensHandler,
     };
   }
 
@@ -673,7 +1081,7 @@ export class CommandManager {
   public getServices() {
     return {
       python: this.pythonService,
-      htmlView: this.htmlViewService
+      htmlView: this.htmlViewService,
     };
   }
 
@@ -696,17 +1104,21 @@ export class CommandManager {
    */
   public dispose(): void {
     try {
-      this.errorHandler.logError('Disposing command manager', null, 'dispose');
-      
+      this.errorHandler.logError("Disposing command manager", null, "dispose");
+
       // Dispose command disposables
-      this.disposables.forEach(disposable => {
+      this.disposables.forEach((disposable) => {
         try {
           disposable.dispose();
         } catch (error) {
-          this.errorHandler.logError('Error disposing command', error, 'dispose');
+          this.errorHandler.logError(
+            "Error disposing command",
+            error,
+            "dispose"
+          );
         }
       });
-      
+
       this.disposables = [];
 
       // Dispose services and handlers
@@ -717,11 +1129,18 @@ export class CommandManager {
         this.jsonUtilitiesHandler.dispose();
         this.codeLensHandler.dispose();
       } catch (error) {
-        this.errorHandler.logError('Error disposing services', error, 'dispose');
+        this.errorHandler.logError(
+          "Error disposing services",
+          error,
+          "dispose"
+        );
       }
-      
     } catch (error) {
-      this.errorHandler.logError('Error during command manager disposal', error, 'dispose');
+      this.errorHandler.logError(
+        "Error during command manager disposal",
+        error,
+        "dispose"
+      );
     }
   }
 }
