@@ -123,12 +123,34 @@
         {
           "command": "doracodebird.jsonFormat",
           "group": "json@1",
-          "when": "resourceLangId == json"
+          "when": "doracodebird.jsonContext"
         },
         {
           "command": "doracodebird.jsonTreeView",
           "group": "json@2",
-          "when": "resourceLangId == json"
+          "when": "doracodebird.jsonContext"
+        },
+        {
+          "command": "doracodebird.jsonFix",
+          "group": "json@3",
+          "when": "doracodebird.jsonContext"
+        },
+        {
+          "command": "doracodebird.jsonMinify",
+          "group": "json@4",
+          "when": "doracodebird.jsonContext"
+        },
+        {
+          "command": "doracodebird.toggleCodeLens",
+          "group": "codelens@1",
+          "when": "resourceLangId == python"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "doracodebird.toggleCodeLens",
+          "when": "resourceLangId == python",
+          "group": "navigation@1"
         }
       ],
       "view/title": [
@@ -194,6 +216,18 @@
         "icon": "$(list-tree)"
       },
       {
+        "command": "doracodebird.jsonFix",
+        "title": "JSON Fix (Python Dict)",
+        "category": "DoraCodeBirdView",
+        "icon": "$(wrench)"
+      },
+      {
+        "command": "doracodebird.jsonMinify",
+        "title": "JSON Minify",
+        "category": "DoraCodeBirdView",
+        "icon": "$(fold)"
+      },
+      {
         "command": "doracodebird.refreshSidebar",
         "title": "Refresh",
         "category": "DoraCodeBirdView",
@@ -256,11 +290,24 @@
         "category": "DoraCodeBirdView",
         "icon": "$(type-hierarchy)"
       },
+
       {
-        "command": "doracodebird.showJsonView",
-        "title": "JSON View",
+        "command": "doracodebird.toggleCodeLens",
+        "title": "Toggle Code Lens",
         "category": "DoraCodeBirdView",
-        "icon": "$(json)"
+        "icon": "$(eye)"
+      },
+      {
+        "command": "doracodebird.enableCodeLens",
+        "title": "Enable Code Lens",
+        "category": "DoraCodeBirdView",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "doracodebird.disableCodeLens",
+        "title": "Disable Code Lens",
+        "category": "DoraCodeBirdView",
+        "icon": "$(eye-closed)"
       }
     ],
     "scripts": {

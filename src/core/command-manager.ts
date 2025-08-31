@@ -6,6 +6,8 @@ import { FullCodeAnalysisHandler } from '../commands/full-code-analysis-handler'
 import { CurrentFileAnalysisHandler } from '../commands/current-file-analysis-handler';
 import { GitAnalyticsHandler } from '../commands/git-analytics-handler';
 import { DatabaseSchemaHandler } from '../commands/database-schema-handler';
+import { JsonUtilitiesHandler } from '../commands/json-utilities-handler';
+import { CodeLensHandler } from '../commands/code-lens-handler';
 import { WebviewManager } from '../webviews/webview-manager';
 import { PythonService } from '../services/python-service';
 import { HTMLViewService } from '../services/html-view-service';
@@ -27,6 +29,8 @@ export class CommandManager {
   private currentFileAnalysisHandler: CurrentFileAnalysisHandler;
   private gitAnalyticsHandler: GitAnalyticsHandler;
   private databaseSchemaHandler: DatabaseSchemaHandler;
+  private jsonUtilitiesHandler: JsonUtilitiesHandler;
+  private codeLensHandler: CodeLensHandler;
 
   // Services
   private pythonService: PythonService;
@@ -74,6 +78,8 @@ export class CommandManager {
       stateManager,
       webviewManager
     );
+    this.jsonUtilitiesHandler = new JsonUtilitiesHandler(errorHandler);
+    this.codeLensHandler = new CodeLensHandler(errorHandler, context);
   }
 
   public static getInstance(
@@ -146,6 +152,71 @@ export class CommandManager {
         () => this.handleResetState()
       );
 
+      // Register JSON utilities commands
+      const jsonFormatCommand = vscode.commands.registerCommand(
+        'doracodebird.jsonFormat',
+        () => this.handleJsonFormat()
+      );
+
+      const jsonTreeViewCommand = vscode.commands.registerCommand(
+        'doracodebird.jsonTreeView',
+        () => this.handleJsonTreeView()
+      );
+
+      const jsonFixCommand = vscode.commands.registerCommand(
+        'doracodebird.jsonFix',
+        () => this.handleJsonFix()
+      );
+
+      const jsonMinifyCommand = vscode.commands.registerCommand(
+        'doracodebird.jsonMinify',
+        () => this.handleJsonMinify()
+      );
+
+      // Register code lens commands
+      const toggleCodeLensCommand = vscode.commands.registerCommand(
+        'doracodebird.toggleCodeLens',
+        () => this.handleToggleCodeLens()
+      );
+
+      const enableCodeLensCommand = vscode.commands.registerCommand(
+        'doracodebird.enableCodeLens',
+        () => this.handleEnableCodeLens()
+      );
+
+      const disableCodeLensCommand = vscode.commands.registerCommand(
+        'doracodebird.disableCodeLens',
+        () => this.handleDisableCodeLens()
+      );
+
+      // Register code lens detail commands
+      const showFunctionDetailsCommand = vscode.commands.registerCommand(
+        'doracodebird.showFunctionDetails',
+        (func: any, uri: vscode.Uri) => this.handleShowFunctionDetails(func, uri)
+      );
+
+      const showClassDetailsCommand = vscode.commands.registerCommand(
+        'doracodebird.showClassDetails',
+        (cls: any, uri: vscode.Uri) => this.handleShowClassDetails(cls, uri)
+      );
+
+      const showMethodDetailsCommand = vscode.commands.registerCommand(
+        'doracodebird.showMethodDetails',
+        (method: any, cls: any, uri: vscode.Uri) => this.handleShowMethodDetails(method, cls, uri)
+      );
+
+      // Register code lens data update command (internal)
+      const updateCodeLensDataCommand = vscode.commands.registerCommand(
+        'doracodebird.updateCodeLensData',
+        (analysisData: any) => this.handleUpdateCodeLensData(analysisData)
+      );
+
+      // Register show message command (for testing)
+      const showMessageCommand = vscode.commands.registerCommand(
+        'doracodebird.showMessage',
+        (message: string) => this.handleShowMessage(message)
+      );
+
       // Store disposables
       this.disposables.push(
         fullCodeAnalysisCommand,
@@ -155,7 +226,19 @@ export class CommandManager {
         renderHTMLCommand,
         openSettingsCommand,
         debugStateCommand,
-        resetStateCommand
+        resetStateCommand,
+        jsonFormatCommand,
+        jsonTreeViewCommand,
+        jsonFixCommand,
+        jsonMinifyCommand,
+        toggleCodeLensCommand,
+        enableCodeLensCommand,
+        disableCodeLensCommand,
+        showFunctionDetailsCommand,
+        showClassDetailsCommand,
+        showMethodDetailsCommand,
+        updateCodeLensDataCommand,
+        showMessageCommand
       );
 
       // Add to context subscriptions
@@ -187,6 +270,18 @@ export class CommandManager {
    */
   public async handleCurrentFileAnalysis(): Promise<void> {
     try {
+      // Check if current file is Python
+      const activeEditor = vscode.window.activeTextEditor;
+      if (!activeEditor) {
+        vscode.window.showWarningMessage('No active file found.');
+        return;
+      }
+
+      if (activeEditor.document.languageId !== 'python') {
+        vscode.window.showWarningMessage('Current file analysis is only available for Python files.');
+        return;
+      }
+
       // Execute analysis - the handler will display results via WebviewManager
       await this.currentFileAnalysisHandler.execute();
     } catch (error) {
@@ -213,12 +308,194 @@ export class CommandManager {
    */
   public async handleDatabaseSchemaAnalysis(): Promise<void> {
     try {
+      // Check if we're in a Python project context
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (!workspaceFolder) {
+        vscode.window.showWarningMessage('Database schema analysis requires an open workspace.');
+        return;
+      }
+
       // Execute analysis - the handler will display results via WebviewManager
       await this.databaseSchemaHandler.execute();
     } catch (error) {
       this.errorHandler.logError('Database schema analysis command failed', error, 'handleDatabaseSchemaAnalysis');
       // Error handling is done in the handler
     }
+  }
+
+  /**
+   * Handles JSON format command
+   */
+  public async handleJsonFormat(): Promise<void> {
+    try {
+      await this.jsonUtilitiesHandler.handleFormatJson();
+    } catch (error) {
+      this.errorHandler.logError('JSON format command failed', error, 'handleJsonFormat');
+      // Error handling is done in the handler
+    }
+  }
+
+  /**
+   * Handles JSON tree view command
+   */
+  public async handleJsonTreeView(): Promise<void> {
+    try {
+      await this.jsonUtilitiesHandler.handleJsonTreeView();
+    } catch (error) {
+      this.errorHandler.logError('JSON tree view command failed', error, 'handleJsonTreeView');
+      // Error handling is done in the handler
+    }
+  }
+
+  /**
+   * Handles JSON fix command
+   */
+  public async handleJsonFix(): Promise<void> {
+    try {
+      await this.jsonUtilitiesHandler.handleFixJson();
+    } catch (error) {
+      this.errorHandler.logError('JSON fix command failed', error, 'handleJsonFix');
+      // Error handling is done in the handler
+    }
+  }
+
+  /**
+   * Handles JSON minify command
+   */
+  public async handleJsonMinify(): Promise<void> {
+    try {
+      await this.jsonUtilitiesHandler.handleMinifyJson();
+    } catch (error) {
+      this.errorHandler.logError('JSON minify command failed', error, 'handleJsonMinify');
+      // Error handling is done in the handler
+    }
+  }
+
+  /**
+   * Handles toggle code lens command
+   */
+  public async handleToggleCodeLens(): Promise<void> {
+    try {
+      // Check if current file is Python
+      const activeEditor = vscode.window.activeTextEditor;
+      if (!activeEditor) {
+        vscode.window.showWarningMessage('No active file found.');
+        return;
+      }
+
+      if (activeEditor.document.languageId !== 'python') {
+        vscode.window.showWarningMessage('Code lens is only available for Python files.');
+        return;
+      }
+
+      await this.codeLensHandler.handleToggleCodeLens();
+    } catch (error) {
+      this.errorHandler.logError('Toggle code lens command failed', error, 'handleToggleCodeLens');
+      // Error handling is done in the handler
+    }
+  }
+
+  /**
+   * Handles enable code lens command
+   */
+  public async handleEnableCodeLens(): Promise<void> {
+    try {
+      // Check if current file is Python
+      const activeEditor = vscode.window.activeTextEditor;
+      if (!activeEditor) {
+        vscode.window.showWarningMessage('No active file found.');
+        return;
+      }
+
+      if (activeEditor.document.languageId !== 'python') {
+        vscode.window.showWarningMessage('Code lens is only available for Python files.');
+        return;
+      }
+
+      await this.codeLensHandler.handleEnableCodeLens();
+    } catch (error) {
+      this.errorHandler.logError('Enable code lens command failed', error, 'handleEnableCodeLens');
+      // Error handling is done in the handler
+    }
+  }
+
+  /**
+   * Handles disable code lens command
+   */
+  public async handleDisableCodeLens(): Promise<void> {
+    try {
+      // Check if current file is Python
+      const activeEditor = vscode.window.activeTextEditor;
+      if (!activeEditor) {
+        vscode.window.showWarningMessage('No active file found.');
+        return;
+      }
+
+      if (activeEditor.document.languageId !== 'python') {
+        vscode.window.showWarningMessage('Code lens is only available for Python files.');
+        return;
+      }
+
+      await this.codeLensHandler.handleDisableCodeLens();
+    } catch (error) {
+      this.errorHandler.logError('Disable code lens command failed', error, 'handleDisableCodeLens');
+      // Error handling is done in the handler
+    }
+  }
+
+  /**
+   * Handles show function details command
+   */
+  public async handleShowFunctionDetails(func: any, uri: vscode.Uri): Promise<void> {
+    try {
+      await this.codeLensHandler.handleShowFunctionDetails(func, uri);
+    } catch (error) {
+      this.errorHandler.logError('Show function details command failed', error, 'handleShowFunctionDetails');
+      // Error handling is done in the handler
+    }
+  }
+
+  /**
+   * Handles show class details command
+   */
+  public async handleShowClassDetails(cls: any, uri: vscode.Uri): Promise<void> {
+    try {
+      await this.codeLensHandler.handleShowClassDetails(cls, uri);
+    } catch (error) {
+      this.errorHandler.logError('Show class details command failed', error, 'handleShowClassDetails');
+      // Error handling is done in the handler
+    }
+  }
+
+  /**
+   * Handles show method details command
+   */
+  public async handleShowMethodDetails(method: any, cls: any, uri: vscode.Uri): Promise<void> {
+    try {
+      await this.codeLensHandler.handleShowMethodDetails(method, cls, uri);
+    } catch (error) {
+      this.errorHandler.logError('Show method details command failed', error, 'handleShowMethodDetails');
+      // Error handling is done in the handler
+    }
+  }
+
+  /**
+   * Handles update code lens data command (internal)
+   */
+  public async handleUpdateCodeLensData(analysisData: any): Promise<void> {
+    try {
+      this.codeLensHandler.updateFromAnalysisData(analysisData);
+      this.errorHandler.logError('Code lens data updated successfully', null, 'handleUpdateCodeLensData');
+    } catch (error) {
+      this.errorHandler.logError('Update code lens data command failed', error, 'handleUpdateCodeLensData');
+    }
+  }
+
+  /**
+   * Handles show message command (for testing)
+   */
+  public async handleShowMessage(message: string): Promise<void> {
+    vscode.window.showInformationMessage(message);
   }
 
   /**
@@ -320,6 +597,30 @@ export class CommandManager {
   }
 
   /**
+   * Initialize code lens state on startup
+   */
+  public initializeCodeLens(): void {
+    try {
+      this.codeLensHandler.restoreState();
+      this.errorHandler.logError('Code lens state initialized', null, 'initializeCodeLens');
+    } catch (error) {
+      this.errorHandler.logError('Failed to initialize code lens state', error, 'initializeCodeLens');
+    }
+  }
+
+  /**
+   * Update analysis data for code lens
+   */
+  public updateCodeLensAnalysisData(analysisData: any): void {
+    try {
+      this.codeLensHandler.updateFromAnalysisData(analysisData);
+      this.errorHandler.logError('Code lens analysis data updated', null, 'updateCodeLensAnalysisData');
+    } catch (error) {
+      this.errorHandler.logError('Failed to update code lens analysis data', error, 'updateCodeLensAnalysisData');
+    }
+  }
+
+  /**
    * Validate Python dependencies on startup
    */
   public async validateDependencies(): Promise<boolean> {
@@ -360,7 +661,9 @@ export class CommandManager {
       fullCodeAnalysis: this.fullCodeAnalysisHandler,
       currentFileAnalysis: this.currentFileAnalysisHandler,
       gitAnalytics: this.gitAnalyticsHandler,
-      databaseSchema: this.databaseSchemaHandler
+      databaseSchema: this.databaseSchemaHandler,
+      jsonUtilities: this.jsonUtilitiesHandler,
+      codeLens: this.codeLensHandler
     };
   }
 
@@ -406,11 +709,13 @@ export class CommandManager {
       
       this.disposables = [];
 
-      // Dispose services
+      // Dispose services and handlers
       try {
         this.pythonService.dispose();
         this.htmlViewService.dispose();
         this.webviewManager.dispose();
+        this.jsonUtilitiesHandler.dispose();
+        this.codeLensHandler.dispose();
       } catch (error) {
         this.errorHandler.logError('Error disposing services', error, 'dispose');
       }

@@ -97,12 +97,13 @@ export class DatabaseSchemaWebview {
     // Get resource URIs
     const cssUri = webview.asWebviewUri(vscode.Uri.file(path.join(this.extensionPath, 'resources', 'webview.css')));
     const cytoscapeUri = webview.asWebviewUri(vscode.Uri.file(path.join(this.extensionPath, 'node_modules', 'cytoscape', 'dist', 'cytoscape.min.js')));
-    const dagreUri = webview.asWebviewUri(vscode.Uri.file(path.join(this.extensionPath, 'node_modules', 'dagre', 'dist', 'dagre.min.js')));
-    const cytoscapeDagreUri = webview.asWebviewUri(vscode.Uri.file(path.join(this.extensionPath, 'node_modules', 'cytoscape-dagre', 'cytoscape-dagre.js')));
-    const schemaGraphUri = webview.asWebviewUri(vscode.Uri.file(path.join(this.extensionPath, 'resources', 'database-schema-graph.js')));
+    const enhancedGraphControlsUri = webview.asWebviewUri(vscode.Uri.file(path.join(this.extensionPath, 'resources', 'enhanced-graph-controls.js')));
 
     // Generate tab contents
     const tabContents = this.generateTabContents(schemaData);
+    
+    // Prepare graph data using the same approach as full code analysis
+    const graphData = this.prepareGraphData(schemaData);
 
     return `
       <!DOCTYPE html>
@@ -178,18 +179,23 @@ export class DatabaseSchemaWebview {
         </div>
 
         <!-- Scripts -->
-        <script src="${cytoscapeUri}"></script>
-        <script src="${dagreUri}"></script>
-        <script src="${cytoscapeDagreUri}"></script>
-        <script src="${schemaGraphUri}"></script>
+        <script src="${cytoscapeUri}" onload="console.log('Cytoscape loaded successfully')" onerror="console.error('Failed to load Cytoscape')"></script>
+        <script src="${enhancedGraphControlsUri}" onload="console.log('Enhanced graph controls loaded successfully')" onerror="console.error('Failed to load enhanced graph controls')"></script>
         
         <script>
           const vscode = acquireVsCodeApi();
           const schemaData = ${JSON.stringify(schemaData)};
-          let schemaGraph = null;
-          
+          const graphData = ${JSON.stringify(graphData)};
+          let cy = null;
+
+          console.log('=== DATABASE SCHEMA WEBVIEW INITIALIZED ===');
+          console.log('Schema data available:', !!schemaData);
+          console.log('Graph data available:', !!graphData);
+          console.log('Tables count:', graphData?.state?.tables?.length || 0);
+
           // Initialize when DOM is ready
           document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM ready, starting initialization...');
             initializeTabs();
             initializeDatabaseSchema();
           });
@@ -245,109 +251,290 @@ export class DatabaseSchemaWebview {
           }
           
           function initializeSchemaGraph() {
+            // Check if Cytoscape is available
+            if (typeof cytoscape === 'undefined') {
+              console.log('Cytoscape not loaded yet, retrying...');
+              setTimeout(initializeSchemaGraph, 100);
+              return;
+            }
+
+            console.log('Cytoscape loaded, initializing schema graph...');
+            
+            const container = document.getElementById('enhanced-graph');
+            const loadingElement = document.getElementById('graph-loading');
+            
+            if (!container) {
+              console.error('Graph container not found');
+              return;
+            }
+
+            // Get schema data
+            const elements = graphData?.elements || [];
+            const style = graphData?.style || [];
+            const layout = graphData?.layout || { name: 'dagre' };
+            
+            console.log('Graph elements:', elements.length);
+            console.log('Graph style rules:', style.length);
+
+            if (elements.length === 0) {
+              showEmptyState();
+              return;
+            }
+
             try {
-              // Handle both direct data and wrapped data structures
-              const data = schemaData?.data || schemaData;
-              const tables = data?.tables;
+              // Create Cytoscape instance
+              cy = cytoscape({
+                container: container,
+                elements: elements,
+                style: style,
+                layout: layout,
+                
+                // Interaction settings
+                zoomingEnabled: true,
+                panningEnabled: true,
+                selectionType: 'single',
+                
+                // Performance settings
+                hideEdgesOnViewport: elements.length > 100,
+                textureOnViewport: elements.length > 200,
+                motionBlur: true,
+                
+                // Viewport settings
+                minZoom: 0.1,
+                maxZoom: 5.0,
+                wheelSensitivity: 0.2
+              });
+
+              // Store cytoscape instance globally for controls
+              window.cy = cy;
+              window.schemaData = graphData?.state?.schemaData;
+
+              // Setup event handlers
+              setupSchemaGraphEventHandlers(cy);
               
-              if (!data || !tables || tables.length === 0) {
-                const emptyElement = document.getElementById('schema-empty');
-                if (emptyElement) {
-                  emptyElement.style.display = 'flex';
-                }
+              // Setup controls
+              setupSchemaGraphControls(cy);
+              
+              // Initial fit
+              cy.fit();
+
+              // Show graph and legend, hide loading
+              container.style.display = 'block';
+              loadingElement.style.display = 'none';
+              
+              const legendElement = document.querySelector('.legend');
+              if (legendElement) {
+                legendElement.style.display = 'block';
+              }
+              
+              console.log('✅ Schema graph initialized successfully');
+              window.schemaGraphInitialized = true;
+
+            } catch (error) {
+              console.error('Error initializing schema graph:', error);
+              showErrorState(error.message);
+            }
+          }
+
+          function setupSchemaGraphEventHandlers(cy) {
+            // Table node click
+            cy.on('tap', 'node[type="table"]', function(event) {
+              const table = event.target.data('table');
+              const tableName = event.target.data('name');
+              console.log('Table clicked:', tableName);
+              
+              // Clear previous selections
+              cy.elements().removeClass('highlighted');
+              
+              // Select the table
+              event.target.addClass('highlighted');
+              
+              // Highlight related edges
+              const connectedEdges = event.target.connectedEdges();
+              connectedEdges.addClass('highlighted');
+              
+              // Highlight connected tables
+              connectedEdges.connectedNodes().addClass('highlighted');
+              
+              // Show table info
+              showTableInfo(tableName);
+            });
+
+            // Background click
+            cy.on('tap', function(event) {
+              if (event.target === cy) {
+                cy.elements().removeClass('highlighted');
+                hideTableInfo();
+              }
+            });
+
+            // Edge click
+            cy.on('tap', 'edge[type="relationship"]', function(event) {
+              const relationship = event.target.data('relationship');
+              console.log('Relationship clicked:', relationship);
+              
+              // Highlight the relationship
+              cy.elements().removeClass('highlighted');
+              event.target.addClass('highlighted');
+              event.target.connectedNodes().addClass('highlighted');
+            });
+          }
+
+          function setupSchemaGraphControls(cy) {
+            // Helper function to safely add event listeners
+            function safeAddEventListener(elementId, event, handler) {
+              const element = document.getElementById(elementId);
+              if (element) {
+                element.addEventListener(event, handler);
+              } else {
+                console.warn('Element not found:', elementId);
+              }
+            }
+
+            // Zoom In
+            safeAddEventListener('zoom-in-btn', 'click', function() {
+              cy.zoom(cy.zoom() * 1.25);
+              cy.center();
+            });
+
+            // Zoom Out
+            safeAddEventListener('zoom-out-btn', 'click', function() {
+              cy.zoom(cy.zoom() * 0.8);
+              cy.center();
+            });
+
+            // Reset View
+            safeAddEventListener('reset-view-btn', 'click', function() {
+              cy.zoom(1);
+              cy.center();
+              cy.elements().removeClass('highlighted');
+              hideTableInfo();
+              
+              // Clear search
+              const searchInput = document.getElementById('table-search');
+              if (searchInput) {
+                searchInput.value = '';
+              }
+            });
+
+            // Fit to Screen
+            safeAddEventListener('fit-view-btn', 'click', function() {
+              cy.fit();
+            });
+
+            // Layout Selection
+            safeAddEventListener('layout-select', 'change', function() {
+              const layoutName = this.value;
+              console.log('Changing layout to:', layoutName);
+              
+              let layoutOptions = { name: layoutName, animate: true, fit: true };
+              
+              // Add specific options for different layouts
+              switch(layoutName) {
+                case 'cose':
+                  layoutOptions = { name: 'cose', animate: true, fit: true, nodeRepulsion: 400000, idealEdgeLength: 100 };
+                  break;
+                case 'breadthfirst':
+                  layoutOptions = { name: 'breadthfirst', animate: true, fit: true, directed: true, spacingFactor: 1.5 };
+                  break;
+                case 'circle':
+                  layoutOptions = { name: 'circle', animate: true, fit: true, radius: 200 };
+                  break;
+                case 'grid':
+                  layoutOptions = { name: 'grid', animate: true, fit: true, spacing: 100 };
+                  break;
+                case 'concentric':
+                  layoutOptions = { name: 'concentric', animate: true, fit: true, spacingFactor: 1.5 };
+                  break;
+                case 'random':
+                  layoutOptions = { name: 'random', animate: true, fit: true };
+                  break;
+              }
+              
+              cy.layout(layoutOptions).run();
+            });
+
+            // Search functionality
+            safeAddEventListener('table-search', 'input', function() {
+              const query = this.value.toLowerCase();
+              
+              if (!query) {
+                cy.elements().removeClass('highlighted search-result');
                 return;
               }
               
-              // Initialize database schema graph
-              if (typeof DatabaseSchemaGraph !== 'undefined') {
-                schemaGraph = new DatabaseSchemaGraph();
-                // Pass the correct data structure to the graph
-                schemaGraph.initializeGraph('schema-graph', data);
+              // Clear previous highlights
+              cy.elements().removeClass('highlighted search-result');
+              
+              // Find matching tables
+              const matchingTables = cy.nodes('[type="table"]').filter(function(node) {
+                const tableName = node.data('name').toLowerCase();
+                return tableName.includes(query);
+              });
+              
+              if (matchingTables.length > 0) {
+                matchingTables.addClass('search-result highlighted');
                 
-                // Setup search functionality
-                setupSearch();
-                
-                // Setup layout change handler
-                const layoutSelect = document.getElementById('layout-select');
-                if (layoutSelect) {
-                  layoutSelect.addEventListener('change', function(e) {
-                    if (schemaGraph) {
-                      schemaGraph.changeLayout(e.target.value);
-                    }
+                // Focus on first match if only one
+                if (matchingTables.length === 1) {
+                  cy.center(matchingTables[0]);
+                  cy.zoom({
+                    level: 1.5,
+                    renderedPosition: matchingTables[0].renderedPosition()
                   });
                 }
-                
-                window.schemaGraphInitialized = true;
-                console.log('Schema graph initialized successfully');
-              } else {
-                console.warn('DatabaseSchemaGraph class not available');
               }
-            } catch (error) {
-              console.error('Failed to initialize schema graph:', error);
-              showError('Failed to initialize schema graph visualization');
-            }
-          }
-          
-          function setupSearch() {
-            const searchInput = document.getElementById('table-search');
-            if (searchInput && schemaGraph) {
-              searchInput.addEventListener('input', function(e) {
-                const query = e.target.value;
-                if (query) {
-                  const matchCount = schemaGraph.searchTables(query);
-                  console.log(\`Found \${matchCount} matching tables\`);
-                } else {
-                  schemaGraph.clearHighlights();
-                }
-              });
-            }
-          }
-          
-          function fitSchema() {
-            if (schemaGraph) {
-              schemaGraph.fitToContainer();
-            }
-          }
-          
-          function resetSchema() {
-            if (schemaGraph) {
-              schemaGraph.resetView();
-            }
-            
-            // Clear search
-            const searchInput = document.getElementById('table-search');
-            if (searchInput) {
-              searchInput.value = '';
-            }
-          }
-          
-          function exportSchema() {
-            if (schemaGraph) {
-              schemaGraph.exportAsImage('database_schema.png');
-            }
-          }
-          
-          function selectTable(tableName) {
-            // Handle both direct data and wrapped data structures
-            const data = schemaData?.data || schemaData;
-            const tables = data?.tables;
-            
-            if (schemaGraph && tables) {
-              const table = tables.find(t => t.name === tableName);
-              if (table) {
-                schemaGraph.selectTable(table);
-              }
-            }
-            
-            // Update sidebar selection
-            document.querySelectorAll('.table-item').forEach(item => {
-              item.classList.remove('selected');
             });
+
+            // Export functionality
+            safeAddEventListener('export-btn', 'click', function() {
+              try {
+                const png64 = cy.png({
+                  output: 'base64uri',
+                  bg: 'var(--vscode-editor-background)',
+                  full: true,
+                  scale: 2
+                });
+                
+                const link = document.createElement('a');
+                link.download = 'database-schema.png';
+                link.href = png64;
+                link.click();
+              } catch (error) {
+                console.error('Error exporting schema graph:', error);
+              }
+            });
+          }
+
+          function showEmptyState() {
+            const container = document.getElementById('enhanced-graph');
+            const loadingElement = document.getElementById('graph-loading');
+            const emptyElement = document.getElementById('schema-empty');
+            const legendElement = document.querySelector('.legend');
             
-            const selectedItem = document.querySelector(\`[data-table="\${tableName}"]\`);
-            if (selectedItem) {
-              selectedItem.classList.add('selected');
+            if (container) container.style.display = 'none';
+            if (loadingElement) loadingElement.style.display = 'none';
+            if (emptyElement) emptyElement.style.display = 'block';
+            if (legendElement) legendElement.style.display = 'none';
+          }
+
+          function showErrorState(message) {
+            const container = document.getElementById('enhanced-graph');
+            const loadingElement = document.getElementById('graph-loading');
+            const legendElement = document.querySelector('.legend');
+            
+            if (container) {
+              container.innerHTML = \`
+                <div style="text-align: center; padding: 40px; font-size: 16px;">
+                  <div style="margin-bottom: 16px; font-size: 48px;">⚠️</div>
+                  <div style="margin-bottom: 16px;">Error: \${message}</div>
+                  <button onclick="location.reload()" style="padding: 8px 16px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer;">Retry</button>
+                </div>
+              \`;
+              container.style.display = 'block';
             }
+            if (loadingElement) loadingElement.style.display = 'none';
+            if (legendElement) legendElement.style.display = 'none';
           }
           
           function hideTableInfo() {
@@ -360,7 +547,7 @@ export class DatabaseSchemaWebview {
           function showTableInfo(tableName) {
             // Handle both direct data and wrapped data structures
             const data = schemaData?.data || schemaData;
-            const tables = data?.tables;
+            const tables = data?.tables || graphData?.state?.tables;
             
             if (!tables) return;
             
@@ -384,16 +571,16 @@ export class DatabaseSchemaWebview {
             const fkCount = table.foreign_keys ? table.foreign_keys.length : 0;
             
             let html = \`
-              <div class="table-summary">
-                <div class="summary-item">
+              <div class="table-summary" style="margin-bottom: 16px;">
+                <div class="summary-item" style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                   <span class="summary-label">Columns:</span>
                   <span class="summary-value">\${columnCount}</span>
                 </div>
-                <div class="summary-item">
+                <div class="summary-item" style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                   <span class="summary-label">Primary Keys:</span>
                   <span class="summary-value">\${pkCount}</span>
                 </div>
-                <div class="summary-item">
+                <div class="summary-item" style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                   <span class="summary-label">Foreign Keys:</span>
                   <span class="summary-value">\${fkCount}</span>
                 </div>
@@ -403,13 +590,13 @@ export class DatabaseSchemaWebview {
             if (table.columns && table.columns.length > 0) {
               html += \`
                 <div class="columns-section">
-                  <h4>Columns</h4>
-                  <table class="columns-table">
+                  <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: bold;">Columns</h4>
+                  <table class="columns-table" style="width: 100%; border-collapse: collapse; font-size: 11px;">
                     <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Type</th>
-                        <th>Nullable</th>
+                      <tr style="background: var(--vscode-sideBar-background);">
+                        <th style="padding: 4px; text-align: left; border: 1px solid var(--vscode-widget-border);">Name</th>
+                        <th style="padding: 4px; text-align: left; border: 1px solid var(--vscode-widget-border);">Type</th>
+                        <th style="padding: 4px; text-align: left; border: 1px solid var(--vscode-widget-border);">Null</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -418,14 +605,14 @@ export class DatabaseSchemaWebview {
               table.columns.forEach(column => {
                 const isPK = column.is_primary_key;
                 const isFK = column.is_foreign_key;
-                const nameClass = isPK ? 'primary-key' : (isFK ? 'foreign-key' : '');
-                const nullableClass = column.nullable ? 'yes' : 'no';
+                const nameStyle = isPK ? 'color: #e74c3c; font-weight: bold;' : (isFK ? 'color: #f39c12; font-weight: bold;' : '');
+                const nullableText = column.nullable ? 'Yes' : 'No';
                 
                 html += \`
                   <tr>
-                    <td class="column-name \${nameClass}">\${column.name}</td>
-                    <td>\${column.data_type || column.type || 'Unknown'}</td>
-                    <td class="column-nullable \${nullableClass}">\${column.nullable ? 'Yes' : 'No'}</td>
+                    <td style="padding: 4px; border: 1px solid var(--vscode-widget-border); \${nameStyle}">\${column.name}</td>
+                    <td style="padding: 4px; border: 1px solid var(--vscode-widget-border);">\${column.data_type || column.type || 'Unknown'}</td>
+                    <td style="padding: 4px; border: 1px solid var(--vscode-widget-border);">\${nullableText}</td>
                   </tr>
                 \`;
               });
@@ -449,7 +636,7 @@ export class DatabaseSchemaWebview {
           
           function showError(message) {
             console.error(message);
-            // Could show error in UI
+            showErrorState(message);
           }
           
           // Handle table clicks from table list
@@ -457,7 +644,23 @@ export class DatabaseSchemaWebview {
             if (e.target.closest('.table-item')) {
               const tableName = e.target.closest('.table-item').dataset.table;
               if (tableName) {
-                selectTable(tableName);
+                // Find and select the table in the graph
+                if (cy) {
+                  const tableNode = cy.getElementById(tableName);
+                  if (tableNode.length > 0) {
+                    cy.elements().removeClass('highlighted');
+                    tableNode.addClass('highlighted');
+                    
+                    // Highlight connected elements
+                    const connectedEdges = tableNode.connectedEdges();
+                    connectedEdges.addClass('highlighted');
+                    connectedEdges.connectedNodes().addClass('highlighted');
+                    
+                    // Center on the table
+                    cy.center(tableNode);
+                  }
+                }
+                
                 showTableInfo(tableName);
               }
             }
@@ -466,6 +669,125 @@ export class DatabaseSchemaWebview {
       </body>
       </html>
     `;
+  }
+
+  /**
+   * Prepare graph data from schema data (similar to full code analysis approach)
+   */
+  private prepareGraphData(schemaData: any): any {
+    // Handle both direct data and wrapped data structures
+    const data = schemaData?.data || schemaData;
+    const tables = data?.tables || [];
+    
+    // Transform database schema data into graph format
+    const elements: any[] = [];
+    
+    // Add table nodes
+    tables.forEach((table: any) => {
+      elements.push({
+        data: {
+          id: table.name,
+          name: table.name,
+          label: table.name,
+          type: 'table',
+          table: table,
+          columnCount: table.columns ? table.columns.length : 0,
+          primaryKeys: table.primary_keys || table.primaryKeys || [],
+          foreignKeys: table.foreign_keys || table.foreignKeys || []
+        }
+      });
+    });
+    
+    // Add relationship edges
+    if (data?.relationships) {
+      data.relationships.forEach((relationship: any, index: number) => {
+        elements.push({
+          data: {
+            id: `rel_${index}`,
+            source: relationship.fromTable || relationship.from_table,
+            target: relationship.toTable || relationship.to_table,
+            type: 'relationship',
+            relationship: relationship,
+            label: relationship.relationshipType || relationship.relationship_type || 'foreign_key'
+          }
+        });
+      });
+    }
+    
+    // Define Cytoscape style for database schema
+    const style = [
+      // Table nodes
+      {
+        selector: 'node[type="table"]',
+        style: {
+          'shape': 'round-rectangle',
+          'background-color': '#3498db',
+          'border-color': '#2980b9',
+          'border-width': 2,
+          'label': 'data(name)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'color': '#ffffff',
+          'font-size': '12px',
+          'font-weight': 'bold',
+          'width': 120,
+          'height': 80,
+          'text-wrap': 'wrap',
+          'text-max-width': '100px'
+        }
+      },
+      // Selected table
+      {
+        selector: 'node[type="table"]:selected',
+        style: {
+          'background-color': '#9b59b6',
+          'border-color': '#8e44ad',
+          'border-width': 3
+        }
+      },
+      // Highlighted table
+      {
+        selector: 'node[type="table"].highlighted',
+        style: {
+          'background-color': '#1abc9c',
+          'border-color': '#16a085',
+          'border-width': 3
+        }
+      },
+      // Relationship edges
+      {
+        selector: 'edge[type="relationship"]',
+        style: {
+          'width': 2,
+          'line-color': '#2ecc71',
+          'target-arrow-color': '#2ecc71',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier',
+          'label': 'data(label)',
+          'font-size': '10px',
+          'text-rotation': 'autorotate'
+        }
+      },
+      // Highlighted edges
+      {
+        selector: 'edge[type="relationship"].highlighted',
+        style: {
+          'width': 4,
+          'line-color': '#1abc9c',
+          'target-arrow-color': '#1abc9c'
+        }
+      }
+    ];
+    
+    return {
+      elements: elements,
+      style: style,
+      layout: { name: 'cose', animate: true, fit: true },
+      state: {
+        schemaData: data,
+        tables: tables
+      }
+    };
   }
 
   /**
@@ -581,39 +903,57 @@ export class DatabaseSchemaWebview {
     return `
       <div class="graph-container">
         <!-- Toolbar -->
-        <div class="schema-toolbar">
-          <button class="toolbar-btn" onclick="fitSchema()">🔍 Fit</button>
-          <button class="toolbar-btn" onclick="resetSchema()">🔄 Reset</button>
-          <input type="text" id="table-search" class="search-input" placeholder="Search tables..." />
-          <select id="layout-select" class="layout-select">
-            <option value="dagre">Hierarchical</option>
+        <div class="schema-toolbar" style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 8px; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 5px; margin-bottom: 16px;">
+          <button id="zoom-in-btn" class="toolbar-btn" style="padding: 6px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 14px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Zoom In">🔍+</button>
+          <button id="zoom-out-btn" class="toolbar-btn" style="padding: 6px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 14px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Zoom Out">🔍-</button>
+          <button id="reset-view-btn" class="toolbar-btn" style="padding: 6px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 14px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Reset View">🎯</button>
+          <button id="fit-view-btn" class="toolbar-btn" style="padding: 6px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 14px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Fit to Screen">📐</button>
+          <input type="text" id="table-search" class="search-input" placeholder="Search tables..." style="padding: 4px 8px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); border-radius: 3px; font-size: 12px; min-width: 150px;" />
+          <select id="layout-select" class="layout-select" style="padding: 4px 8px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); border-radius: 3px; font-size: 12px; min-width: 120px;">
+            <option value="cose" selected>Force-directed</option>
             <option value="circle">Circle</option>
             <option value="grid">Grid</option>
             <option value="breadthfirst">Tree</option>
-            <option value="cose">Force-directed</option>
+            <option value="concentric">Concentric</option>
+            <option value="random">Random</option>
           </select>
-          <button class="toolbar-btn" onclick="exportSchema()">💾 Export</button>
+          <button id="export-btn" class="toolbar-btn" style="padding: 6px 12px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">💾 Export</button>
+        </div>
+
+        <!-- Graph Loading -->
+        <div id="graph-loading" style="text-align: center; padding: 40px; font-size: 16px;">
+          <div style="margin-bottom: 16px;">🔄</div>
+          <div>Initializing database schema graph...</div>
         </div>
 
         <!-- Graph -->
-        <div id="schema-graph" class="graph-display"></div>
+        <div id="enhanced-graph" class="graph-display" style="width: 100%; height: 600px; border: 1px solid var(--vscode-panel-border); display: none;"></div>
         
         <!-- Empty State -->
-        <div id="schema-empty" class="empty-state" style="display: none;">
-          <div class="empty-icon">🗄️</div>
+        <div id="schema-empty" class="empty-state" style="display: none; text-align: center; padding: 40px;">
+          <div class="empty-icon" style="font-size: 48px; margin-bottom: 16px;">🗄️</div>
           <h3>No Schema Data</h3>
           <p>Run a database schema analysis to see the visualization.</p>
-          <button onclick="requestSchemaAnalysis()" class="refresh-btn">Analyze Schema</button>
+          <button onclick="requestSchemaAnalysis()" class="refresh-btn" style="padding: 8px 16px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer;">Analyze Schema</button>
         </div>
 
         <!-- Table Info Panel -->
-        <div id="table-info-panel" class="table-info-panel">
-          <div class="info-panel-header">
-            <h3 id="table-info-title" class="info-panel-title">Table Details</h3>
-            <button class="close-btn" onclick="hideTableInfo()">×</button>
+        <div id="table-info-panel" class="table-info-panel" style="position: fixed; top: 50%; right: 16px; transform: translateY(-50%); background: var(--vscode-editor-background); padding: 16px; border: 1px solid var(--vscode-panel-border); border-radius: 5px; font-size: 12px; display: none; z-index: 1000; min-width: 250px; max-width: 400px; max-height: 80vh; overflow-y: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div class="info-panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 id="table-info-title" class="info-panel-title" style="margin: 0; font-size: 14px; font-weight: bold;">Table Details</h3>
+            <button class="close-btn" onclick="hideTableInfo()" style="background: none; border: none; color: var(--vscode-foreground); cursor: pointer; font-size: 16px;">×</button>
           </div>
           <div id="table-info-content" class="info-panel-content">
             <!-- Content will be populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- Legend Panel -->
+        <div class="legend" style="position: fixed; bottom: 16px; right: 16px; background: var(--vscode-editor-background); padding: 12px; border: 1px solid var(--vscode-panel-border); border-radius: 5px; font-size: 12px; display: none; z-index: 1000; min-width: 180px; max-height: 80vh; overflow-y: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="font-weight: bold; margin-bottom: 12px; font-size: 13px;">📊 Legend</div>
+          <div>
+            <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: #3498db; border: 1px solid #2980b9; border-radius: 2px;"></span> 🗄️ Table</div>
+            <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 24px; height: 2px; margin-right: 8px; vertical-align: middle; background: #2ecc71;"></span> Relationship</div>
           </div>
         </div>
       </div>
@@ -861,6 +1201,240 @@ export class DatabaseSchemaWebview {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--vscode-widget-border);
+      }
+
+      .detail-item:last-child {
+        border-bottom: none;
+      }
+
+      .detail-label {
+        font-weight: 600;
+        color: var(--vscode-foreground);
+      }
+
+      .detail-value {
+        color: var(--vscode-descriptionForeground);
+        font-family: var(--vscode-editor-font-family);
+      }
+
+      .table-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+      }
+
+      .summary-table-item {
+        padding: 12px;
+        background: var(--vscode-sideBar-background);
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 4px;
+      }
+
+      .summary-table-name {
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+
+      .summary-table-info {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+      }
+
+      .summary-table-item.more {
+        opacity: 0.7;
+        font-style: italic;
+      }
+
+      /* Graph specific styles */
+      .graph-container {
+        position: relative;
+        height: 100%;
+      }
+
+      .graph-display {
+        background: var(--vscode-editor-background);
+        border-radius: 4px;
+      }
+
+      .toolbar-btn:hover {
+        background: var(--vscode-button-hoverBackground) !important;
+      }
+
+      .search-input:focus,
+      .layout-select:focus {
+        outline: 1px solid var(--vscode-focusBorder);
+        outline-offset: -1px;
+      }
+
+      /* Table list styles */
+      .table-details-container {
+        padding: 0;
+      }
+
+      .table-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .table-item {
+        background: var(--vscode-sideBar-background);
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 8px;
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .table-item:hover {
+        background: var(--vscode-list-hoverBackground);
+        border-color: var(--vscode-focusBorder);
+      }
+
+      .table-item.selected {
+        background: var(--vscode-list-activeSelectionBackground);
+        border-color: var(--vscode-focusBorder);
+        color: var(--vscode-list-activeSelectionForeground);
+      }
+
+      .table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .table-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--vscode-foreground);
+      }
+
+      .table-stats {
+        display: flex;
+        gap: 8px;
+      }
+
+      .stat-badge {
+        padding: 2px 6px;
+        background: var(--vscode-badge-background);
+        color: var(--vscode-badge-foreground);
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: 500;
+      }
+
+      .stat-badge.primary {
+        background: #e74c3c;
+        color: white;
+      }
+
+      .stat-badge.foreign {
+        background: #f39c12;
+        color: white;
+      }
+
+      .table-columns {
+        margin-top: 8px;
+      }
+
+      .columns-header {
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--vscode-foreground);
+      }
+
+      .columns-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .column-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 8px;
+        background: var(--vscode-editor-background);
+        border-radius: 3px;
+        font-size: 11px;
+      }
+
+      .column-item.more {
+        opacity: 0.7;
+        font-style: italic;
+      }
+
+      .column-name {
+        font-weight: 500;
+      }
+
+      .column-type {
+        color: var(--vscode-descriptionForeground);
+        font-family: var(--vscode-editor-font-family);
+      }
+
+      .column-badge {
+        padding: 1px 4px;
+        border-radius: 2px;
+        font-size: 9px;
+        font-weight: bold;
+      }
+
+      .column-badge.pk {
+        background: #e74c3c;
+        color: white;
+      }
+
+      .column-badge.fk {
+        background: #f39c12;
+        color: white;
+      }
+
+      /* Empty state styles */
+      .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 400px;
+        text-align: center;
+        color: var(--vscode-descriptionForeground);
+      }
+
+      .empty-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+
+      .empty-state h3 {
+        margin: 0 0 8px 0;
+        color: var(--vscode-foreground);
+      }
+
+      .empty-state p {
+        margin: 0 0 16px 0;
+        max-width: 300px;
+      }
+
+      .refresh-btn {
+        padding: 8px 16px;
+        background: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.2s ease;
+      }
+
+      .refresh-btn:hover {
+        background: var(--vscode-button-hoverBackground);
+      }-items: center;
         padding: 8px 0;
         border-bottom: 1px solid var(--vscode-widget-border);
       }

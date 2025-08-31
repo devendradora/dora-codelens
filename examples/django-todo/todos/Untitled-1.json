@@ -11,7 +11,11 @@
     "treeView": {
       "expandableNodes": true,
       "searchFunctionality": true,
-      "exportOptions": ["json", "csv", "txt"],
+      "exportOptions": [
+        "json",
+        "csv",
+        "txt"
+      ],
       "metadata": {
         "nodeCount": true,
         "maxDepth": true,
@@ -19,7 +23,14 @@
       }
     }
   },
-  "supportedTypes": ["object", "array", "string", "number", "boolean", "null"],
+  "supportedTypes": [
+    "object",
+    "array",
+    "string",
+    "number",
+    "boolean",
+    "null"
+  ],
   "configuration": {
     "indent": 2,
     "sortKeys": false,
@@ -30,21 +41,34 @@
   "examples": [
     {
       "type": "simple",
-      "data": {"key": "value"}
+      "data": {
+        "key": "value"
+      }
     },
     {
       "type": "nested",
       "data": {
         "level1": {
           "level2": {
-            "level3": ["item1", "item2", "item3"]
+            "level3": [
+              "item1",
+              "item2",
+              "item3"
+            ]
           }
         }
       }
     },
     {
       "type": "array",
-      "data": [1, 2, 3, {"nested": true}]
+      "data": [
+        1,
+        2,
+        3,
+        {
+          "nested": true
+        }
+      ]
     }
   ],
   "testData": {

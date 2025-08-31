@@ -1,0 +1,11 @@
+{
+  "name": "test",
+  "version": "1.0.0",
+  "description": "Test JSON file for utilities",
+  "nested": {
+    "array": [1, 2, 3],
+    "object": {
+      "key": "value"
+    }
+  }
+}

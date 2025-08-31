@@ -4,6 +4,7 @@ import { DuplicateCallGuard } from './core/duplicate-call-guard';
 import { AnalysisStateManager } from './core/analysis-state-manager';
 import { CommandManager } from './core/command-manager';
 import { WebviewManager } from './webviews/webview-manager';
+import { JsonContextManager } from './core/json-context-manager';
 
 /**
  * Extension activation function with centralized error handling and duplicate call prevention
@@ -15,6 +16,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   let stateManager: AnalysisStateManager | undefined;
   let webviewManager: WebviewManager | undefined;
   let commandManager: CommandManager | undefined;
+  let jsonContextManager: JsonContextManager | undefined;
 
   try {
     // Create output channel first
@@ -58,6 +60,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // Register all commands
     commandManager.registerAllCommands();
     errorHandler.logError('All commands registered', null, 'activate');
+
+    // Initialize code lens state
+    commandManager.initializeCodeLens();
+    errorHandler.logError('Code lens initialized', null, 'activate');
+
+    // Initialize JSON context manager
+    jsonContextManager = JsonContextManager.getInstance(errorHandler);
+    errorHandler.logError('JSON context manager initialized', null, 'activate');
 
     // Add state change listener for debugging
     stateManager.addStateChangeListener((state) => {
@@ -123,6 +133,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     // Clean up on failure
     try {
+      if (jsonContextManager) {
+        jsonContextManager.dispose();
+      }
       if (commandManager) {
         commandManager.dispose();
       }
@@ -156,6 +169,13 @@ export async function deactivate(): Promise<void> {
     const commandManager = CommandManager.getInstance();
     const stateManager = AnalysisStateManager.getInstance();
     const duplicateCallGuard = DuplicateCallGuard.getInstance();
+    const jsonContextManager = JsonContextManager.getInstance();
+
+    // Clean up JSON context manager
+    if (jsonContextManager) {
+      jsonContextManager.dispose();
+      errorHandler.logError('JSON context manager disposed', null, 'deactivate');
+    }
 
     // Clean up command manager
     if (commandManager) {

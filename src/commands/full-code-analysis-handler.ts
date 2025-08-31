@@ -105,6 +105,13 @@ export class FullCodeAnalysisHandler {
               this.errorHandler.logError('Failed to show webview, analysis completed but display failed', webviewError, FullCodeAnalysisHandler.COMMAND_ID);
               vscode.window.showWarningMessage('Analysis completed but failed to display results. Check the output for details.');
             }
+
+            // Update code lens with analysis data
+            try {
+              vscode.commands.executeCommand('doracodebird.updateCodeLensData', validatedResult);
+            } catch (codeLensError) {
+              this.errorHandler.logError('Failed to update code lens data', codeLensError, FullCodeAnalysisHandler.COMMAND_ID);
+            }
             
             // Show success message
             vscode.window.showInformationMessage(

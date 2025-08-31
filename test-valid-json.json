@@ -1,0 +1,16 @@
+{
+  "name": "test-config",
+  "enabled": true,
+  "disabled": false,
+  "value": null,
+  "settings": {
+    "timeout": 30,
+    "debug": true,
+    "features": ["auth", "logging"],
+    "database": {
+      "host": "localhost",
+      "ssl": false,
+      "credentials": null
+    }
+  }
+}

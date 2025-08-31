@@ -239,6 +239,12 @@ export class FullCodeAnalysisWebview {
                       <option value="random">Random</option>
                     </select>
                   </div>
+                  <!-- Code Lens Toggle -->
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <button id="toggle-code-lens-btn" style="padding: 8px 12px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: 600;" title="Toggle Code Lens">
+                      📊 Toggle Code Lens
+                    </button>
+                  </div>
                 </div>
               </div>
               <div class="section-content" style="position: relative; padding: 0;">
@@ -499,6 +505,14 @@ export class FullCodeAnalysisWebview {
             // Collapse All Folders
             safeAddEventListener('collapse-all-btn', 'click', function() {
               collapseAllFolders(cy, window.expanded);
+            });
+
+            // Code Lens Toggle
+            safeAddEventListener('toggle-code-lens-btn', 'click', function() {
+              console.log('Code lens toggle clicked');
+              vscode.postMessage({
+                command: 'toggleCodeLens'
+              });
             });
 
             // Layout Selection (if exists)
@@ -1311,6 +1325,15 @@ export class FullCodeAnalysisWebview {
           null,
           "FullCodeAnalysisWebview"
         );
+        break;
+      case "toggleCodeLens":
+        // Handle code lens toggle
+        this.errorHandler.logError(
+          "Code lens toggle requested from webview",
+          null,
+          "FullCodeAnalysisWebview"
+        );
+        vscode.commands.executeCommand('doracodebird.toggleCodeLens');
         break;
       default:
         this.errorHandler.logError(
