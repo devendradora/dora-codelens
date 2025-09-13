@@ -1,0 +1,673 @@
+/* Modern Tech Stack Dashboard Styles */
+
+/* Main dashboard container */
+.modern-tech-stack-layout {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--vscode-editor-background);
+  padding: 20px;
+  color: var(--vscode-foreground);
+  line-height: 1.5;
+}
+
+/* Category sections */
+.category-section {
+  margin-bottom: 40px;
+}
+
+.category-header {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 20px 0;
+  padding: 0;
+}
+
+/* Subcategory grid layout */
+.subcategory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* Subcategory cards */
+.subcategory-card {
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 8px;
+  padding: 16px;
+  min-height: 120px;
+}
+
+.subcategory-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.subcategory-icon {
+  font-size: 16px;
+}
+
+.subcategory-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+  margin: 0;
+}
+
+.subcategory-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+/* Technology badges */
+.tech-badge {
+  background: var(--vscode-input-background);
+  color: var(--vscode-foreground);
+  border: 1px solid var(--vscode-input-border);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-block;
+  transition: all 0.2s ease;
+}
+
+.tech-badge:hover {
+  background: var(--vscode-list-hoverBackground);
+  border-color: var(--vscode-focusBorder);
+}
+
+.tech-badge-with-version {
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-block;
+  transition: all 0.2s ease;
+  cursor: help;
+}
+
+.tech-badge-with-version:hover {
+  background: var(--vscode-button-hoverBackground);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.no-data {
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+  font-size: 12px;
+}
+
+/* Error states */
+.no-categories {
+  text-align: center;
+  padding: 40px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 16px;
+}
+
+.tech-stack-dashboard.error {
+  text-align: center;
+  padding: 40px;
+}
+
+.error-message h3 {
+  color: var(--vscode-errorForeground);
+  margin-bottom: 10px;
+}
+
+.error-message p {
+  color: var(--vscode-descriptionForeground);
+}
+
+/* Responsive design */
+
+/* Tablet and smaller */
+@media (max-width: 768px) {
+  .tech-stack-dashboard {
+    padding: 16px;
+  }
+  
+  .project-overview-card {
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  
+  .project-overview-card h2 {
+    font-size: 20px;
+  }
+  
+  .overview-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+  }
+  
+  .overview-item {
+    padding: 14px;
+  }
+  
+  .overview-item p {
+    font-size: 16px;
+  }
+  
+  .category-card {
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  
+  .category-header {
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  
+  .category-title {
+    font-size: 20px;
+  }
+  
+  .category-icon {
+    font-size: 24px;
+    width: 36px;
+    height: 36px;
+  }
+  
+  .subcategory-section {
+    margin-bottom: 24px;
+  }
+  
+  .technology-badges {
+    gap: 8px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .tech-stack-dashboard {
+    padding: 12px;
+  }
+  
+  .project-overview-card {
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  
+  .project-overview-card h2 {
+    font-size: 18px;
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+  
+  .overview-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  
+  .overview-item {
+    padding: 12px;
+  }
+  
+  .overview-item p {
+    font-size: 14px;
+  }
+  
+  .overview-item.description {
+    grid-column: 1 / -1;
+  }
+  
+  .category-card {
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  
+  .category-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    text-align: left;
+  }
+  
+  .category-title {
+    font-size: 18px;
+  }
+  
+  .category-icon {
+    font-size: 20px;
+    width: 32px;
+    height: 32px;
+  }
+  
+  .subcategory-header {
+    gap: 8px;
+  }
+  
+  .subcategory-title {
+    font-size: 14px;
+  }
+  
+  .technology-badges {
+    gap: 6px;
+  }
+  
+  .tech-badge {
+    padding: 6px 10px;
+    font-size: 12px;
+    max-width: 150px;
+  }
+  
+  .tech-version {
+    font-size: 10px;
+    padding: 1px 4px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .category-card {
+    border-width: 2px;
+  }
+  
+  .tech-badge {
+    border-width: 2px;
+  }
+  
+  .overview-item {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .category-card,
+  .tech-badge,
+  .overview-item,
+  .project-overview-card {
+    transition: none;
+  }
+  
+  .category-card:hover,
+  .tech-badge:hover,
+  .overview-item:hover {
+    transform: none;
+  }
+}
+
+/* Dark theme specific adjustments */
+.vscode-dark .tech-stack-dashboard {
+  /* Enhanced shadows for dark theme */
+}
+
+.vscode-dark .category-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.vscode-dark .category-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.vscode-dark .project-overview-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.vscode-dark .project-overview-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Light theme specific adjustments */
+.vscode-light .category-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.vscode-light .category-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light .project-overview-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.vscode-light .project-overview-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+/*
+ Responsive design */
+
+/* Tablet and smaller */
+@media (max-width: 768px) {
+  .modern-tech-stack-layout {
+    padding: 16px;
+  }
+  
+  .subcategory-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .subcategory-card {
+    padding: 12px;
+  }
+  
+  .category-header {
+    font-size: 16px;
+    margin-bottom: 16px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .modern-tech-stack-layout {
+    padding: 12px;
+  }
+  
+  .category-section {
+    margin-bottom: 30px;
+  }
+  
+  .subcategory-grid {
+    gap: 8px;
+  }
+  
+  .subcategory-card {
+    padding: 10px;
+    min-height: 100px;
+  }
+  
+  .subcategory-header {
+    margin-bottom: 8px;
+  }
+  
+  .subcategory-title {
+    font-size: 13px;
+  }
+  
+  .tech-name {
+    font-size: 13px;
+  }
+  
+  .tech-version {
+    font-size: 10px;
+    padding: 1px 4px;
+  }
+  
+  .tech-badge {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .subcategory-card {
+    border-width: 2px;
+  }
+  
+  .tech-badge {
+    border: 1px solid var(--vscode-contrastBorder);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .subcategory-card {
+    transition: none;
+  }
+}
+
+/* Dark theme specific adjustments */
+.vscode-dark .subcategory-card {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Light theme specific adjustments */
+.vscode-light .subcategory-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+/* Debu
+g Panel Styles */
+.debug-panel {
+  margin-bottom: 20px;
+}
+
+.debug-toggle-btn {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.debug-toggle-btn:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.debug-content {
+  margin-top: 16px;
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.debug-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--vscode-titleBar-activeBackground);
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.debug-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vscode-titleBar-activeForeground);
+}
+
+.debug-close-btn {
+  background: transparent;
+  color: var(--vscode-titleBar-activeForeground);
+  border: none;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.debug-close-btn:hover {
+  background: var(--vscode-titleBar-inactiveBackground);
+}
+
+.debug-json-container {
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.debug-json {
+  background: var(--vscode-textCodeBlock-background);
+  color: var(--vscode-editor-foreground);
+  font-family: 'Courier New', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  margin: 0;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-input-border);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-x: auto;
+}
+
+/* Scrollbar styling for debug panel */
+.debug-json-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.debug-json-container::-webkit-scrollbar-track {
+  background: var(--vscode-scrollbarSlider-background);
+}
+
+.debug-json-container::-webkit-scrollbar-thumb {
+  background: var(--vscode-scrollbarSlider-hoverBackground);
+  border-radius: 4px;
+}
+
+.debug-json-container::-webkit-scrollbar-thumb:hover {
+  background: var(--vscode-scrollbarSlider-activeBackground);
+}
+
+/* Responsive debug panel */
+@media (max-width: 768px) {
+  .debug-header {
+    padding: 10px 12px;
+  }
+  
+  .debug-header h3 {
+    font-size: 13px;
+  }
+  
+  .debug-json-container {
+    padding: 12px;
+    max-height: 400px;
+  }
+  
+  .debug-json {
+    font-size: 10px;
+    padding: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .debug-toggle-btn {
+    font-size: 11px;
+    padding: 6px 12px;
+  }
+  
+  .debug-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .debug-close-btn {
+    align-self: flex-end;
+  }
+  
+  .debug-json-container {
+    max-height: 300px;
+  }
+}
+/* De
+bug Panel Styles */
+.debug-panel {
+  margin-bottom: 20px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.debug-toggle-btn {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  padding: 12px 16px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.debug-toggle-btn:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.debug-content {
+  background: var(--vscode-editor-background);
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.debug-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--vscode-input-background);
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.debug-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+.debug-close-btn {
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.debug-close-btn:hover {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.debug-json-container {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.debug-json {
+  background: var(--vscode-textCodeBlock-background);
+  color: var(--vscode-foreground);
+  padding: 12px;
+  border-radius: 4px;
+  font-family: 'Courier New', Consolas, 'Liberation Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  border: 1px solid var(--vscode-panel-border);
+}
+
+.debug-json code {
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* Debug panel responsive design */
+@media (max-width: 768px) {
+  .debug-json-container {
+    max-height: 300px;
+    padding: 12px;
+  }
+  
+  .debug-json {
+    font-size: 11px;
+    padding: 8px;
+  }
+}

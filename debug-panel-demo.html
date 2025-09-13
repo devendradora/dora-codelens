@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Panel Demo</title>
+    <style>
+        :root {
+            --vscode-editor-background: #1e1e1e;
+            --vscode-foreground: #cccccc;
+            --vscode-panel-border: #3c3c3c;
+            --vscode-button-background: #0e639c;
+            --vscode-button-foreground: #ffffff;
+            --vscode-button-hoverBackground: #1177bb;
+            --vscode-titleBar-activeBackground: #2d2d30;
+            --vscode-titleBar-activeForeground: #cccccc;
+            --vscode-titleBar-inactiveBackground: #3c3c3c;
+            --vscode-textCodeBlock-background: #0f0f0f;
+            --vscode-input-border: #3c3c3c;
+            --vscode-scrollbarSlider-background: #79797966;
+            --vscode-scrollbarSlider-hoverBackground: #646464b3;
+            --vscode-scrollbarSlider-activeBackground: #bfbfbf66;
+            --vscode-badge-background: #4d4d4d;
+            --vscode-badge-foreground: #ffffff;
+        }
+        
+        body {
+            background: var(--vscode-editor-background);
+            color: var(--vscode-foreground);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+    </style>
+    <link rel="stylesheet" href="resources/modern-tech-stack-dashboard.css">
+</head>
+<body>
+    <h1>Modern Tech Stack Dashboard with Debug Panel</h1>
+    
+    <div class="modern-tech-stack-layout">
+        <!-- Debug Panel -->
+        <div class="debug-panel">
+            <button class="debug-toggle-btn" onclick="toggleDebugPanel()">
+                🐛 Debug: Show Tech Stack JSON
+            </button>
+            <div class="debug-content" id="debug-content" style="display: none;">
+                <div class="debug-header">
+                    <h3>Tech Stack Analysis Data (Debug Mode)</h3>
+                    <button class="debug-close-btn" onclick="toggleDebugPanel()">✕ Close</button>
+                </div>
+                <div class="debug-json-container">
+                    <pre class="debug-json"><code>{
+  "categorized_tech_stack": {
+    "categories": {
+      "backend": {
+        "metadata": {
+          "name": "backend",
+          "display_name": "Backend",
+          "icon": "🔧",
+          "description": "Backend technologies",
+          "color": "#ff9800"
+        },
+        "subcategories": {
+          "languages": {
+            "name": "languages",
+            "display_name": "Languages",
+            "icon": "&lt;&gt;",
+            "technologies": [
+              {
+                "name": "Python",
+                "version": "3.13.1",
+                "source": "requirements.txt",
+                "confidence": 0.95,
+                "metadata": {
+                  "icon": "🐍",
+                  "description": "Python programming language"
+                }
+              }
+            ],
+            "visible": true,
+            "order": 1
+          },
+          "package_managers": {
+            "name": "package_managers",
+            "display_name": "Package Manager",
+            "icon": "⚙️",
+            "technologies": [
+              {
+                "name": "pip",
+                "source": "requirements.txt",
+                "confidence": 0.90,
+                "metadata": {
+                  "icon": "📦",
+                  "description": "Python package manager"
+                }
+              }
+            ],
+            "visible": true,
+            "order": 2
+          },
+          "frameworks": {
+            "name": "frameworks",
+            "display_name": "Frameworks",
+            "icon": "🏗️",
+            "technologies": [
+              {
+                "name": "Django",
+                "source": "imports",
+                "confidence": 0.85
+              },
+              {
+                "name": "Flask",
+                "source": "imports",
+                "confidence": 0.80
+              },
+              {
+                "name": "FastAPI",
+                "source": "imports",
+                "confidence": 0.75
+              }
+            ],
+            "visible": true,
+            "order": 3
+          },
+          "libraries": {
+            "name": "libraries",
+            "display_name": "Libraries",
+            "icon": "📚",
+            "technologies": [
+              {
+                "name": "djangorestframework",
+                "source": "requirements.txt",
+                "confidence": 0.90
+              },
+              {
+                "name": "pytest",
+                "source": "requirements.txt",
+                "confidence": 0.85
+              },
+              {
+                "name": "celery",
+                "source": "requirements.txt",
+                "confidence": 0.80
+              },
+              {
+                "name": "sentry-sdk",
+                "source": "requirements.txt",
+                "confidence": 0.75
+              },
+              {
+                "name": "cryptography",
+                "source": "requirements.txt",
+                "confidence": 0.70
+              }
+            ],
+            "visible": true,
+            "order": 4
+          }
+        },
+        "total_count": 10,
+        "visible": true,
+        "layout_hints": {
+          "full_width": false,
+          "subcategory_layout": "grid"
+        }
+      },
+      "frontend": {
+        "metadata": {
+          "name": "frontend",
+          "display_name": "Frontend",
+          "icon": "🎨",
+          "description": "Frontend technologies",
+          "color": "#4caf50"
+        },
+        "subcategories": {
+          "libraries": {
+            "name": "libraries",
+            "display_name": "Libraries",
+            "icon": "📚",
+            "technologies": [
+              {
+                "name": "hubspot-api-client",
+                "source": "package.json",
+                "confidence": 0.90
+              }
+            ],
+            "visible": true,
+            "order": 4
+          }
+        },
+        "total_count": 1,
+        "visible": true,
+        "layout_hints": {
+          "full_width": false,
+          "subcategory_layout": "grid"
+        }
+      }
+    },
+    "total_technologies": 11,
+    "processing_metadata": {
+      "processing_time_ms": 150,
+      "rules_applied": 25,
+      "confidence_threshold": 0.7,
+      "detection_methods": [
+        "file_analysis",
+        "import_analysis",
+        "package_analysis"
+      ],
+      "fallback_mode": false
+    },
+    "layout_config": {
+      "full_width_categories": false,
+      "show_empty_categories": false,
+      "responsive_design": true,
+      "category_order": [
+        "backend",
+        "frontend",
+        "databases",
+        "devops",
+        "others"
+      ]
+    }
+  }
+}</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backend Section -->
+        <div class="category-section" data-category="backend">
+            <h2 class="category-header" style="color: #ff9800;">Backend</h2>
+            <div class="subcategory-grid">
+                <div class="subcategory-card" data-subcategory="languages">
+                    <div class="subcategory-header">
+                        <span class="subcategory-icon"><></span>
+                        <span class="subcategory-title">Languages</span>
+                    </div>
+                    <div class="subcategory-content">
+                        <div class="tech-item-with-version">
+                            <span class="tech-name">Python</span>
+                            <span class="tech-version">3.13.1</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="subcategory-card" data-subcategory="package_managers">
+                    <div class="subcategory-header">
+                        <span class="subcategory-icon">⚙️</span>
+                        <span class="subcategory-title">Package Manager</span>
+                    </div>
+                    <div class="subcategory-content">
+                        <div class="tech-badge">pip</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory-card" data-subcategory="frameworks">
+                    <div class="subcategory-header">
+                        <span class="subcategory-icon">🏗️</span>
+                        <span class="subcategory-title">Frameworks</span>
+                    </div>
+                    <div class="subcategory-content">
+                        <div class="tech-badge">Django</div>
+                        <div class="tech-badge">Flask</div>
+                        <div class="tech-badge">FastAPI</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory-card" data-subcategory="libraries">
+                    <div class="subcategory-header">
+                        <span class="subcategory-icon">📚</span>
+                        <span class="subcategory-title">Libraries</span>
+                    </div>
+                    <div class="subcategory-content">
+                        <div class="tech-badge">djangorestframework</div>
+                        <div class="tech-badge">pytest</div>
+                        <div class="tech-badge">celery</div>
+                        <div class="tech-badge">sentry-sdk</div>
+                        <div class="tech-badge">cryptography</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Frontend Section -->
+        <div class="category-section" data-category="frontend">
+            <h2 class="category-header" style="color: #4caf50;">Frontend</h2>
+            <div class="subcategory-grid">
+                <div class="subcategory-card" data-subcategory="libraries">
+                    <div class="subcategory-header">
+                        <span class="subcategory-icon">📚</span>
+                        <span class="subcategory-title">Libraries</span>
+                    </div>
+                    <div class="subcategory-content">
+                        <div class="tech-badge">hubspot-api-client</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleDebugPanel() {
+            const debugContent = document.getElementById('debug-content');
+            const toggleBtn = document.querySelector('.debug-toggle-btn');
+            
+            if (debugContent.style.display === 'none') {
+                debugContent.style.display = 'block';
+                toggleBtn.textContent = '🐛 Debug: Hide Tech Stack JSON';
+                debugContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                debugContent.style.display = 'none';
+                toggleBtn.textContent = '🐛 Debug: Show Tech Stack JSON';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -516,6 +516,7 @@ export class CurrentFileAnalysisWebview {
       }
       
       .complexity-low {
+        width: 60px;
         background: #27ae60;
         color: white;
       }

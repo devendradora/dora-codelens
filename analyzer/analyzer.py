@@ -119,6 +119,15 @@ class ModuleInfo:
 # Import from dependency_parser at module level to avoid issues
 from dependency_parser import Library, TechStack
 
+# Import new categorization system
+try:
+    from tech_stack_categorizer import TechStackCategorizer
+    from category_rules_engine import CategoryRulesEngine
+    CATEGORIZATION_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Categorization system not available: {e}")
+    CATEGORIZATION_AVAILABLE = False
+
 
 @dataclass
 class ModuleNode:
@@ -217,6 +226,7 @@ class AnalysisResult:
     tech_stack: TechStack
     code_graph_json: List[CodeGraphNode]  # Enhanced code graph structure
     metadata: AnalysisMetadata
+    categorized_tech_stack: Optional[Dict[str, Any]] = None  # New categorized structure
     
     def to_json(self, validate: bool = True) -> str:
         """Convert analysis result to JSON string.
@@ -266,6 +276,10 @@ class AnalysisResult:
             "code_graph_json": [self._code_graph_node_to_dict(node) for node in self.code_graph_json] if self.code_graph_json else [],
             "schema_version": "2.0.0"
         }
+        
+        # Add categorized tech stack if available
+        if self.categorized_tech_stack:
+            result_dict.update(self.categorized_tech_stack)
         
         return result_dict
     
@@ -894,6 +908,86 @@ class ProjectAnalyzer:
             # Calculate complexity statistics
             complexity_stats = complexity_analyzer.calculate_project_complexity_stats(enhanced_modules)
             
+            # Generate categorized tech stack using new Python-driven system
+            categorized_tech_stack = None
+            if CATEGORIZATION_AVAILABLE:
+                try:
+                    self.performance_optimizer.progress_reporter.update_progress("Categorizing technologies")
+                    logger.info("Starting Python-driven tech stack categorization...")
+                    
+                    # Initialize categorization system
+                    rules_engine = CategoryRulesEngine()
+                    categorizer = TechStackCategorizer(rules_engine)
+                    
+                    # Prepare technology data for categorization
+                    technologies = []
+                    seen_technologies = set()  # Track technologies to avoid duplicates
+                    
+                    # Add libraries from tech stack
+                    for library in tech_stack.libraries:
+                        tech_name = library.name.lower()
+                        if tech_name not in seen_technologies:
+                            technologies.append({
+                                "name": library.name,
+                                "version": library.version,
+                                "source": library.source,
+                                "confidence": 1.0
+                            })
+                            seen_technologies.add(tech_name)
+                    
+                    # Add frameworks (only if not already added as library)
+                    for framework in tech_stack.frameworks:
+                        tech_name = framework.lower()
+                        if tech_name not in seen_technologies:
+                            technologies.append({
+                                "name": framework,
+                                "source": "framework_detection",
+                                "confidence": 0.9
+                            })
+                            seen_technologies.add(tech_name)
+                    
+                    # Add Python version as a technology
+                    if tech_stack.python_version:
+                        technologies.append({
+                            "name": "python",
+                            "version": tech_stack.python_version,
+                            "source": "version_detection",
+                            "confidence": 1.0
+                        })
+                    
+                    # Add package manager
+                    technologies.append({
+                        "name": tech_stack.package_manager,
+                        "source": "package_manager_detection",
+                        "confidence": 1.0
+                    })
+                    
+                    # Perform categorization
+                    analysis_data = {
+                        "project_path": str(self.project_path),
+                        "modules": len(enhanced_modules),
+                        "complexity_stats": complexity_stats
+                    }
+                    
+                    categorized_result = categorizer.categorize_technologies(technologies, analysis_data)
+                    categorized_tech_stack = categorizer.generate_output_json(categorized_result)
+                    
+                    # Validate the output
+                    validation_result = categorizer.validate_output(categorized_tech_stack)
+                    if not validation_result["valid"]:
+                        logger.warning(f"Categorization validation failed: {validation_result['errors']}")
+                        for warning in validation_result["warnings"]:
+                            self._add_warning("categorization_validation", warning)
+                    else:
+                        logger.info(f"Categorization completed successfully: {validation_result['statistics']}")
+                    
+                except Exception as e:
+                    logger.error(f"Tech stack categorization failed: {e}")
+                    self._add_warning("categorization_failure", f"Tech stack categorization failed: {e}")
+                    categorized_tech_stack = None
+            else:
+                logger.info("Python-driven categorization system not available, skipping...")
+            
             # Final memory cleanup
             self.performance_optimizer.cleanup_memory()
             
@@ -916,7 +1010,8 @@ class ProjectAnalyzer:
                 warnings=self.warnings.copy(),
                 tech_stack=tech_stack,
                 code_graph_json=code_graph_json,
-                metadata=metadata
+                metadata=metadata,
+                categorized_tech_stack=categorized_tech_stack
             )
             
             # Stop performance monitoring

@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { ErrorHandler } from "../core/error-handler";
+import { CategoryDisplayManager } from "../services/category-display-manager";
 
 /**
  * Full Code Analysis Webview Provider
@@ -12,10 +13,12 @@ export class FullCodeAnalysisWebview {
   private errorHandler: ErrorHandler;
   private extensionPath: string;
   private currentData: any = null;
+  private categoryDisplayManager: CategoryDisplayManager;
 
   constructor(errorHandler: ErrorHandler, extensionPath: string) {
     this.errorHandler = errorHandler;
     this.extensionPath = extensionPath;
+    this.categoryDisplayManager = new CategoryDisplayManager(errorHandler);
   }
 
   /**
@@ -126,6 +129,12 @@ export class FullCodeAnalysisWebview {
     const cssUri = webview.asWebviewUri(
       vscode.Uri.file(path.join(this.extensionPath, "resources", "webview.css"))
     );
+    const techStackCssUri = webview.asWebviewUri(
+      vscode.Uri.file(path.join(this.extensionPath, "resources", "tech-stack-categories.css"))
+    );
+    const modernDashboardCssUri = webview.asWebviewUri(
+      vscode.Uri.file(path.join(this.extensionPath, "resources", "modern-tech-stack-dashboard.css"))
+    );
     const cytoscapeUri = webview.asWebviewUri(
       vscode.Uri.file(
         path.join(
@@ -167,6 +176,8 @@ export class FullCodeAnalysisWebview {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Full Code Analysis</title>
         <link rel="stylesheet" href="${cssUri}">
+        <link rel="stylesheet" href="${techStackCssUri}">
+        <link rel="stylesheet" href="${modernDashboardCssUri}">
         <meta http-equiv="Content-Security-Policy" content="
           default-src 'none';
           img-src ${webview.cspSource} https: data:;
@@ -190,11 +201,11 @@ export class FullCodeAnalysisWebview {
               </button>
               <button class="nav-link" data-tab="code-graph-section">
                 <span class="nav-icon">🕸️</span>
-                <span class="nav-label">Code Graph</span>
+                <span class="nav-label">Mind Map</span>
               </button>
               <button class="nav-link" data-tab="code-graph-json-section">
                 <span class="nav-icon">📄</span>
-                <span class="nav-label">Code Graph JSON</span>
+                <span class="nav-label">Mind Map JSON</span>
               </button>
             </div>
           </div>
@@ -211,10 +222,10 @@ export class FullCodeAnalysisWebview {
               </div>
             </section>
 
-            <!-- Code Graph Section -->
+            <!-- Mind Map Section -->
             <section id="code-graph-section" class="content-section">
               <div class="section-header" style="margin-bottom: 16px;">
-                <h2 style="margin: 0 0 16px 0;">🕸️ Code Graph Visualization</h2>
+                <h2 style="margin: 0 0 16px 0;">🕸️ Mind Map Visualization</h2>
                 <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
                   <!-- Quick Controls -->
                   <div style="display: flex; gap: 8px; flex-wrap: wrap; padding: 8px; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 5px;">
@@ -254,7 +265,7 @@ export class FullCodeAnalysisWebview {
                 <div id="graph-loading" style="text-align: center; padding: 40px; font-size: 16px;">
                   <div style="margin-bottom: 24px;">
                     <div id="loading-icon" style="font-size: 32px; margin-bottom: 16px;">🔄</div>
-                    <div id="loading-message" style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Initializing interactive code graph...</div>
+                    <div id="loading-message" style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Initializing interactive mind map...</div>
                     <div id="loading-details" style="font-size: 14px; color: var(--vscode-descriptionForeground); margin-bottom: 16px;">Analyzing data structure...</div>
                   </div>
                   
@@ -289,10 +300,10 @@ export class FullCodeAnalysisWebview {
                   
                   <!-- Legend -->
                   <div>
-                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: yellow; border:1px solid #000; border-radius: 2px;"></span> 📁 Folder</div>
-                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: skyblue; border:1px solid #000; border-radius: 2px;"></span> 📄 File</div>
-                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: orange; clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);"></span> 🏛️ Class</div>
-                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: green; border-radius: 50%;"></span> ⚙️ Function</div>
+                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: yellow; border:1px solid #000; border-radius: 2px;"></span> Folder</div>
+                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: skyblue; border:1px solid #000; border-radius: 2px;"></span> File</div>
+                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: orange; clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);"></span> Class</div>
+                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: green; border-radius: 50%;"></span> Function</div>
                     <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 24px; height: 2px; margin-right: 8px; vertical-align: middle; background: #888;"></span> Contains</div>
                     <div><span style="display: inline-block; width: 24px; height: 2px; margin-right: 8px; vertical-align: middle; background: red;"></span> Calls</div>
                   </div>
@@ -300,10 +311,10 @@ export class FullCodeAnalysisWebview {
               </div>
             </section>
 
-            <!-- Code Graph JSON Section -->
+            <!-- Mind Map JSON Section -->
             <section id="code-graph-json-section" class="content-section">
               <div class="section-header">
-                <h2>📄 Code Graph JSON Data</h2>
+                <h2>📄 Mind Map JSON Data</h2>
               </div>
               <div class="section-content">
                 ${tabContents.codeGraphJson}
@@ -352,7 +363,7 @@ export class FullCodeAnalysisWebview {
                 if (targetSection) {
                   targetSection.classList.add('active');
                   
-                  // If switching to code graph tab, initialize graph if not already done
+                  // If switching to mind map tab, initialize graph if not already done
                   if (targetTab === 'code-graph-section' && !window.graphInitialized) {
                     setTimeout(() => {
                       initializeGraph();
@@ -470,11 +481,11 @@ export class FullCodeAnalysisWebview {
               const cy = cytoscape({
                 container: container,
                 style: [
-                  { selector: 'node[type="folder"]', style: { shape:'rectangle','background-color':'yellow', label:'data(name)','text-valign':'center','text-halign':'center','font-weight':'bold','border-width':2,'border-color':'#000','width':150,'height':80 } },
-                  { selector: 'node[type="file"]', style: { shape:'rectangle','background-color':'skyblue', label:'data(name)','text-valign':'center','text-halign':'center','border-width':1,'border-color':'#000','width':120,'height':60 } },
-                  { selector: 'node[type="class"]', style: { shape:'hexagon','background-color':'orange', label:'data(name)','text-valign':'center','text-halign':'center','width':100,'height':60 } },
-                  { selector: 'node[type="function"]', style: { shape:'ellipse', 'color':'#fff', label:'data(name)','text-valign':'center','text-halign':'center','width':60,'height':40,'font-size':10 } },
-                  { selector: 'node[type="summary"]', style: { shape:'round-rectangle','background-color':'lightgray', label:'data(name)','text-valign':'center','text-halign':'center','border-width':1,'border-color':'#666','width':200,'height':40,'font-size':12 } },
+                  { selector: 'node[type="folder"]', style: { shape:'rectangle','background-color':'yellow', label:'data(name)','text-valign':'center','text-halign':'center','font-weight':'bold','border-width':2,'border-color':'#000','width':180,'height':100 } },
+                  { selector: 'node[type="file"]', style: { shape:'rectangle','background-color':'skyblue', label:'data(name)','text-valign':'center','text-halign':'center','border-width':1,'border-color':'#000','width':150,'height':80 } },
+                  { selector: 'node[type="class"]', style: { shape:'hexagon','background-color':'orange', label:'data(name)','text-valign':'center','text-halign':'center','width':140,'height':80 } },
+                  { selector: 'node[type="function"]', style: { shape:'ellipse', 'color':'#fff', label:'data(name)','text-valign':'center','text-halign':'center','width':100,'height':60,'font-size':12 } },
+                  { selector: 'node[type="summary"]', style: { shape:'round-rectangle','background-color':'lightgray', label:'data(name)','text-valign':'center','text-halign':'center','border-width':1,'border-color':'#666','width':250,'height':50,'font-size':14 } },
                   { selector: 'node[complexity="low"]', style: { 'background-color':'green' } },
                   { selector: 'node[complexity="medium"]', style: { 'background-color':'orange' } },
                   { selector: 'node[complexity="high"]', style: { 'background-color':'red' } },
@@ -1306,7 +1317,7 @@ export class FullCodeAnalysisWebview {
             const legendElement = document.querySelector('.legend');
             const graphControlsElement = document.querySelector('.graph-controls');
             
-            container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; text-align: center;"><div><div style="font-size: 48px; margin-bottom: 16px;">🕸️</div><h3>No Graph Data</h3><p>No code graph data available to display.</p></div></div>';
+            container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; text-align: center;"><div><div style="font-size: 48px; margin-bottom: 16px;">🕸️</div><h3>No Mind Map Data</h3><p>No mind map data available to display.</p></div></div>';
             container.style.display = 'block';
             loadingElement.style.display = 'none';
             if (legendElement) legendElement.style.display = 'none';
@@ -1319,7 +1330,7 @@ export class FullCodeAnalysisWebview {
             const legendElement = document.querySelector('.legend');
             const graphControlsElement = document.querySelector('.graph-controls');
             
-            container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; text-align: center;"><div><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><h3>Graph Error</h3><p>' + message + '</p><button onclick="location.reload()" style="margin-top: 16px; padding: 8px 16px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; cursor: pointer;">Retry</button></div></div>';
+            container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; text-align: center;"><div><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><h3>Mind Map Error</h3><p>' + message + '</p><button onclick="location.reload()" style="margin-top: 16px; padding: 8px 16px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; cursor: pointer;">Retry</button></div></div>';
             container.style.display = 'block';
             loadingElement.style.display = 'none';
             if (legendElement) legendElement.style.display = 'none';
@@ -1863,181 +1874,16 @@ export class FullCodeAnalysisWebview {
 
 
     // Project Summary with enhanced statistics
-    html += '<div class="tech-summary">';
     html += "<h3>📊 Project Overview</h3>";
     html += '<div class="summary-grid">';
-    html += `<div class="summary-item"><div class="summary-value">${stats.totalFolders}</div><div class="summary-label">Folders</div></div>`;
     html += `<div class="summary-item"><div class="summary-value">${stats.totalFiles}</div><div class="summary-label">Files</div></div>`;
     html += `<div class="summary-item"><div class="summary-value">${stats.totalClasses}</div><div class="summary-label">Classes</div></div>`;
     html += `<div class="summary-item"><div class="summary-value">${stats.totalFunctions}</div><div class="summary-label">Functions</div></div>`;
+    html += "</div>";
 
-    // Third row: DevOps tools (if present)
-    const devOpsTools = this.detectDevOpsTools(analysisData);
-    if (devOpsTools.docker || devOpsTools.kubernetes || devOpsTools.other.length > 0) {
-      if (devOpsTools.docker) {
-        html += `<div class="summary-item"><div class="summary-value">✓</div><div class="summary-label">Docker</div></div>`;
-      }
-      if (devOpsTools.kubernetes) {
-        html += `<div class="summary-item"><div class="summary-value">✓</div><div class="summary-label">Kubernetes</div></div>`;
-      }
-      if (devOpsTools.other.length > 0) {
-        html += `<div class="summary-item"><div class="summary-value">${devOpsTools.other.length}</div><div class="summary-label">DevOps Tools</div></div>`;
-      }
-    }
+    // Categorized Technology Stack - replaces individual sections
+    html += this.generateCategorizedTechStack(analysisData);
 
-    html += "</div></div>";
-
-    html += '<div class="tech-grid">';
-
-    // Languages with detailed breakdown - calculate from code graph
-    const languageCounts = this.calculateLanguageStats(analysisData);
-    if (Object.keys(languageCounts).length > 0) {
-      html +=
-        '<div class="tech-section"><h4>🔤 Programming Languages</h4><div class="tech-items">';
-      
-      const sortedLanguages = Object.entries(languageCounts)
-        .sort(([, a], [, b]) => b - a);
-
-      sortedLanguages.forEach(([lang, count]) => {
-        const percentage =
-          stats.totalFiles > 0
-            ? ((count / stats.totalFiles) * 100).toFixed(1)
-            : "0";
-        html += `<div class="tech-item">
-          <div class="tech-info">
-            <span class="tech-name">${lang}</span>
-            <div class="tech-details">
-              <span class="tech-count">${count} files</span>
-              <span class="tech-percentage">${percentage}%</span>
-            </div>
-          </div>
-          <div class="tech-bar">
-            <div class="tech-bar-fill" style="width: ${percentage}%"></div>
-          </div>
-        </div>`;
-      });
-      html += "</div></div>";
-    }
-
-    // Major Python Frameworks only (renamed from "Frameworks & Platforms")
-    const frameworks = this.filterMajorFrameworks(analysisData.tech_stack.frameworks);
-    if (frameworks.length > 0) {
-      html +=
-        '<div class="tech-section"><h4>🚀 Frameworks</h4><div class="tech-items">';
-      frameworks.forEach(([framework, version]) => {
-        html += `<div class="tech-item">
-          <div class="tech-info">
-            <span class="tech-name">${framework}</span>
-            <span class="tech-version">v${version}</span>
-          </div>
-        </div>`;
-      });
-      html += "</div></div>";
-    }
-
-    // Package Managers
-    if (analysisData.tech_stack.package_manager) {
-      html +=
-        '<div class="tech-section"><h4>📦 Package Manager</h4><div class="tech-items">';
-      html += `<div class="tech-item">
-        <span class="tech-name">${analysisData.tech_stack.package_manager}</span>
-      </div>`;
-      html += "</div></div>";
-    } else if (analysisData.tech_stack.package_managers && Array.isArray(analysisData.tech_stack.package_managers)) {
-      // Legacy format support
-      html +=
-        '<div class="tech-section"><h4>📦 Package Managers</h4><div class="tech-items">';
-      analysisData.tech_stack.package_managers.forEach((pm: string) => {
-        html += `<div class="tech-item">
-          <span class="tech-name">${pm}</span>
-        </div>`;
-      });
-      html += "</div></div>";
-    }
-
-    // Libraries and Dependencies with enhanced grid layout
-    if (analysisData.tech_stack.libraries) {
-      const processedLibraries = this.processAndSortLibraries(analysisData.tech_stack.libraries);
-      
-      if (processedLibraries.length > 0) {
-        html +=
-          '<div class="tech-section"><h4>📚 Libraries & Dependencies</h4><div class="tech-libraries-grid">';
-        
-        // Generate grid items with responsive layout
-        processedLibraries.forEach((lib) => {
-          html += `<div class="tech-library-item">
-            <div class="tech-info">
-              <span class="tech-name">${lib.name}</span>
-              ${lib.version ? `<span class="tech-version">${lib.version}</span>` : ''}
-            </div>
-          </div>`;
-        });
-        
-        html += "</div></div>";
-      }
-    }
-
-    // Build Tools
-    if (analysisData.tech_stack.build_tools) {
-      html +=
-        '<div class="tech-section"><h4>🔧 Build Tools</h4><div class="tech-items">';
-      analysisData.tech_stack.build_tools.forEach((tool: string) => {
-        html += `<div class="tech-item">
-          <span class="tech-name">${tool}</span>
-        </div>`;
-      });
-      html += "</div></div>";
-    }
-
-    // Configuration Files
-    if (analysisData.tech_stack.config_files) {
-      html +=
-        '<div class="tech-section"><h4>⚙️ Configuration Files</h4><div class="tech-items">';
-      analysisData.tech_stack.config_files.forEach((config: string) => {
-        html += `<div class="tech-item">
-          <span class="tech-name">${config}</span>
-        </div>`;
-      });
-      html += "</div></div>";
-    }
-
-    // Database Technologies
-    if (analysisData.tech_stack.databases) {
-      html +=
-        '<div class="tech-section"><h4>🗄️ Databases</h4><div class="tech-items">';
-      analysisData.tech_stack.databases.forEach((db: string) => {
-        html += `<div class="tech-item">
-          <span class="tech-name">${db}</span>
-        </div>`;
-      });
-      html += "</div></div>";
-    }
-
-    // Testing Frameworks
-    if (analysisData.tech_stack.testing_frameworks) {
-      html +=
-        '<div class="tech-section"><h4>🧪 Testing Frameworks</h4><div class="tech-items">';
-      analysisData.tech_stack.testing_frameworks.forEach((test: string) => {
-        html += `<div class="tech-item">
-          <span class="tech-name">${test}</span>
-        </div>`;
-      });
-      html += "</div></div>";
-    }
-
-    // Development Tools
-    if (analysisData.tech_stack.dev_tools) {
-      html +=
-        '<div class="tech-section"><h4>🛠️ Development Tools</h4><div class="tech-items">';
-      analysisData.tech_stack.dev_tools.forEach((tool: string) => {
-        html += `<div class="tech-item">
-          <span class="tech-name">${tool}</span>
-        </div>`;
-      });
-      html += "</div></div>";
-    }
-
-    html += "</div></div>";
     return html;
 
     } catch (error) {
@@ -2051,11 +1897,61 @@ export class FullCodeAnalysisWebview {
   }
 
   /**
+   * Generate categorized tech stack using Python-provided data only
+   */
+  private generateCategorizedTechStack(analysisData: any): string {
+    try {
+      // Check if we have Python-categorized data
+      if (analysisData?.categorized_tech_stack) {
+        this.errorHandler.logError(
+          'Using Python-provided categorized tech stack data with modern dashboard',
+          null,
+          'FullCodeAnalysisWebview'
+        );
+        
+        // Use modern dashboard for tech stack display
+        return this.categoryDisplayManager.generateModernDashboardHTML(analysisData);
+      } else {
+        this.errorHandler.logError(
+          'No Python categorization available - waiting for Python categorization system',
+          null,
+          'FullCodeAnalysisWebview'
+        );
+        
+        // No fallback - show message that Python categorization is not available
+        return `
+          <div class="tech-categorization-pending">
+            <div class="pending-icon">⏳</div>
+            <h3>Python Categorization System Not Available</h3>
+            <p>The enhanced tech stack categorization system is not yet implemented.</p>
+            <p>This will display categorized technologies once the Python categorization system is complete.</p>
+          </div>
+        `;
+      }
+    } catch (error) {
+      this.errorHandler.logError(
+        'Error generating categorized tech stack',
+        error,
+        'FullCodeAnalysisWebview'
+      );
+      
+      // Error state
+      return `
+        <div class="tech-categorization-error">
+          <div class="error-icon">⚠️</div>
+          <h3>Error Loading Categorized Tech Stack</h3>
+          <p>An error occurred while processing the categorized tech stack data.</p>
+        </div>
+      `;
+    }
+  }
+
+  /**
    * Generate code graph JSON content
    */
   private generateCodeGraphJsonContent(analysisData: any): string {
     if (!analysisData?.code_graph_json) {
-      return '<div class="empty-state"><div class="empty-icon">📄</div><h3>No JSON Data</h3><p>No code graph JSON data available.</p></div>';
+      return '<div class="empty-state"><div class="empty-icon">📄</div><h3>No JSON Data</h3><p>No mind map JSON data available.</p></div>';
     }
 
     return `<pre style="background: var(--vscode-textCodeBlock-background); padding: 16px; border-radius: 4px; overflow: auto; max-height: 400px; font-size: 12px;">${JSON.stringify(
@@ -2556,7 +2452,7 @@ export class FullCodeAnalysisWebview {
 
       .tech-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        grid-template-columns: 1;
         gap: 20px;
       }
 
@@ -2587,6 +2483,7 @@ export class FullCodeAnalysisWebview {
         padding: 12px;
         background: var(--vscode-editor-background);
         border: 1px solid var(--vscode-panel-border);
+        border-color: orange;
         border-radius: 4px;
         transition: all 0.2s ease;
       }
