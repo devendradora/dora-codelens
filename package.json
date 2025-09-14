@@ -11,7 +11,7 @@
   },
   "displayName": "DoraCodeLens",
   "description": "Advanced VS Code extension for comprehensive Python project analysis with Git analytics, enhanced visualizations, JSON utilities, and database schema analysis",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "DevendraDora",
   "icon": "resources/dora-code-lens-kiro.png",
   "repository": {
@@ -124,7 +124,11 @@
         },
         "doracodelens.guidance.preferredAnalysisType": {
           "type": "string",
-          "enum": ["current-file", "full-project", "ask-each-time"],
+          "enum": [
+            "current-file",
+            "full-project",
+            "ask-each-time"
+          ],
           "default": "ask-each-time",
           "description": "Default analysis type when enabling code lens",
           "scope": "resource"
