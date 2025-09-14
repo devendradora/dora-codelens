@@ -42,6 +42,39 @@ export class CurrentFileAnalysisHandler {
   }
 
   /**
+   * Execute current file analysis in background without showing webview
+   */
+  public async executeInBackground(filePath?: string, options: CurrentFileAnalysisOptions = {}): Promise<any> {
+    const targetFile = filePath || this.getCurrentFile();
+    if (!targetFile) {
+      throw new Error('No active file found or file is not a Python file');
+    }
+
+    this.errorHandler.logError('Starting background current file analysis', { filePath: targetFile, options }, CurrentFileAnalysisHandler.COMMAND_ID);
+    
+    try {
+      // Execute Python analysis without progress UI
+      const result = await this.executePythonAnalysisBackground(targetFile, options);
+      
+      // Validate result
+      const validatedResult = this.errorHandler.validateAnalysisResult(result);
+      if (!validatedResult) {
+        throw new Error('Analysis returned invalid result');
+      }
+
+      // Update state with result (but don't show webview)
+      this.stateManager.setLastResult(validatedResult);
+      
+      this.errorHandler.logError('Background current file analysis completed successfully', null, CurrentFileAnalysisHandler.COMMAND_ID);
+      
+      return validatedResult;
+    } catch (error) {
+      this.errorHandler.logError('Background current file analysis failed', error, CurrentFileAnalysisHandler.COMMAND_ID);
+      throw error;
+    }
+  }
+
+  /**
    * Execute current file analysis with duplicate call prevention
    */
   public async execute(options: CurrentFileAnalysisOptions = {}): Promise<any> {
@@ -238,6 +271,108 @@ export class CurrentFileAnalysisHandler {
         this.currentProcess = null;
         this.errorHandler.logError('Python process error', error, CurrentFileAnalysisHandler.COMMAND_ID);
         reject(new Error(`Failed to start Python file analysis: ${error.message}`));
+      });
+    });
+  }
+
+  /**
+   * Execute Python analysis for current file in background (no progress UI)
+   */
+  private async executePythonAnalysisBackground(
+    filePath: string,
+    options: CurrentFileAnalysisOptions
+  ): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const analyzerPath = this.getAnalyzerPath();
+      const workspacePath = this.getWorkspacePath();
+      
+      // Build Python command arguments
+      const args = [analyzerPath, filePath];
+      
+      // Add workspace path for context if available
+      if (workspacePath) {
+        args.push('--project-path', workspacePath);
+      }
+
+      // Add options (using negative flags as per analyzer help)
+      if (options.includeComplexity === false) {
+        args.push('--no-complexity');
+      }
+      if (options.includeDependencies === false) {
+        args.push('--no-dependencies');
+      }
+      if (options.includeFrameworkPatterns === false) {
+        args.push('--no-frameworks');
+      }
+
+      // Get Python path from configuration
+      const config = vscode.workspace.getConfiguration('doracodelens');
+      const pythonPath = config.get<string>('pythonPath', 'python3');
+
+      this.errorHandler.logError('Starting background Python file analysis', { 
+        pythonPath, 
+        analyzerPath, 
+        filePath,
+        args: args.slice(1) // Don't log the full analyzer path
+      }, CurrentFileAnalysisHandler.COMMAND_ID);
+
+      // Spawn Python process
+      const pythonProcess = spawn(pythonPath, args, {
+        cwd: path.dirname(analyzerPath),
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+
+      // Set up timeout (shorter for background analysis)
+      const timeout = setTimeout(() => {
+        this.errorHandler.logError('Background Python process timed out', null, CurrentFileAnalysisHandler.COMMAND_ID);
+        pythonProcess.kill('SIGTERM');
+        reject(new Error(`Background analysis timed out after ${CurrentFileAnalysisHandler.PYTHON_TIMEOUT / 1000} seconds`));
+      }, CurrentFileAnalysisHandler.PYTHON_TIMEOUT);
+
+      let stdout = '';
+      let stderr = '';
+
+      // Collect stdout (no progress reporting)
+      pythonProcess.stdout?.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      // Collect stderr
+      pythonProcess.stderr?.on('data', (data) => {
+        const chunk = data.toString();
+        stderr += chunk;
+        // Only log as error if it's not just warnings or info messages
+        if (!chunk.includes('WARNING') && !chunk.includes('INFO') && !chunk.includes('DEBUG')) {
+          this.errorHandler.logError('Background Python stderr', chunk, CurrentFileAnalysisHandler.COMMAND_ID);
+        }
+      });
+
+      // Handle process completion
+      pythonProcess.on('close', (code) => {
+        clearTimeout(timeout);
+
+        if (code === 0) {
+          try {
+            // Parse JSON result
+            const result = JSON.parse(stdout);
+            this.errorHandler.logError('Background Python file analysis completed', { resultSize: stdout.length }, CurrentFileAnalysisHandler.COMMAND_ID);
+            resolve(result);
+          } catch (parseError) {
+            this.errorHandler.logError('Failed to parse background Python output', parseError, CurrentFileAnalysisHandler.COMMAND_ID);
+            reject(new Error(`Failed to parse background analysis result: ${parseError}`));
+          }
+        } else {
+          const errorMessage = `Background Python file analysis failed with code ${code}`;
+          this.errorHandler.logError(errorMessage, { stderr }, CurrentFileAnalysisHandler.COMMAND_ID);
+          reject(new Error(`${errorMessage}: ${stderr}`));
+        }
+      });
+
+      // Handle process errors
+      pythonProcess.on('error', (error) => {
+        clearTimeout(timeout);
+        this.errorHandler.logError('Background Python process error', error, CurrentFileAnalysisHandler.COMMAND_ID);
+        reject(new Error(`Failed to start background Python file analysis: ${error.message}`));
       });
     });
   }

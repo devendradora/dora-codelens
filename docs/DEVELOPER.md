@@ -621,64 +621,103 @@ export class JsonTreeViewProvider {
 
 #### Enhanced Command Registration
 
-The extension registers comprehensive commands for all DoraCodeLens features:
+The extension registers comprehensive commands for all DoraCodeLens features as defined in package.json:
 
 ```typescript
-// Main analysis commands
-'doracodelens.analyzeProject'                    // Full project analysis
-'doracodelens.currentFileAnalysis'               // Single file analysis
-'doracodelens.showModuleGraph'                   // Enhanced module visualization
-'doracodelens.showCallHierarchy'                 // Call hierarchy analysis
+// Main Analysis Commands
+'doracodelens.analyzeFullCode'                   // Full project analysis
+'doracodelens.refreshFullCodeAnalysis'           // Force refresh analysis
+'doracodelens.analyzeCurrentFile'                // Single file analysis
+'doracodelens.analyzeDatabaseSchema'             // Database schema analysis
+'doracodelens.analyzeGitAnalytics'               // Git repository analytics
 
-// Full Analysis submenu commands
-'doracodelens.fullAnalysisTechStack'             // Tech stack view
-'doracodelens.fullAnalysisGraphView'             // Enhanced graph view
-'doracodelens.fullAnalysisJsonView'              // JSON data view
+// Code Lens Commands
+'doracodelens.enableCodeLens'                    // Enable Code Lens (On)
+'doracodelens.disableCodeLens'                   // Disable Code Lens (Off)
+'doracodelens.applySuggestion'                   // Apply Code Lens suggestion
+'doracodelens.showSuggestionDetails'             // Show suggestion details
 
-// Git Analytics submenu commands
-'doracodelens.gitAuthorStatistics'               // Author contribution stats
-'doracodelens.gitModuleContributions'            // Module-wise Git analytics
-'doracodelens.gitCommitTimeline'                 // Commit timeline visualization
-
-// Database Schema commands
-'doracodelens.dbSchemaGraphView'                 // Interactive schema graph
-'doracodelens.dbSchemaRawSQL'                    // Raw SQL statements view
-
-// JSON Utilities commands
-'doracodelens.jsonFormat'                        // JSON formatting in editor
+// JSON Utilities Commands
+'doracodelens.jsonFormat'                        // Format JSON in editor
 'doracodelens.jsonTreeView'                      // JSON tree visualization
+'doracodelens.jsonFix'                           // Fix Python dict to JSON
+'doracodelens.jsonMinify'                        // Minify JSON content
 
-// Utility commands
+// Navigation and UI Commands
+'doracodelens.navigateToItem'                    // Navigate to code item
+'doracodelens.selectModule'                      // Select module in graph
+'doracodelens.clearSelection'                    // Clear graph selection
+'doracodelens.showDependencies'                  // Show module dependencies
+'doracodelens.showFunctionComplexityDetails'     // Function complexity details
+'doracodelens.showGraphView'                     // Show graph visualization
+
+// Guidance System Commands
+'doracodelens.guidance.showWelcome'              // Show welcome guidance
+'doracodelens.guidance.analyzeCurrentFile'       // Guided current file analysis
+'doracodelens.guidance.analyzeFullProject'       // Guided full project analysis
+'doracodelens.guidance.refreshAnalysis'          // Guided refresh analysis
+'doracodelens.guidance.retryAnalysis'            // Retry failed analysis
+'doracodelens.guidance.showProgress'             // Show analysis progress
+'doracodelens.guidance.changePreferences'        // Change guidance preferences
+'doracodelens.guidance.setPreferredAnalysis'     // Set preferred analysis type
+'doracodelens.guidance.showErrorDetails'         // Show detailed error info
+
+// Utility Commands
 'doracodelens.refreshSidebar'                    // Refresh sidebar data
+'doracodelens.openSettings'                      // Open extension settings
 'doracodelens.clearCache'                        // Clear analysis cache
 'doracodelens.cancelAnalysis'                    // Cancel running analysis
-'doracodelens.validateConfiguration'             // Validate extension settings
+'doracodelens.filterSidebar'                     // Filter sidebar content
+'doracodelens.setupPythonPath'                   // Setup Python interpreter
+'doracodelens.detectPythonPath'                  // Auto-detect Python path
 ```
 
 #### Context Menu Structure
 
-The enhanced context menu provides organized access to all features:
+The enhanced context menu provides organized access to all features with logical grouping as defined in package.json:
 
 ```
 Right-click on Python file:
 ├── DoraCodeLens ►
-│   ├── Full Code Analysis ►
-│   │   ├── Tech Stack
-│   │   ├── Graph View
-│   │   └── JSON View
-│   ├── Current File Analysis
-│   ├── Call Hierarchy
-│   ├── Git Commits ►
-│   │   ├── Author Statistics
-│   │   ├── Module Contributions
-│   │   └── Commit Timeline
-│   ├── DB Schema ►
-│   │   ├── Graph View
-│   │   └── Raw SQL
-│   └── JSON Utils ►
-│       ├── JSON Format
-│       └── JSON Tree View
+│   ├── Full Code Analysis          # Group analyze@1
+│   ├── Current File Analysis       # Group analyze@2  
+│   ├── Code Lens (On/Off)          # Group analyze@3 (conditional visibility)
+│   ├── Database Schema Analysis    # Group database@1
+│   ├── Git Analytics              # Group git@1
+│   ├── JSON Format                # Group json@1 (when doracodelens.jsonContext)
+│   ├── JSON Tree View             # Group json@2 (when doracodelens.jsonContext)
+│   ├── JSON Fix (Python Dict)     # Group json@3 (when doracodelens.jsonContext)
+│   ├── JSON Minify                # Group json@4 (when doracodelens.jsonContext)
+│   ├── Setup Python Path         # Group setup@1
+│   ├── Auto-Detect Python Path   # Group setup@2
+│   └── Settings                   # Group setup@3
 ```
+
+#### Context Key Management
+
+The extension uses VS Code context keys for conditional menu visibility:
+
+```typescript
+// Context keys defined in package.json
+'doracodelens.codeLensEnabled'      // Controls Code Lens toggle visibility
+'doracodelens.jsonContext'          // Controls JSON utilities visibility
+
+// Context conditions in menu items
+"when": "resourceLangId == python"                           // Python files only
+"when": "resourceLangId == python && !doracodelens.codeLensEnabled"  // Show "On" option
+"when": "resourceLangId == python && doracodelens.codeLensEnabled"   // Show "Off" option
+"when": "doracodelens.jsonContext"                          // JSON utilities
+```
+
+#### Menu Groups and Ordering
+
+Menu items are organized into logical groups with specific ordering:
+
+- **analyze@1-3**: Core analysis features (Full, Current File, Code Lens)
+- **database@1**: Database-specific analysis tools
+- **git@1**: Git repository analytics
+- **json@1-4**: JSON processing utilities (context-sensitive)
+- **setup@1-3**: Configuration and troubleshooting tools
 ```
 
 **AnalyzerRunner** (`analyzer-runner.ts`)
@@ -741,6 +780,144 @@ The webview system provides comprehensive analysis visualization through multipl
 - **Export Capabilities**: Export visualizations and data in multiple formats
 - **Search and Filtering**: Advanced search across all analysis data
 - **Responsive Design**: Adapts to different panel sizes and VS Code themes
+
+## Configuration System
+
+### Extension Configuration (package.json)
+
+DoraCodeLens provides extensive configuration options through VS Code settings:
+
+```json
+{
+  "configuration": {
+    "title": "DoraCodeLens",
+    "properties": {
+      // Core Analysis Settings
+      "doracodelens.pythonPath": {
+        "type": "string",
+        "default": "python3",
+        "description": "Path to Python executable"
+      },
+      "doracodelens.analysisTimeout": {
+        "type": "number",
+        "default": 120,
+        "minimum": 30,
+        "maximum": 600,
+        "description": "Timeout for analysis operations in seconds"
+      },
+      "doracodelens.enableDebugLogging": {
+        "type": "boolean",
+        "default": false,
+        "description": "Enable debug logging for troubleshooting"
+      },
+      
+      // Code Lens Configuration
+      "doracodelens.codeLens.complexityThresholds.low": {
+        "type": "number",
+        "default": 5,
+        "minimum": 1,
+        "maximum": 50,
+        "description": "Threshold for low complexity (green indicator)"
+      },
+      "doracodelens.codeLens.complexityThresholds.medium": {
+        "type": "number", 
+        "default": 10,
+        "description": "Threshold for medium complexity (yellow indicator)"
+      },
+      "doracodelens.codeLens.complexityThresholds.high": {
+        "type": "number",
+        "default": 11,
+        "description": "Threshold for high complexity (red indicator)"
+      },
+      "doracodelens.codeLens.showComplexity": {
+        "type": "boolean",
+        "default": true,
+        "description": "Show complexity indicators in code lens"
+      },
+      "doracodelens.codeLens.showSuggestions": {
+        "type": "boolean",
+        "default": true,
+        "description": "Show actionable suggestions in code lens"
+      },
+      "doracodelens.codeLens.maxSuggestionsPerFunction": {
+        "type": "number",
+        "default": 3,
+        "minimum": 1,
+        "maximum": 10,
+        "description": "Maximum number of suggestions to show per function"
+      },
+      
+      // Guidance System Configuration
+      "doracodelens.guidance.enabled": {
+        "type": "boolean",
+        "default": true,
+        "description": "Enable code lens activation guidance"
+      },
+      "doracodelens.guidance.preferredAnalysisType": {
+        "type": "string",
+        "enum": ["current-file", "full-project", "ask-each-time"],
+        "default": "ask-each-time",
+        "description": "Default analysis type when enabling code lens"
+      },
+      "doracodelens.guidance.autoRunAnalysisOnEnable": {
+        "type": "boolean",
+        "default": false,
+        "description": "Automatically run analysis when code lens is enabled"
+      },
+      "doracodelens.guidance.showWelcomeMessage": {
+        "type": "boolean",
+        "default": true,
+        "description": "Show welcome message for first-time users"
+      }
+    }
+  }
+}
+```
+
+### Activation Events
+
+The extension activates automatically based on these events:
+
+```json
+{
+  "activationEvents": [
+    "onLanguage:python",           // When Python files are opened
+    "onLanguage:json",             // When JSON files are opened
+    "workspaceContains:**/*.py",   // When workspace contains Python files
+    "workspaceContains:requirements.txt",  // Python project indicators
+    "workspaceContains:pyproject.toml",
+    "workspaceContains:Pipfile"
+  ]
+}
+```
+
+### Views and Containers
+
+DoraCodeLens provides a dedicated activity bar view:
+
+```json
+{
+  "viewsContainers": {
+    "activitybar": [
+      {
+        "id": "doracodelens-explorer",
+        "title": "DoraCodeLens", 
+        "icon": "resources/light/doracodelens.svg"
+      }
+    ]
+  },
+  "views": {
+    "doracodelens-explorer": [
+      {
+        "id": "doracodelens-sidebar",
+        "name": "Project Analysis",
+        "icon": "resources/light/doracodelens.svg",
+        "contextualTitle": "Project Analysis"
+      }
+    ]
+  }
+}
+```
 
 ## Data Models
 

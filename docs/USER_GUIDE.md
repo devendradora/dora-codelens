@@ -20,53 +20,86 @@ Welcome to DoraCodeLens, an advanced VS Code extension that provides comprehensi
 ### Installation
 
 1. Open VS Code
-2. Go to Extensions (Ctrl+Shift+X)
+2. Go to Extensions (`Ctrl+Shift+X`)
 3. Search for "DoraCodeLens"
 4. Click Install
 5. Reload VS Code when prompted
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- Git (for Git analytics features)
-- A Python project with .py files
+- **VS Code**: Version 1.74.0 or higher
+- **Python**: Version 3.8 or higher
+- **Git**: Any recent version (for Git analytics features)
+- **Memory**: At least 4GB RAM recommended for large projects
+
+### Extension Activation
+
+DoraCodeLens automatically activates when you:
+- Open a Python file (`.py` extension)
+- Open a workspace containing Python files
+- Open a project with `requirements.txt`, `pyproject.toml`, or `Pipfile`
+- Work with JSON files (for JSON utilities)
 
 ### First Analysis
 
-1. Open a Python project in VS Code
-2. Right-click on any Python file
-3. Select **DoraCodeLens** → **Full Code Analysis** → **Tech Stack**
-4. Wait for the analysis to complete
-5. Explore your project's insights!
+1. **Open a Python project** in VS Code
+2. **Right-click on any Python file** to access the context menu
+3. **Select DoraCodeLens** → **Full Code Analysis** → **Tech Stack**
+4. **Wait for analysis to complete** (progress shown in notification)
+5. **Explore the tabbed interface** with your project's insights!
+
+### Alternative Access Methods
+
+**Command Palette** (`Ctrl+Shift+P`):
+- Type "DoraCodeLens" to see all available commands
+- Use `DoraCodeLens: Full Code Analysis` for quick access
+
+**Activity Bar**:
+- Look for the DoraCodeLens icon in the Activity Bar
+- Access the Project Analysis sidebar view
+
+**Editor Title Bar**:
+- Code Lens toggle buttons appear when viewing Python files
 
 ## Context Menu Overview
 
-DoraCodeLens provides a comprehensive context menu when you right-click on Python files. Here's what each option does:
+DoraCodeLens provides a comprehensive context menu when you right-click on Python files. The menu is organized in logical groups for easy access:
 
 ```
 DoraCodeLens ►
-├── Full Code Analysis ►
-│   ├── Tech Stack          # View detected libraries and frameworks
-│   ├── Graph View          # Interactive module dependency graph
-│   └── JSON View           # Raw analysis data in JSON format
-├── Current File Analysis ► # Analyze just the current file
-│   ├── Tech Stack
-│   ├── Graph View
-│   └── JSON View
-├── Call Hierarchy ►        # Function call relationships
-│   ├── Graph View
-│   └── JSON View
-├── Git Commits ►           # Git repository analytics
-│   ├── Author Statistics   # Contributor analysis
-│   ├── Module Contributions # Module-wise Git stats
-│   └── Commit Timeline     # Commit history visualization
-├── DB Schema ►             # Database schema analysis
-│   ├── Graph View          # Visual schema representation
-│   └── Raw SQL             # Extracted SQL statements
-└── JSON Utils ►            # JSON processing tools
-    ├── JSON Format         # Format JSON in current editor
-    └── JSON Tree View      # Expandable JSON tree
+├── Full Code Analysis ►        # Group @1 - Complete project analysis
+│   ├── Tech Stack              # View detected libraries and frameworks
+│   ├── Graph View              # Interactive module dependency graph
+│   └── JSON View               # Raw analysis data in JSON format
+├── Current File Analysis       # Group @2 - Analyze just the current file
+├── Code Lens (On/Off)          # Group @3 - Toggle inline complexity annotations
+├── Database Schema Analysis    # Group database@1 - Database structure analysis
+├── Git Analytics              # Group git@1 - Git repository insights
+├── JSON Format                # Group json@1 - Format JSON in current editor
+├── JSON Tree View             # Group json@2 - Expandable JSON tree explorer
+├── JSON Fix (Python Dict)     # Group json@3 - Convert Python dict to JSON
+├── JSON Minify                # Group json@4 - Compress JSON content
+├── Setup Python Path         # Group setup@1 - Configure Python interpreter
+├── Auto-Detect Python Path   # Group setup@2 - Automatically find Python
+└── Settings                   # Group setup@3 - Open extension settings
 ```
+
+### Context-Sensitive Menu Items
+
+The context menu adapts based on your current context:
+
+**Python Files**: Full DoraCodeLens menu with all analysis options
+**JSON Files/Content**: JSON utilities are highlighted and prioritized
+**Git Repositories**: Git Analytics options are available
+**Database Projects**: Database Schema Analysis is prominently displayed
+
+### Menu Organization
+
+- **Analysis Group (@1-@3)**: Core analysis features in order of frequency
+- **Database Group**: Database-specific analysis tools
+- **Git Group**: Version control and team collaboration insights
+- **JSON Group**: JSON processing and utilities
+- **Setup Group**: Configuration and troubleshooting tools
 
 ## Full Code Analysis
 

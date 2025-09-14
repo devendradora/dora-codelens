@@ -96,43 +96,116 @@ This document provides detailed examples and visual guides for using DoraCodeLen
 
 ## Detailed Usage Examples
 
-### Example 1: Analyzing a Django Project
+### Example 1: Analyzing the Django E-commerce Project
 
-**Scenario**: You have a Django e-commerce project and want to understand its structure and complexity.
+**Scenario**: You want to analyze the comprehensive Django e-commerce example project included with DoraCodeLens.
 
-**Steps**:
-1. Open your Django project in VS Code
-2. Right-click on `models.py`
-3. Select **DoraCodeLens** → **Full Code Analysis** → **Graph View**
+**Setup**:
+1. Navigate to `examples/django-ecommerce/` in the extension directory
+2. Open the project in VS Code
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run migrations: `python manage.py migrate`
+
+**Analysis Steps**:
+1. Right-click on `apps/orders/models.py`
+2. Select **DoraCodeLens** → **Full Code Analysis** → **Graph View**
+3. Explore the **Database Schema Analysis**
+4. Check **Git Analytics** if the project has commit history
 
 **Expected Results**:
-- Module cards showing Django apps (products, orders, users, etc.)
-- Color-coded complexity (models might be green, views orange/red)
-- Clear dependencies between apps
-- Database schema analysis showing model relationships
+- **10 interconnected database tables** with complex relationships
+- **4 Django apps**: users, products, orders, payments
+- **REST API endpoints** with comprehensive CRUD operations
+- **Docker configuration** for containerized deployment
 
-**Sample Output**:
+**Sample Analysis Output**:
 ```
 📊 Django E-commerce Analysis
 
-Modules Detected:
-├── 🟢 products/ (Low complexity)
-│   ├── models.py (3 classes, complexity: 2.1)
-│   ├── views.py (5 functions, complexity: 4.2)
-│   └── admin.py (2 classes, complexity: 1.8)
-├── 🟡 orders/ (Medium complexity)
-│   ├── models.py (4 classes, complexity: 5.3)
-│   ├── views.py (8 functions, complexity: 6.7)
-│   └── serializers.py (3 classes, complexity: 3.9)
-└── 🔴 analytics/ (High complexity)
-    ├── reports.py (12 functions, complexity: 9.2)
-    └── dashboard.py (6 classes, complexity: 8.5)
+🏗️ Project Structure:
+├── 🟢 apps/users/ (Low complexity)
+│   ├── models.py (1 class: User, complexity: 2.3)
+│   ├── views.py (4 API views, complexity: 3.1)
+│   ├── serializers.py (2 serializers, complexity: 1.9)
+│   └── urls.py (4 endpoints, complexity: 1.2)
+├── 🟡 apps/products/ (Medium complexity)
+│   ├── models.py (3 classes: ProductCategory, Product, Discount, complexity: 4.8)
+│   ├── views.py (6 API views, complexity: 5.2)
+│   ├── serializers.py (3 serializers, complexity: 3.7)
+│   └── management/commands/ (1 command, complexity: 2.1)
+├── 🟡 apps/orders/ (Medium complexity)
+│   ├── models.py (4 classes: Order, OrderItem, ReturnOrder, ReturnOrderItem, complexity: 6.1)
+│   ├── views.py (7 API views, complexity: 7.3)
+│   └── serializers.py (4 serializers, complexity: 4.2)
+└── 🟢 apps/payments/ (Low complexity)
+    ├── models.py (1 class: Payment, complexity: 2.8)
+    ├── views.py (2 API views, complexity: 3.4)
+    └── serializers.py (1 serializer, complexity: 1.6)
 
-Database Schema:
-├── Product (5 columns, 2 relationships)
-├── Order (8 columns, 3 relationships)
-├── OrderItem (4 columns, 2 relationships)
-└── User (6 columns, 1 relationship)
+🗄️ Database Schema (10 Tables):
+├── User (6 columns) → Orders (1:N)
+├── ProductCategory (4 columns) → Products (1:N), Self-referential
+├── Product (10 columns) → OrderItems (1:N), DiscountProducts (N:N)
+├── Discount (8 columns) → DiscountProducts (N:N)
+├── DiscountProduct (3 columns) - Junction table
+├── Order (7 columns) → OrderItems (1:N), Payment (1:1), ReturnOrder (1:0..1)
+├── OrderItem (8 columns) → ReturnOrderItems (1:N)
+├── Payment (6 columns) - Payment processing
+├── ReturnOrder (5 columns) → ReturnOrderItems (1:N)
+└── ReturnOrderItem (5 columns) - Return item details
+
+🔧 Framework Features Detected:
+├── Django REST Framework (DRF) - Complete API implementation
+├── Django Admin - Model administration interface
+├── Django Migrations - 12 migration files
+├── Docker & Docker Compose - Containerization setup
+├── PostgreSQL - Production database configuration
+├── Redis - Caching and session storage
+├── Nginx - Reverse proxy configuration
+└── JWT Authentication - Token-based API security
+
+📊 API Endpoints (24 total):
+├── /api/users/ - User management (4 endpoints)
+├── /api/products/ - Product catalog (8 endpoints)
+├── /api/orders/ - Order processing (8 endpoints)
+└── /api/payments/ - Payment handling (4 endpoints)
+```
+
+**Database Schema Visualization**:
+The Database Schema Analysis reveals a sophisticated e-commerce data model:
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│      User       │    │     Order       │    │   OrderItem     │
+├─────────────────┤    ├─────────────────┤    ├─────────────────┤
+│ 🔑 id (PK)      │◄───┤ 🔗 user_id (FK) │    │ 🔑 id (PK)      │
+│ 📧 email (UQ)   │    │ 💰 total_amount │    │ 🔗 order_id (FK)│◄──┐
+│ 👤 name         │    │ 💸 discount_amt │    │ 🔗 product_id   │   │
+│ 🚻 gender       │    │ 📊 status       │    │ 🔢 quantity     │   │
+│ 🔐 otp          │    │ 📅 created_at   │    │ 💰 final_price  │   │
+│ 📅 created_at   │    │ 📅 updated_at   │    │ 📅 created_at   │   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │                       │
+                       ┌─────────────────┐            │
+                       │    Payment      │            │
+                       ├─────────────────┤            │
+                       │ 🔑 id (PK)      │            │
+                       │ 🔗 order_id (FK)│◄───────────┘
+                       │ 💳 method       │
+                       │ 💰 amount       │            ┌─────────────────┐
+                       │ 📅 created_at   │            │    Product      │
+                       └─────────────────┘            ├─────────────────┤
+                                                      │ 🔑 id (PK)      │◄──┘
+                                                      │ 📝 name         │
+                                                      │ 📄 description  │
+                                                      │ 🏷️ sku (UQ)     │
+                                                      │ 📊 barcode (UQ) │
+                                                      │ 💰 mrp          │
+                                                      │ 💸 selling_price│
+                                                      │ 📦 stock_qty    │
+                                                      │ 🔗 category_id  │
+                                                      │ 📅 created_at   │
+                                                      └─────────────────┘
 ```
 
 ### Example 2: Git Analytics for Team Management
@@ -335,9 +408,105 @@ Raw SQL Extracted:
 └── Good practices: Most functions have low complexity ✅
 ```
 
+### Example 6: Using the Guidance System
+
+**Scenario**: You're a new user wanting to understand how to best use DoraCodeLens for your workflow.
+
+**Steps**:
+1. Open a Python project in VS Code
+2. Right-click on any Python file
+3. Select **DoraCodeLens** → **Code Lens (On)**
+4. Follow the guidance prompts that appear
+
+**Guidance System Features**:
+- **Welcome Message**: First-time user introduction and setup
+- **Analysis Type Selection**: Choose between current-file or full-project analysis
+- **Auto-run Options**: Configure automatic analysis when Code Lens is enabled
+- **Progress Tracking**: Visual feedback during analysis operations
+- **Error Recovery**: Helpful suggestions when analysis fails
+
+**Configuration Options**:
+```json
+{
+  "doracodelens.guidance.enabled": true,
+  "doracodelens.guidance.preferredAnalysisType": "ask-each-time",
+  "doracodelens.guidance.autoRunAnalysisOnEnable": false,
+  "doracodelens.guidance.showWelcomeMessage": true
+}
+```
+
+**Sample Guidance Flow**:
+```
+🎯 DoraCodeLens Guidance
+
+Welcome! Let's set up DoraCodeLens for your workflow.
+
+┌─ Analysis Type Selection ─┐
+│ How would you like to     │
+│ analyze your code?        │
+│                          │
+│ ○ Current File Only      │
+│   (Fast, focused)        │
+│                          │
+│ ○ Full Project          │
+│   (Comprehensive)        │
+│                          │
+│ ● Ask Each Time         │
+│   (Flexible)            │
+└─────────────────────────┘
+
+✅ Code Lens enabled successfully!
+🔄 Running current file analysis...
+📊 Analysis complete - 3 functions analyzed
+💡 Tip: Use Ctrl+Shift+P → "DoraCodeLens" for more options
+```
+
+### Example 7: Advanced Configuration Setup
+
+**Scenario**: You want to customize DoraCodeLens for your team's specific needs and coding standards.
+
+**Configuration Steps**:
+1. Open VS Code Settings (`Ctrl+,`)
+2. Search for "DoraCodeLens"
+3. Customize settings for your team
+
+**Team Configuration Example**:
+```json
+{
+  // Custom Python interpreter for team environment
+  "doracodelens.pythonPath": "/opt/python3.9/bin/python",
+  
+  // Adjusted complexity thresholds for stricter standards
+  "doracodelens.codeLens.complexityThresholds.low": 3,
+  "doracodelens.codeLens.complexityThresholds.medium": 6,
+  "doracodelens.codeLens.complexityThresholds.high": 8,
+  
+  // Enhanced timeout for large projects
+  "doracodelens.analysisTimeout": 300,
+  
+  // Streamlined guidance for experienced users
+  "doracodelens.guidance.preferredAnalysisType": "current-file",
+  "doracodelens.guidance.autoRunAnalysisOnEnable": true,
+  "doracodelens.guidance.showWelcomeMessage": false,
+  
+  // Enhanced Code Lens display
+  "doracodelens.codeLens.maxSuggestionsPerFunction": 5,
+  "doracodelens.codeLens.showSuggestions": true,
+  
+  // Debug logging for troubleshooting
+  "doracodelens.enableDebugLogging": false
+}
+```
+
+**Team Workflow Benefits**:
+- **Consistent Standards**: Same complexity thresholds across team
+- **Optimized Performance**: Appropriate timeouts for project size
+- **Streamlined UX**: Reduced guidance prompts for experienced users
+- **Enhanced Feedback**: More suggestions per function for learning
+
 ## Integration Examples
 
-### Example 6: Exporting for Team Reports
+### Example 8: Exporting for Team Reports
 
 **Scenario**: You want to create a monthly development report for stakeholders.
 
@@ -389,7 +558,7 @@ Raw SQL Extracted:
 </html>
 ```
 
-### Example 7: CI/CD Integration
+### Example 9: CI/CD Integration
 
 **Scenario**: You want to integrate DoraCodeLens analysis into your continuous integration pipeline.
 

@@ -125,6 +125,11 @@ export class FullCodeAnalysisWebview {
 
     const webview = this.panel!.webview;
 
+    // Get cache info for display
+    const { AnalysisStateManager } = require('../core/analysis-state-manager');
+    const stateManager = AnalysisStateManager.getInstance();
+    const cacheInfo = stateManager.getCacheInfo();
+
     // Get resource URIs
     const cssUri = webview.asWebviewUri(
       vscode.Uri.file(path.join(this.extensionPath, "resources", "webview.css"))
@@ -202,6 +207,20 @@ export class FullCodeAnalysisWebview {
               <button class="nav-link" data-tab="code-graph-section">
                 <span class="nav-icon">🕸️</span>
                 <span class="nav-label">Mind Map</span>
+              </button>
+            </div>
+            <div class="nav-controls">
+              <div class="analysis-info">
+                ${cacheInfo.hasCache ? `
+                  <span class="last-analyzed">
+                    <span class="info-icon">🕒</span>
+                    <span class="info-text">Last analyzed: ${this.formatTimestamp(cacheInfo.timestamp!)}</span>
+                  </span>
+                ` : ''}
+              </div>
+              <button class="refresh-btn" id="refresh-analysis" title="Refresh Analysis">
+                <span class="refresh-icon">🔄</span>
+                <span class="refresh-text">Refresh</span>
               </button>
             </div>
           </div>
@@ -367,6 +386,42 @@ export class FullCodeAnalysisWebview {
                 }
               });
             });
+
+            // Initialize refresh button
+            const refreshBtn = document.getElementById('refresh-analysis');
+            if (refreshBtn) {
+              refreshBtn.addEventListener('click', function() {
+                // Show loading state
+                const refreshIcon = this.querySelector('.refresh-icon');
+                const refreshText = this.querySelector('.refresh-text');
+                
+                if (refreshIcon) {
+                  refreshIcon.style.animation = 'spin 1s linear infinite';
+                }
+                if (refreshText) {
+                  refreshText.textContent = 'Refreshing...';
+                }
+                
+                // Disable button temporarily
+                this.disabled = true;
+                this.style.opacity = '0.6';
+                
+                // Send refresh message to extension
+                vscode.postMessage({ command: 'refresh' });
+                
+                // Reset button state after a delay (will be updated when refresh completes)
+                setTimeout(() => {
+                  if (refreshIcon) {
+                    refreshIcon.style.animation = '';
+                  }
+                  if (refreshText) {
+                    refreshText.textContent = 'Refresh';
+                  }
+                  this.disabled = false;
+                  this.style.opacity = '1';
+                }, 2000);
+              });
+            }
           }
 
           // Global variables for performance optimization
@@ -2256,6 +2311,9 @@ export class FullCodeAnalysisWebview {
       }
 
       .navigation-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         border-bottom: 1px solid var(--vscode-panel-border);
         background: var(--vscode-tab-activeBackground);
         padding: 0;
@@ -2291,6 +2349,69 @@ export class FullCodeAnalysisWebview {
         background: var(--vscode-tab-activeBackground);
         color: var(--vscode-tab-activeForeground);
         border-bottom-color: var(--vscode-tab-activeBorder);
+      }
+
+      .nav-controls {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 0 16px;
+      }
+
+      .analysis-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .last-analyzed {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+      }
+
+      .info-icon {
+        font-size: 14px;
+      }
+
+      .refresh-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        background: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        font-family: inherit;
+        transition: all 0.2s ease;
+      }
+
+      .refresh-btn:hover {
+        background: var(--vscode-button-hoverBackground);
+        transform: translateY(-1px);
+      }
+
+      .refresh-btn:active {
+        transform: translateY(0);
+      }
+
+      .refresh-icon {
+        font-size: 14px;
+        transition: transform 0.3s ease;
+      }
+
+      .refresh-btn:hover .refresh-icon {
+        transform: rotate(180deg);
+      }
+
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
       }
 
       /* Search container styles */
@@ -2729,6 +2850,9 @@ export class FullCodeAnalysisWebview {
    */
   private handleWebviewMessage(message: any): void {
     switch (message.command) {
+      case "refresh":
+        this.handleRefreshRequest();
+        break;
       case "retryAnalysis":
         // Handle retry logic if needed
         this.errorHandler.logError(
@@ -2752,6 +2876,53 @@ export class FullCodeAnalysisWebview {
           message,
           "FullCodeAnalysisWebview"
         );
+    }
+  }
+
+  /**
+   * Handle refresh request from webview
+   */
+  private async handleRefreshRequest(): Promise<void> {
+    try {
+      this.errorHandler.logError(
+        "Handling refresh request from webview",
+        null,
+        "FullCodeAnalysisWebview"
+      );
+
+      // Execute refresh command
+      await vscode.commands.executeCommand('doracodelens.refreshFullCodeAnalysis');
+    } catch (error) {
+      this.errorHandler.logError(
+        "Failed to handle refresh request",
+        error,
+        "FullCodeAnalysisWebview"
+      );
+      vscode.window.showErrorMessage('Failed to refresh analysis. Please try again.');
+    }
+  }
+
+  /**
+   * Format timestamp for display
+   */
+  private formatTimestamp(timestamp: number): string {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - timestamp;
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMinutes < 1) {
+      return 'just now';
+    } else if (diffMinutes < 60) {
+      return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+    } else if (diffDays < 7) {
+      return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+    } else {
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
   }
 

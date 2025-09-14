@@ -175,17 +175,31 @@ export class CodeLensGuidanceManager {
                 prompts.push(this.createProgressPrompt(analysisState.analysisProgress));
             }
 
-            // Analysis required prompts
-            if (!analysisState.hasData && !analysisState.isAnalysisRunning) {
+            // Analysis required prompts - only show if code lens is disabled
+            // When code lens is enabled, analysis happens automatically
+            const codeLensEnabled = vscode.workspace.getConfiguration('doracodelens.codeLens').get('enabled', false);
+            if (!analysisState.hasData && !analysisState.isAnalysisRunning && !codeLensEnabled) {
                 if (preferences.preferredAnalysisType === 'ask-each-time' || isFirstTime) {
                     prompts.push(...this.createAnalysisChoicePrompts());
                 } else {
                     prompts.push(this.createPreferredAnalysisPrompt(preferences.preferredAnalysisType));
                 }
+            } else if (!analysisState.hasData && !analysisState.isAnalysisRunning && codeLensEnabled) {
+                // Show a helpful message that analysis will happen automatically
+                prompts.push({
+                    id: 'auto-analysis-info',
+                    type: 'preference',
+                    title: '$(info) Code Lens enabled - Analysis will run automatically',
+                    description: 'Complexity metrics will appear above functions when ready',
+                    icon: '$(info)',
+                    command: 'doracodelens.openSettings',
+                    tooltip: 'Code Lens is enabled. Analysis runs automatically when you open Python files.',
+                    priority: 4
+                });
             }
 
-            // Stale data prompt
-            if (analysisState.hasData && analysisState.isStale && !analysisState.isAnalysisRunning) {
+            // Stale data prompt - only show if code lens is disabled
+            if (analysisState.hasData && analysisState.isStale && !analysisState.isAnalysisRunning && !codeLensEnabled) {
                 prompts.push(this.createRefreshPrompt());
             }
 

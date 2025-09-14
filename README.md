@@ -1,217 +1,274 @@
 # DoraCodeLens VS Code Extension
 
-An advanced VS Code extension that provides comprehensive code analysis and visualization capabilities for Python projects. DoraCodeLens creates interactive graph visualizations of project structure, dependencies, and code complexity while supporting framework-specific patterns for Django, Flask, and FastAPI. Enhanced with Git analytics, database schema analysis, and JSON utilities for complete project insights.
+![DoraCodeLens](resources/dora-code-lens-kiro.png)
 
-![DoraCodeLens Demo](https://via.placeholder.com/800x400/1e1e1e/ffffff?text=DoraCodeLens+Demo)
+
+Every developer knows the pain of diving into an unfamiliar codebase — endless scrolling, manual tracing, and juggling scattered tools. We wanted to replace that friction with clarity: a single workspace inside VS Code where a Python project comes alive as a visual mind map.
+
+That’s how DoraCodeLens was born.
+
+What it does
+It analyzes Python projects and delivers:
+
+🗺️ Mind maps of modules, classes, methods, and functions — annotated with real-time complexity scores.
+🗃️ Database-schema diagrams, extracted directly from ORM models.
+📊 Git analytics, including contributor timelines and activity stats.
+⚡ Productivity tools such as JSON minify/beautify and a tree viewer.
+All of this runs right inside the editor — no context switching, no clutter.
+
 
 ## Features
 
-### 🔍 **Project Analysis**
-- **Tech Stack Detection**: Automatically identifies libraries and frameworks from requirements.txt, pyproject.toml, or Pipfile
-- **Framework Support**: Specialized analysis for Django, Flask, and FastAPI projects
-- **Dependency Mapping**: Visualizes module dependencies and import relationships
+### 🔍 **Comprehensive Code Analysis**
 
-### 📊 **Visual Representations**
-- **Module Graph**: Interactive visualization of project modules with complexity color-coding
-- **Call Hierarchy**: Right-click any function to see its complete call graph
-- **Complexity Analysis**: Visual indicators for code complexity using color coding (green/orange/red)
-
-### 🚀 **VS Code Integration**
-- **Sidebar Panel**: Browse project structure, dependencies, and modules
-- **CodeLens**: Inline complexity scores above function definitions
-- **Context Menu**: Right-click functions to show call hierarchy
-- **Webview Graphs**: Interactive Cytoscape.js visualizations
-
-### 🎨 **Enhanced Visualizations**
-- **Module Cards**: Styled rectangular cards with folder-based organization
-- **Git Analytics**: Author contributions, commit timelines, and module statistics
-- **Database Schema**: Interactive schema graphs with table relationships
-- **Tabbed Interface**: Organized views for Tech Stack, Graph, JSON, Git, and Database analysis
-
-### 🛠️ **Developer Tools**
-- **JSON Utilities**: Format, validate, and explore JSON data with tree view
+- **Full Project Analysis**: Complete codebase analysis with interactive visualizations
 - **Current File Analysis**: Quick insights for the file you're working on
-- **Export Capabilities**: Share results in JSON, CSV, HTML, and image formats
-- **Git Integration**: Comprehensive repository analysis and team insights
+- **Complexity Metrics**: Color-coded complexity indicators (🟢 Low, 🟡 Medium, 🔴 High)
+- **Framework Detection**: Automatic detection of Django, Flask, FastAPI patterns
 
-### ⚡ **Performance**
-- **Caching**: Intelligent caching system for fast re-analysis
-- **Incremental Updates**: Only re-analyzes changed files
-- **Large Project Support**: Optimized for real-world codebases
+### 📊 **Interactive Visualizations**
 
-## Installation
+- **Module Graph View**: Interactive dependency graphs with styled module cards
+- **Tech Stack Dashboard**: Categorized view of detected technologies and frameworks
+- **Database Schema Graphs**: Visual representation of database relationships
+- **Git Analytics Charts**: Contributor statistics and commit timeline visualizations
 
-### Prerequisites
-- VS Code 1.74.0 or higher
-- Python 3.8 or higher
-- Node.js 16.0 or higher (for development)
+### 🔧 **Developer Productivity Tools**
 
-### From VS Code Marketplace
-1. Open VS Code
-2. Go to Extensions (Ctrl+Shift+X)
-3. Search for "DoraCodeLens"
-4. Click Install
+- **Code Lens Integration**: Inline complexity annotations with toggle controls
+- **JSON Utilities**: Format, validate, and explore JSON with tree view
+- **Context Menu Integration**: Organized right-click menu for quick access
+- **Export Capabilities**: Export analysis results in multiple formats (JSON, CSV, HTML, PNG)
 
-### From Source
-1. Clone the repository:
-```bash
-git clone https://github.com/your-username/doracodelens-extension.git
-cd doracodelens-extension
-```
+### 📈 **Git Analytics & Team Insights**
 
-2. Install dependencies:
-```bash
-npm install
-cd analyzer
-pip install -r requirements.txt
-```
+- **Author Statistics**: Detailed contributor analysis with commit counts and line changes
+- **Module Contributions**: Track who works on which parts of your codebase
+- **Commit Timeline**: Visual timeline of development activity
+- **Code Ownership**: Identify primary maintainers of each module
 
-3. Build and install:
-```bash
-npm run compile
-code --install-extension doracodelens-*.vsix
-```
+### 🗄️ **Database Schema Analysis**
+
+- **Schema Visualization**: Interactive graphs showing table relationships
+- **SQL Extraction**: Parse and categorize SQL statements from your codebase
+- **Model Analysis**: Support for Django ORM and SQLAlchemy models
+- **Migration Tracking**: Analyze database migration files
 
 ## Usage
 
 ### Quick Start
-1. Open a Python project in VS Code
-2. Right-click on any Python file
-3. Select **DoraCodeLens** → **Full Code Analysis** → **Tech Stack**
-4. Explore your project's insights in the tabbed interface!
 
-### Enhanced Context Menu
-DoraCodeLens provides a comprehensive right-click context menu with organized options:
+1. **Install the Extension**
 
-- **Full Code Analysis**: Complete project analysis with Tech Stack, Graph View, and JSON View
-- **Current File Analysis**: Quick analysis of just the current file
-- **Git Analytics**: Author statistics, module contributions, and commit timeline
-- **Database Schema**: Visual schema graphs and raw SQL extraction
-- **JSON Utilities**: JSON formatting and tree view capabilities
+   - Open VS Code Extensions panel (`Ctrl+Shift+X`)
+   - Search for "DoraCodeLens"
+   - Click Install and reload VS Code
 
-### Interactive Features
-- **Module Cards**: Enhanced graph visualization with styled rectangular cards
-- **Complexity Color Coding**: Green (low), Orange (medium), Red (high complexity)
-- **Git Analytics Dashboard**: Comprehensive contributor and commit analysis
-- **Database Schema Graphs**: Visual representation of table relationships
-- **JSON Tree View**: Expandable JSON structure exploration
+2. **Analyze Your Project**
 
-## Documentation
+   - Open a Python project in VS Code
+   - Right-click on any Python file
+   - Select **DoraCodeLens** from the context menu
 
-📚 **[Complete User Guide](docs/USER_GUIDE.md)** - Comprehensive guide to all features
-📋 **[Quick Reference](docs/QUICK_REFERENCE.md)** - Handy cheat sheet for daily use
-🎯 **[Examples & Screenshots](docs/EXAMPLES.md)** - Detailed usage examples
-🔧 **[Developer Guide](docs/DEVELOPER.md)** - Architecture and development setup
+3. **Explore Analysis Options**
 
-## Supported Frameworks
+   ```
+   DoraCodeLens ►
+   ├── Full Code Analysis
+   │   ├── Tech Stack          # View detected frameworks & libraries
+   │   ├── Mind Map            # Interactive module dependency graph
+   │   └── JSON View           # Raw analysis data
+   ├── Current File Analysis   # Quick analysis of current file
+   ├── Code Lens (On/Off)      # Toggle inline complexity annotations
+   ├── Git Analytics ►
+   │   ├── Author Statistics   # Team contribution analysis
+   │   ├── Module Contributions # Module-wise Git activity
+   │   └── Commit Timeline     # Development timeline
+   ├── Database Schema ►
+   │   ├── Graph View          # Visual schema representation
+   │   └── Raw SQL             # Extracted SQL statements
+   └── JSON Utilities ►
+       ├── JSON Format         # Beautify JSON in editor
+       └── JSON Tree View      # Expandable JSON explorer
+   ```
 
-### Django
-- URL pattern detection from urls.py files
-- Model relationship mapping
-- View function analysis
-- Admin interface integration
+4. **Navigate the Tabbed Interface**
+   - Analysis results open in a comprehensive tabbed interface
+   - Switch between different views seamlessly
+   - Export results for documentation or sharing
 
-### Flask
-- Route detection via @app.route decorators
-- Blueprint pattern recognition
-- Template rendering analysis
-- SQLAlchemy model relationships
+## Configuration & Settings
 
-### FastAPI
-- Route detection via @app.get/post decorators
-- Dependency injection pattern analysis
-- Pydantic model relationships
-- Automatic API documentation integration
+DoraCodeLens provides extensive configuration options through VS Code settings:
 
-## Configuration
+### Analysis Settings
 
-### Extension Settings
-Access settings via File → Preferences → Settings → Extensions → DoraCodeLens
+- **Python Path**: Configure custom Python interpreter path
+- **Analysis Timeout**: Set timeout for analysis operations (30-600 seconds)
+- **Debug Logging**: Enable detailed logging for troubleshooting
 
-- `doracodelens.enableCodeLens`: Enable/disable CodeLens complexity annotations
-- `doracodelens.complexityThresholds`: Customize complexity color thresholds
-- `doracodelens.cacheEnabled`: Enable/disable analysis result caching
-- `doracodelens.maxProjectSize`: Maximum project size for analysis
+### Code Lens Settings
 
-### Python Dependencies
-The extension automatically manages Python dependencies, but you can manually install them:
+- **Complexity Thresholds**: Customize low/medium/high complexity boundaries
+- **Display Options**: Toggle complexity indicators and suggestions
+- **Max Suggestions**: Control number of suggestions per function
 
-```bash
-cd analyzer
-pip install -r requirements.txt
-```
+### Guidance System
+
+- **Preferred Analysis Type**: Set default analysis mode (current-file/full-project)
+- **Auto-run Analysis**: Automatically analyze when Code Lens is enabled
+- **Welcome Messages**: Control first-time user guidance
+
+### Access Settings
+
+1. Open VS Code Settings (`Ctrl+,`)
+2. Search for "DoraCodeLens"
+3. Customize options to fit your workflow
+
+## Supported Frameworks & Technologies
+
+### Web Frameworks
+
+- **Django**: Models, views, URLs, admin interface, migrations
+- **Flask**: Routes, blueprints, SQLAlchemy integration, templates
+- **FastAPI**: Routes, dependency injection, Pydantic models, async patterns
+
+### Database Technologies
+
+- **Django ORM**: Model relationships, migrations, admin integration
+- **SQLAlchemy**: Model definitions, relationships, query patterns
+- **Raw SQL**: DDL, DML, DQL statement parsing and categorization
+
+### Development Tools
+
+- **Git Integration**: Repository analysis, author statistics, commit tracking
+- **JSON Processing**: Validation, formatting, tree exploration
+- **Testing Frameworks**: pytest, unittest pattern detection
+- **Package Management**: requirements.txt, pyproject.toml, Pipfile support
+
+## Command Palette Integration
+
+Access DoraCodeLens features through the VS Code Command Palette (`Ctrl+Shift+P`):
+
+### Analysis Commands
+
+- `DoraCodeLens: Full Code Analysis` - Complete project analysis
+- `DoraCodeLens: Current File Analysis` - Analyze current file only
+- `DoraCodeLens: Refresh Full Code Analysis` - Force refresh analysis cache
+- `DoraCodeLens: Database Schema Analysis` - Analyze database structure
+- `DoraCodeLens: Git Analytics` - Generate Git repository insights
+
+### Code Lens Commands
+
+- `DoraCodeLens: Code Lens (On)` - Enable inline complexity annotations
+- `DoraCodeLens: Code Lens (Off)` - Disable Code Lens display
+- `DoraCodeLens: Apply Code Lens Suggestion` - Apply suggested improvements
+- `DoraCodeLens: Show Code Lens Suggestion Details` - View detailed suggestions
+
+### JSON Utilities
+
+- `DoraCodeLens: JSON Format` - Format JSON in current editor
+- `DoraCodeLens: JSON Tree View` - Open JSON tree explorer
+- `DoraCodeLens: JSON Fix (Python Dict)` - Convert Python dict to JSON
+- `DoraCodeLens: JSON Minify` - Compress JSON content
+
+### Utility Commands
+
+- `DoraCodeLens: Setup Python Path` - Configure Python interpreter
+- `DoraCodeLens: Auto-Detect Python Path` - Automatically find Python
+- `DoraCodeLens: Clear Cache` - Clear analysis cache
+- `DoraCodeLens: Cancel Analysis` - Stop running analysis
+- `DoraCodeLens: Settings` - Open extension settings
 
 ## Example Projects
 
 The `examples/` directory contains sample projects demonstrating the extension's capabilities:
 
+- **django-ecommerce**: Comprehensive Django e-commerce project with complex database schema, REST APIs, and Docker setup
 - **django-todo**: Django todo app with models, views, and URL patterns
 - **flask-todo**: Flask todo app using Blueprints and SQLAlchemy
-- **fastapi-todo**: FastAPI todo app with dependency injection
+- **fastapi-todo**: FastAPI todo app with dependency injection and modern async patterns
 
-Each example includes setup instructions and demonstrates different framework patterns.
+Each example includes setup instructions and demonstrates different framework patterns that DoraCodeLens can analyze.
 
 ## Troubleshooting
 
 ### Common Issues
 
 **Extension not activating**
-- Ensure you have a Python project open
-- Check that Python is installed and accessible
-- Verify the workspace contains Python files
 
-**Analysis fails**
-- Check Python interpreter path in VS Code settings
-- Ensure required Python packages are installed
-- Review the Output panel for error messages
+- Ensure you have a Python project open with `.py` files
+- Check that Python 3.8+ is installed and accessible
+- Verify workspace contains `requirements.txt`, `pyproject.toml`, or Python files
+- Try reloading VS Code window (`Ctrl+Shift+P` → "Developer: Reload Window")
 
-**Performance issues**
-- Enable caching in extension settings
-- Consider analyzing specific directories for large projects
-- Adjust project size limits in settings
+**Analysis fails or times out**
 
-**Webview not loading**
-- Disable other extensions that might conflict
-- Check browser console in webview (Developer Tools)
-- Restart VS Code and try again
+- Check Python interpreter path in DoraCodeLens settings
+- Increase analysis timeout in settings (default: 120 seconds)
+- Try Current File Analysis instead of Full Code Analysis for large projects
+- Review VS Code Output panel for detailed error messages
+
+**Code Lens not appearing**
+
+- Ensure Code Lens is enabled (`DoraCodeLens: Code Lens (On)`)
+- Check that you're in a Python file (`.py` extension)
+- Run analysis first to populate Code Lens data
+- Verify complexity thresholds in settings aren't too restrictive
+
+**Git Analytics empty**
+
+- Ensure the project is a Git repository (`git init` if needed)
+- Check that Git is installed and accessible from command line
+- Verify the repository has commit history
+- Try analyzing a specific date range if history is very large
+
+**Database Schema not detected**
+
+- Ensure you have Django models (`models.py`) or SQLAlchemy models
+- Check that model files are in standard locations
+- Verify database models follow standard ORM patterns
+- Look for SQL files in migrations or schema directories
+
+**JSON utilities not working**
+
+- Ensure the content is valid JSON syntax
+- Try formatting smaller JSON sections first
+- Check that the file has proper JSON structure
+- Use JSON Fix feature for Python dictionary conversion
+
+**Performance issues with large projects**
+
+- Use Current File Analysis instead of Full Code Analysis
+- Enable analysis caching in settings
+- Close other resource-intensive VS Code extensions
+- Consider analyzing specific directories rather than entire project
+- Ensure sufficient RAM (4GB+ recommended for large projects)
 
 ### Getting Help
-- Check the [GitHub Issues](https://github.com/your-username/doracodelens-extension/issues)
-- Review the [Developer Documentation](docs/DEVELOPER.md)
-- Submit bug reports with project details and error logs
 
-## Contributing
+1. **Check Extension Output**
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+   - Open VS Code Output panel (`View` → `Output`)
+   - Select "DoraCodeLens" from the dropdown
+   - Review error messages and debug information
 
-### Development Setup
-1. Fork and clone the repository
-2. Install dependencies: `npm install`
-3. Install Python dependencies: `cd analyzer && pip install -r requirements.txt`
-4. Open in VS Code and press F5 to launch Extension Development Host
-5. Make changes and test in the development environment
+2. **Enable Debug Logging**
 
-### Running Tests
-```bash
-# TypeScript tests
-npm test
+   - Open VS Code Settings (`Ctrl+,`)
+   - Search for "DoraCodeLens debug"
+   - Enable "Enable Debug Logging"
+   - Reproduce the issue and check output
 
-# Python tests
-cd analyzer
-python -m pytest
-```
 
-## Architecture
+### System Requirements
 
-DoraCodeLens uses a hybrid architecture:
-
-- **Python Analyzer**: Static analysis engine using AST parsing
-- **TypeScript Extension**: VS Code integration and UI
-- **Webview Visualization**: Interactive graphs using Cytoscape.js
-- **Git Analytics Engine**: Comprehensive Git repository analysis
-- **Database Schema Analyzer**: Database schema analysis and visualization
-
-For detailed architecture information, see [docs/DEVELOPER.md](docs/DEVELOPER.md).
+- **VS Code**: Version 1.74.0 or higher
+- **Python**: Version 3.8 or higher
+- **Git**: Any recent version (for Git analytics features)
+- **Memory**: At least 4GB RAM recommended for large projects
+- **Storage**: 100MB free space for extension and caching
+- **Network**: Internet connection for initial Python package installation
 
 ## License
 
@@ -219,9 +276,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
+- [VS Code Extension API](https://code.visualstudio.com/api) for integration capabilities
 - [Cytoscape.js](https://cytoscape.org/) for graph visualization
 - [Radon](https://radon.readthedocs.io/) for complexity analysis
-- [VS Code Extension API](https://code.visualstudio.com/api) for integration capabilities
 
 ## Changelog
 

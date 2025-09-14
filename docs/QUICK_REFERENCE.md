@@ -11,15 +11,33 @@ Right-click on Python file → DoraCodeLens →
 | **Tech Stack** | Full Code Analysis → Tech Stack | Shows detected frameworks & libraries |
 | **Module Graph** | Full Code Analysis → Graph View | Interactive module dependency visualization |
 | **Raw Data** | Full Code Analysis → JSON View | Complete analysis data in JSON format |
-| **File Analysis** | Current File Analysis → [View] | Analyze just the current file |
-| **Call Tree** | Call Hierarchy → Graph View | Function call relationships |
-| **Git Stats** | Git Commits → Author Statistics | Contributor analysis & statistics |
-| **Module Git** | Git Commits → Module Contributions | Git activity per module/folder |
-| **Commit History** | Git Commits → Commit Timeline | Visual commit timeline |
-| **DB Graph** | DB Schema → Graph View | Database schema visualization |
-| **SQL View** | DB Schema → Raw SQL | Extracted SQL statements |
-| **Format JSON** | JSON Utils → JSON Format | Beautify JSON in current editor |
-| **JSON Tree** | JSON Utils → JSON Tree View | Expandable JSON structure |
+| **File Analysis** | Current File Analysis | Analyze just the current file |
+| **Code Lens Toggle** | Code Lens (On/Off) | Toggle inline complexity annotations |
+| **DB Analysis** | Database Schema Analysis | Complete database structure analysis |
+| **Git Analytics** | Git Analytics | Repository insights and team statistics |
+| **Format JSON** | JSON Format | Beautify JSON in current editor |
+| **JSON Tree** | JSON Tree View | Expandable JSON structure explorer |
+| **JSON Fix** | JSON Fix (Python Dict) | Convert Python dict to valid JSON |
+| **JSON Compress** | JSON Minify | Compress JSON content |
+| **Python Setup** | Setup Python Path | Configure Python interpreter |
+| **Auto-Detect** | Auto-Detect Python Path | Automatically find Python |
+| **Settings** | Settings | Open extension configuration |
+
+## Command Palette Quick Access
+
+```
+Ctrl+Shift+P → DoraCodeLens: [Command]
+```
+
+| Command | Shortcut | What it does |
+|---------|----------|--------------|
+| **Full Code Analysis** | `Ctrl+Shift+P` → `DoraCodeLens: Full Code Analysis` | Complete project analysis |
+| **Current File Analysis** | `Ctrl+Shift+P` → `DoraCodeLens: Current File Analysis` | Analyze current file only |
+| **Refresh Analysis** | `Ctrl+Shift+P` → `DoraCodeLens: Refresh Full Code Analysis` | Force refresh cache |
+| **Enable Code Lens** | `Ctrl+Shift+P` → `DoraCodeLens: Code Lens (On)` | Enable inline annotations |
+| **Disable Code Lens** | `Ctrl+Shift+P` → `DoraCodeLens: Code Lens (Off)` | Disable Code Lens |
+| **Clear Cache** | `Ctrl+Shift+P` → `DoraCodeLens: Clear Cache` | Clear analysis cache |
+| **Cancel Analysis** | `Ctrl+Shift+P` → `DoraCodeLens: Cancel Analysis` | Stop running analysis |
 
 ## Complexity Color Coding
 
@@ -119,29 +137,67 @@ DoraCodeLens automatically detects:
 | Large JSON files | Use Tree View for navigation |
 | Multiple analyses | Wait for completion before next |
 
+## Configuration Quick Reference
+
+### Essential Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `doracodelens.pythonPath` | `"python3"` | Python interpreter path |
+| `doracodelens.analysisTimeout` | `120` | Analysis timeout (seconds) |
+| `doracodelens.enableDebugLogging` | `false` | Enable debug logging |
+| `doracodelens.codeLens.showComplexity` | `true` | Show complexity indicators |
+| `doracodelens.codeLens.showSuggestions` | `true` | Show actionable suggestions |
+| `doracodelens.guidance.enabled` | `true` | Enable guidance system |
+| `doracodelens.guidance.autoRunAnalysisOnEnable` | `false` | Auto-run when enabled |
+
+### Complexity Thresholds
+
+| Threshold | Default | Range | Color |
+|-----------|---------|-------|-------|
+| Low | `5` | 1-50 | 🟢 Green |
+| Medium | `10` | 1-50 | 🟡 Orange |
+| High | `11` | 1-50 | 🔴 Red |
+
+### Access Settings
+1. `Ctrl+,` → Search "DoraCodeLens"
+2. Command Palette → `DoraCodeLens: Settings`
+3. Context Menu → Settings
+
 ## Best Practices
 
 ### Daily Development
 1. Use **Current File Analysis** while coding
 2. Check **complexity colors** before committing
-3. Format JSON with **JSON Utils** when needed
+3. Format JSON with **JSON utilities** when needed
+4. Enable **Code Lens** for inline complexity feedback
 
 ### Weekly Reviews
 1. Run **Full Code Analysis** to check project health
-2. Review **Git Analytics** for team activity
-3. Export **HTML reports** for documentation
+2. Review **Git Analytics** for team activity patterns
+3. Check **Database Schema** for model changes
+4. Export **reports** for documentation updates
 
 ### Monthly Planning
-1. Analyze **Git Commit Timeline** for patterns
-2. Review **Module Contributions** for ownership
+1. Analyze **Git Analytics** for long-term patterns
+2. Review **complexity trends** across modules
 3. Focus refactoring on **red complexity** modules
 4. Update **Database Schema** documentation
+5. Review and adjust **complexity thresholds**
 
 ### Team Collaboration
 1. Share **Graph Views** in architecture discussions
-2. Use **Git Analytics** for sprint planning
-3. Export **visualizations** for presentations
-4. Track **complexity trends** over time
+2. Use **Git Analytics** for sprint planning and retrospectives
+3. Export **visualizations** for presentations and documentation
+4. Track **complexity trends** and code quality metrics over time
+5. Use **Database Schema** graphs for data modeling discussions
+
+### Performance Optimization
+1. Use **Current File Analysis** for large projects
+2. Enable **caching** for faster subsequent analyses
+3. Adjust **analysis timeout** for complex projects
+4. Use **selective analysis** rather than full project scans
+5. Monitor **debug logs** for performance bottlenecks
 
 ---
 

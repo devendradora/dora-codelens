@@ -23,28 +23,7 @@ export class CodeLensHandler {
         this.commandManager.registerDynamicCommands();
     }
 
-    /**
-     * Handle toggle code lens command
-     */
-    public async handleToggleCodeLens(): Promise<void> {
-        try {
-            this.errorHandler.logError(
-                'Toggle code lens command initiated',
-                null,
-                'CodeLensHandler'
-            );
 
-            this.codeLensManager.toggleCodeLens();
-
-        } catch (error) {
-            this.errorHandler.logError(
-                'Toggle code lens command failed',
-                error,
-                'CodeLensHandler'
-            );
-            vscode.window.showErrorMessage('Failed to toggle Code Lens. Check the output for details.');
-        }
-    }
 
     /**
      * Handle enable code lens command
@@ -57,6 +36,8 @@ export class CodeLensHandler {
                 'CodeLensHandler'
             );
 
+            // Enable code lens - no automatic analysis triggering
+            // Code lens will show complexity indicators when analysis data is available
             this.codeLensManager.enableCodeLens();
 
         } catch (error) {
@@ -456,6 +437,56 @@ export class CodeLensHandler {
      */
     public getGuidanceCommandHandler(): any {
         return this.guidanceCommandHandler;
+    }
+
+    /**
+     * Trigger current file analysis when code lens is enabled and no cached results exist
+     */
+    private async triggerCurrentFileAnalysis(document: vscode.TextDocument): Promise<void> {
+        try {
+            // Import current file analysis handler dynamically to avoid circular dependencies
+            const { CurrentFileAnalysisHandler } = await import('./current-file-analysis-handler');
+            
+            // Get required dependencies from the command manager
+            const commandManager = require('../core/command-manager').CommandManager.getInstance();
+            const errorHandler = this.errorHandler;
+            const duplicateCallGuard = commandManager.duplicateCallGuard;
+            const stateManager = commandManager.stateManager;
+            const webviewManager = commandManager.webviewManager;
+            
+            // Create handler instance
+            const analysisHandler = new CurrentFileAnalysisHandler(
+                errorHandler,
+                duplicateCallGuard,
+                stateManager,
+                webviewManager
+            );
+            
+            // Execute analysis
+            const analysisResult = await analysisHandler.execute({
+                includeComplexity: true,
+                includeDependencies: false,
+                includeFrameworkPatterns: false
+            });
+            
+            // Update code lens with analysis results
+            if (analysisResult) {
+                this.codeLensManager.updateFromAnalysisData(analysisResult);
+                this.errorHandler.logError(
+                    'Current file analysis completed and code lens updated',
+                    null,
+                    'CodeLensHandler'
+                );
+            }
+            
+        } catch (error) {
+            this.errorHandler.logError(
+                'Failed to trigger current file analysis',
+                error,
+                'CodeLensHandler'
+            );
+            // Don't show error to user as this is automatic - code lens will still work without analysis
+        }
     }
 
     /**

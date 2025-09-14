@@ -1,0 +1,27 @@
+{
+  "enabled": true,
+  "name": "Documentation Sync",
+  "description": "Monitors all source files (TypeScript, Python, JavaScript, JSON configs) and triggers documentation updates in README.md and docs/ folder when changes are detected",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.ts",
+      "analyzer/**/*.py",
+      "*.js",
+      "*.json",
+      "package.json",
+      "tsconfig.json",
+      "analyzer/pyproject.toml",
+      ".eslintrc.json",
+      "examples/**/*.py",
+      "examples/**/*.js",
+      "demo/**/*.py",
+      "demo/**/*.js"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Source files have been modified in this TypeScript/Python project. Please analyze the changes and update the documentation accordingly. Focus on:\n\n1. Update README.md if there are significant feature changes, new commands, or architectural updates\n2. Update relevant files in the docs/ folder (USER_GUIDE.md, DEVELOPER.md, EXAMPLES.md, etc.) based on the nature of changes\n3. Ensure documentation reflects current functionality, especially for:\n   - New TypeScript commands or webview providers\n   - Python analyzer capabilities and modules\n   - Configuration changes in package.json, tsconfig.json, or pyproject.toml\n   - New example projects or demo files\n\nPlease review the changed files and provide updated documentation that maintains accuracy with the current codebase."
+  }
+}

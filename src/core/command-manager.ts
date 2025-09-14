@@ -127,6 +127,12 @@ export class CommandManager {
         () => this.handleFullCodeAnalysis()
       );
 
+      // Register refresh full code analysis command
+      const refreshFullCodeAnalysisCommand = vscode.commands.registerCommand(
+        "doracodelens.refreshFullCodeAnalysis",
+        () => this.handleRefreshFullCodeAnalysis()
+      );
+
       // Register current file analysis command
       const currentFileAnalysisCommand = vscode.commands.registerCommand(
         "doracodelens.analyzeCurrentFile",
@@ -201,11 +207,6 @@ export class CommandManager {
       );
 
       // Register code lens commands
-      const toggleCodeLensCommand = vscode.commands.registerCommand(
-        "doracodelens.toggleCodeLens",
-        () => this.handleToggleCodeLens()
-      );
-
       const enableCodeLensCommand = vscode.commands.registerCommand(
         "doracodelens.enableCodeLens",
         () => this.handleEnableCodeLens()
@@ -274,6 +275,7 @@ export class CommandManager {
       // Store disposables
       this.disposables.push(
         fullCodeAnalysisCommand,
+        refreshFullCodeAnalysisCommand,
         currentFileAnalysisCommand,
         gitAnalyticsCommand,
         databaseSchemaCommand,
@@ -287,7 +289,6 @@ export class CommandManager {
         jsonTreeViewCommand,
         jsonFixCommand,
         jsonMinifyCommand,
-        toggleCodeLensCommand,
         enableCodeLensCommand,
         disableCodeLensCommand,
         showFunctionDetailsCommand,
@@ -333,6 +334,23 @@ export class CommandManager {
         "Full code analysis command failed",
         error,
         "handleFullCodeAnalysis"
+      );
+      // Error handling is done in the handler
+    }
+  }
+
+  /**
+   * Handles refresh full code analysis command
+   */
+  public async handleRefreshFullCodeAnalysis(): Promise<void> {
+    try {
+      // Execute analysis with force refresh - the handler will display results via WebviewManager
+      await this.fullCodeAnalysisHandler.executeRefresh();
+    } catch (error) {
+      this.errorHandler.logError(
+        "Refresh full code analysis command failed",
+        error,
+        "handleRefreshFullCodeAnalysis"
       );
       // Error handling is done in the handler
     }
@@ -476,35 +494,7 @@ export class CommandManager {
     }
   }
 
-  /**
-   * Handles toggle code lens command
-   */
-  public async handleToggleCodeLens(): Promise<void> {
-    try {
-      // Check if current file is Python
-      const activeEditor = vscode.window.activeTextEditor;
-      if (!activeEditor) {
-        vscode.window.showWarningMessage("No active file found.");
-        return;
-      }
 
-      if (activeEditor.document.languageId !== "python") {
-        vscode.window.showWarningMessage(
-          "Code lens is only available for Python files."
-        );
-        return;
-      }
-
-      await this.codeLensHandler.handleToggleCodeLens();
-    } catch (error) {
-      this.errorHandler.logError(
-        "Toggle code lens command failed",
-        error,
-        "handleToggleCodeLens"
-      );
-      // Error handling is done in the handler
-    }
-  }
 
   /**
    * Handles enable code lens command
@@ -1000,6 +990,20 @@ export class CommandManager {
   }
 
   /**
+   * Get command handlers for integration
+   */
+  public getHandlers() {
+    return {
+      fullCodeAnalysis: this.fullCodeAnalysisHandler,
+      currentFileAnalysis: this.currentFileAnalysisHandler,
+      gitAnalytics: this.gitAnalyticsHandler,
+      databaseSchema: this.databaseSchemaHandler,
+      jsonUtilities: this.jsonUtilitiesHandler,
+      codeLens: this.codeLensHandler
+    };
+  }
+
+  /**
    * Validate Python dependencies on startup
    */
   public async validateDependencies(): Promise<boolean> {
@@ -1068,19 +1072,7 @@ export class CommandManager {
     }
   }
 
-  /**
-   * Get command handler instances for external access
-   */
-  public getHandlers() {
-    return {
-      fullCodeAnalysis: this.fullCodeAnalysisHandler,
-      currentFileAnalysis: this.currentFileAnalysisHandler,
-      gitAnalytics: this.gitAnalyticsHandler,
-      databaseSchema: this.databaseSchemaHandler,
-      jsonUtilities: this.jsonUtilitiesHandler,
-      codeLens: this.codeLensHandler,
-    };
-  }
+
 
   /**
    * Get service instances for external access

@@ -126,21 +126,12 @@ export class CodeLensCommandManager {
         }
     }
 
-    /**
-     * Toggle code lens state
-     */
-    private toggleCodeLens(): void {
-        if (this.commandState.codeLensEnabled) {
-            this.disableCodeLens();
-        } else {
-            this.enableCodeLens();
-        }
-    }
+
 
     /**
      * Enable code lens
      */
-    private enableCodeLens(): void {
+    public enableCodeLens(): void {
         this.commandState.codeLensEnabled = true;
         this.commandState.lastUpdate = Date.now();
         this.updateCommandTitles();
@@ -149,10 +140,10 @@ export class CodeLensCommandManager {
         // Emit event for other components
         vscode.commands.executeCommand('doracodelens.codeLensStateChanged', true);
         
-        vscode.window.showInformationMessage('Code Lens enabled');
+        vscode.window.showInformationMessage('Code Lens -> On');
         
         this.errorHandler.logError(
-            'Code lens enabled via dynamic command',
+            'Code lens enabled via command manager',
             null,
             'CodeLensCommandManager'
         );
@@ -161,7 +152,7 @@ export class CodeLensCommandManager {
     /**
      * Disable code lens
      */
-    private disableCodeLens(): void {
+    public disableCodeLens(): void {
         this.commandState.codeLensEnabled = false;
         this.commandState.lastUpdate = Date.now();
         this.updateCommandTitles();
@@ -170,10 +161,10 @@ export class CodeLensCommandManager {
         // Emit event for other components
         vscode.commands.executeCommand('doracodelens.codeLensStateChanged', false);
         
-        vscode.window.showInformationMessage('Code Lens disabled');
+        vscode.window.showInformationMessage('Code Lens -> Off');
         
         this.errorHandler.logError(
-            'Code lens disabled via dynamic command',
+            'Code lens disabled via command manager',
             null,
             'CodeLensCommandManager'
         );

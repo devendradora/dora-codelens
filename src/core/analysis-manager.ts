@@ -282,6 +282,87 @@ export class AnalysisManager {
         });
     }
 
+
+
+    /**
+     * Analyze current file in background without showing progress UI
+     */
+    public async analyzeCurrentFileInBackground(document: vscode.TextDocument): Promise<any> {
+        return await this.logger.measureAsync('analyzeCurrentFileInBackground', async () => {
+            const filePath = document.uri.fsPath;
+            
+            // Check cache first
+            const cached = this.analysisCache.get(filePath);
+            if (cached && (Date.now() - cached.timestamp) < 30000) { // 30 second cache
+                this.logger.debug('AnalysisManager', 'analyzeCurrentFileInBackground', 'Using cached results', {
+                    filePath,
+                    cacheAge: Date.now() - cached.timestamp
+                });
+                
+                // Return transformed data for code lens
+                return this.transformAnalysisDataForCodeLens(filePath, cached);
+            }
+
+            this.logger.info('AnalysisManager', 'analyzeCurrentFileInBackground', 'Starting background analysis', 
+                null, { filePath });
+
+            try {
+                // Check if we can get existing analysis data first
+                const stateManager = (await import('./analysis-state-manager')).AnalysisStateManager.getInstance();
+                let analysisData = stateManager.getLastResult();
+                
+                // If no existing data or it's stale, run new analysis
+                if (!analysisData || this.isAnalysisDataStale(analysisData, filePath)) {
+                    this.logger.debug('AnalysisManager', 'analyzeCurrentFileInBackground', 'Running new background analysis', null, { filePath });
+                    
+                    // Run Python analyzer in background without showing webview
+                    const { CurrentFileAnalysisHandler } = await import('../commands/current-file-analysis-handler');
+                    const { DuplicateCallGuard } = await import('./duplicate-call-guard');
+                    const { AnalysisStateManager } = await import('./analysis-state-manager');
+                    const { WebviewManager } = await import('../webviews/webview-manager');
+                    
+                    const duplicateCallGuard = DuplicateCallGuard.getInstance();
+                    const webviewManager = new WebviewManager(this.errorHandler, ''); // Empty extension path for background
+                    const handler = new CurrentFileAnalysisHandler(
+                        this.errorHandler,
+                        duplicateCallGuard,
+                        stateManager,
+                        webviewManager
+                    );
+                    
+                    // Run background analysis
+                    analysisData = await handler.executeInBackground(filePath);
+                }
+                
+                if (!analysisData) {
+                    this.logger.debug('AnalysisManager', 'analyzeCurrentFileInBackground', 'No analysis data returned', null, { filePath });
+                    return null;
+                }
+
+                // Process analysis results
+                const results = this.processAnalysisResults(filePath, analysisData);
+                
+                // Cache results
+                this.analysisCache.set(filePath, results);
+
+                // Transform the data for code lens provider
+                const transformedData = this.transformAnalysisDataForCodeLens(filePath, analysisData);
+
+                this.logger.info('AnalysisManager', 'analyzeCurrentFileInBackground', 'Background analysis completed', {
+                    functionCount: results.functions.length,
+                    classCount: results.classes.length
+                }, { filePath });
+
+                return transformedData;
+
+            } catch (error) {
+                this.logger.error('AnalysisManager', 'analyzeCurrentFileInBackground', 'Background analysis failed', 
+                    { error: error instanceof Error ? error.message : String(error) }, { filePath });
+                throw error;
+            }
+        });
+    }
+
     /**
      * Analyze full project and update code lens for all files
      */
@@ -580,6 +661,30 @@ export class AnalysisManager {
             this.codeLensProvider.updateAnalysisData({
                 files: [cached]
             });
+        } else if (this.config.enableCodeLens && this.codeLensProvider) {
+            // No cached data and code lens is enabled - trigger automatic analysis with throttling
+            this.logger.info('AnalysisManager', 'handleActiveEditorChange', 'Triggering automatic analysis for opened Python file', 
+                null, { filePath });
+            
+            // Throttle automatic analysis to prevent excessive calls
+            const existingTimer = this.throttleTimers.get(filePath);
+            if (existingTimer) {
+                clearTimeout(existingTimer);
+            }
+
+            const timer = setTimeout(async () => {
+                try {
+                    // Run analysis in background without showing progress UI
+                    await this.analyzeCurrentFileInBackground(editor.document);
+                    this.throttleTimers.delete(filePath);
+                } catch (error) {
+                    this.logger.error('AnalysisManager', 'handleActiveEditorChange', 'Automatic analysis failed', 
+                        { error: error instanceof Error ? error.message : String(error) }, { filePath });
+                    this.throttleTimers.delete(filePath);
+                }
+            }, Math.min(this.config.throttleMs, 500)); // Use shorter delay for file opening (max 500ms)
+
+            this.throttleTimers.set(filePath, timer);
         }
     }
 

@@ -1,6 +1,17 @@
 import { ErrorHandler } from './error-handler';
 
 /**
+ * Cached analysis result with metadata
+ */
+export interface CachedAnalysisResult {
+  data: any;
+  timestamp: number;
+  workspacePath: string;
+  options: any;
+  isValid: boolean;
+}
+
+/**
  * Analysis state model for centralized state management
  */
 export interface AnalysisState {
@@ -10,6 +21,7 @@ export interface AnalysisState {
   activeCommands: Set<string>;
   lastAnalysisTime: number;
   errorCount: number;
+  cachedResult: CachedAnalysisResult | null;
 }
 
 /**
@@ -34,7 +46,8 @@ export class AnalysisStateManager {
       currentOptions: null,
       activeCommands: new Set<string>(),
       lastAnalysisTime: 0,
-      errorCount: 0
+      errorCount: 0,
+      cachedResult: null
     };
   }
 
@@ -124,6 +137,132 @@ export class AnalysisStateManager {
   }
 
   /**
+   * Sets cached analysis result with metadata
+   */
+  public setCachedResult(result: any, workspacePath: string, options: any = {}): void {
+    const validatedResult = this.errorHandler.validateAnalysisResult(result);
+    
+    if (validatedResult) {
+      this.state.cachedResult = {
+        data: validatedResult,
+        timestamp: Date.now(),
+        workspacePath,
+        options,
+        isValid: true
+      };
+      
+      // Also update lastResult for backward compatibility
+      this.state.lastResult = validatedResult;
+      
+      this.errorHandler.logError(
+        'Cached analysis result updated',
+        { workspacePath, timestamp: this.state.cachedResult.timestamp },
+        'setCachedResult'
+      );
+    } else {
+      this.state.cachedResult = null;
+      this.errorHandler.logError(
+        'Failed to cache invalid analysis result',
+        null,
+        'setCachedResult'
+      );
+    }
+
+    this.notifyListeners();
+  }
+
+  /**
+   * Gets cached analysis result if valid
+   */
+  public getCachedResult(workspacePath: string, maxAgeMs: number = 300000): CachedAnalysisResult | null {
+    if (!this.state.cachedResult) {
+      return null;
+    }
+
+    // Check if cache is for the same workspace
+    if (this.state.cachedResult.workspacePath !== workspacePath) {
+      this.errorHandler.logError(
+        'Cached result is for different workspace',
+        { 
+          cached: this.state.cachedResult.workspacePath, 
+          requested: workspacePath 
+        },
+        'getCachedResult'
+      );
+      return null;
+    }
+
+    // Check if cache is still valid (default 5 minutes)
+    const age = Date.now() - this.state.cachedResult.timestamp;
+    if (age > maxAgeMs) {
+      this.errorHandler.logError(
+        'Cached result is too old',
+        { age, maxAge: maxAgeMs },
+        'getCachedResult'
+      );
+      return null;
+    }
+
+    // Check if cache is marked as valid
+    if (!this.state.cachedResult.isValid) {
+      this.errorHandler.logError(
+        'Cached result is marked as invalid',
+        null,
+        'getCachedResult'
+      );
+      return null;
+    }
+
+    return this.state.cachedResult;
+  }
+
+  /**
+   * Invalidates cached result
+   */
+  public invalidateCache(): void {
+    if (this.state.cachedResult) {
+      this.state.cachedResult.isValid = false;
+      this.errorHandler.logError(
+        'Cache invalidated',
+        { timestamp: this.state.cachedResult.timestamp },
+        'invalidateCache'
+      );
+      this.notifyListeners();
+    }
+  }
+
+  /**
+   * Clears cached result completely
+   */
+  public clearCache(): void {
+    if (this.state.cachedResult) {
+      this.errorHandler.logError(
+        'Cache cleared',
+        { timestamp: this.state.cachedResult.timestamp },
+        'clearCache'
+      );
+      this.state.cachedResult = null;
+      this.notifyListeners();
+    }
+  }
+
+  /**
+   * Gets cache info for display
+   */
+  public getCacheInfo(): { hasCache: boolean; timestamp: number | null; age: number | null; workspacePath: string | null } {
+    if (!this.state.cachedResult) {
+      return { hasCache: false, timestamp: null, age: null, workspacePath: null };
+    }
+
+    return {
+      hasCache: true,
+      timestamp: this.state.cachedResult.timestamp,
+      age: Date.now() - this.state.cachedResult.timestamp,
+      workspacePath: this.state.cachedResult.workspacePath
+    };
+  }
+
+  /**
    * Adds active command
    */
   public addActiveCommand(commandId: string): void {
@@ -207,7 +346,8 @@ export class AnalysisStateManager {
       currentOptions: null,
       activeCommands: new Set<string>(),
       lastAnalysisTime: 0,
-      errorCount: 0
+      errorCount: 0,
+      cachedResult: null
     };
 
     this.notifyListeners();

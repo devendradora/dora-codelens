@@ -13,6 +13,7 @@
   "description": "Advanced VS Code extension for comprehensive Python project analysis with Git analytics, enhanced visualizations, JSON utilities, and database schema analysis",
   "version": "0.1.1",
   "publisher": "DevendraDora",
+  "icon": "resources/dora-code-lens-kiro.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/devendradora/code-mind-map.git"
@@ -182,14 +183,24 @@
       ],
       "doracodelens.contextMenu": [
         {
-          "command": "doracodelens.analyzeCurrentFile",
+          "command": "doracodelens.analyzeFullCode",
           "group": "analyze@1",
           "when": "resourceLangId == python"
         },
         {
-          "command": "doracodelens.analyzeFullCode",
+          "command": "doracodelens.analyzeCurrentFile",
           "group": "analyze@2",
           "when": "resourceLangId == python"
+        },
+        {
+          "command": "doracodelens.enableCodeLens",
+          "group": "analyze@3",
+          "when": "resourceLangId == python && !doracodelens.codeLensEnabled"
+        },
+        {
+          "command": "doracodelens.disableCodeLens",
+          "group": "analyze@3",
+          "when": "resourceLangId == python && doracodelens.codeLensEnabled"
         },
         {
           "command": "doracodelens.analyzeDatabaseSchema",
@@ -231,17 +242,17 @@
         {
           "command": "doracodelens.openSettings",
           "group": "setup@3"
-        },
-        {
-          "command": "doracodelens.toggleCodeLens",
-          "group": "codelens@1",
-          "when": "resourceLangId == python"
         }
       ],
       "editor/title": [
         {
-          "command": "doracodelens.toggleCodeLens",
-          "when": "resourceLangId == python",
+          "command": "doracodelens.enableCodeLens",
+          "when": "resourceLangId == python && !doracodelens.codeLensEnabled",
+          "group": "navigation@1"
+        },
+        {
+          "command": "doracodelens.disableCodeLens",
+          "when": "resourceLangId == python && doracodelens.codeLensEnabled",
           "group": "navigation@1"
         }
       ],
@@ -276,6 +287,12 @@
         "title": "Full Code Analysis",
         "category": "DoraCodeLens",
         "icon": "$(graph)"
+      },
+      {
+        "command": "doracodelens.refreshFullCodeAnalysis",
+        "title": "Refresh Full Code Analysis",
+        "category": "DoraCodeLens",
+        "icon": "$(refresh)"
       },
       {
         "command": "doracodelens.analyzeCurrentFile",
@@ -383,20 +400,14 @@
         "icon": "$(type-hierarchy)"
       },
       {
-        "command": "doracodelens.toggleCodeLens",
-        "title": "Toggle Code Lens",
-        "category": "DoraCodeLens",
-        "icon": "$(eye)"
-      },
-      {
         "command": "doracodelens.enableCodeLens",
-        "title": "Enable Code Lens",
+        "title": "Code Lens (On)",
         "category": "DoraCodeLens",
         "icon": "$(eye)"
       },
       {
         "command": "doracodelens.disableCodeLens",
-        "title": "Disable Code Lens",
+        "title": "Code Lens (Off)",
         "category": "DoraCodeLens",
         "icon": "$(eye-closed)"
       },

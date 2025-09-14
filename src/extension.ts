@@ -174,9 +174,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     commandManager.registerAllCommands();
     errorHandler.logError('All commands registered', null, 'activate');
 
-    // Initialize code lens state
+    // Initialize code lens state and context (restores saved state)
     commandManager.initializeCodeLens();
-    errorHandler.logError('Code lens initialized', null, 'activate');
+    
+    errorHandler.logError('Code lens initialized with restored state', null, 'activate');
 
     // Initialize JSON context manager
     jsonContextManager = JsonContextManager.getInstance(errorHandler);
