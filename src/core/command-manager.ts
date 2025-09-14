@@ -265,6 +265,12 @@ export class CommandManager {
         (message: string) => this.handleShowMessage(message)
       );
 
+      // Register refresh sidebar command
+      const refreshSidebarCommand = vscode.commands.registerCommand(
+        "doracodelens.refreshSidebar",
+        () => this.handleRefreshSidebar()
+      );
+
       // Store disposables
       this.disposables.push(
         fullCodeAnalysisCommand,
@@ -291,7 +297,8 @@ export class CommandManager {
         showSuggestionDetailsCommand,
         codeLensStateChangedCommand,
         updateCodeLensDataCommand,
-        showMessageCommand
+        showMessageCommand,
+        refreshSidebarCommand
       );
 
       // Add to context subscriptions
@@ -1140,6 +1147,35 @@ export class CommandManager {
         "Error during command manager disposal",
         error,
         "dispose"
+      );
+    }
+  }
+
+  /**
+   * Handles refresh sidebar command
+   */
+  public async handleRefreshSidebar(): Promise<void> {
+    try {
+      this.errorHandler.logError(
+        "Refreshing sidebar",
+        null,
+        "handleRefreshSidebar"
+      );
+
+      // Since there's no actual tree data provider implemented yet,
+      // we'll just show a message for now
+      vscode.window.showInformationMessage("Sidebar refreshed successfully!");
+      
+      // TODO: Implement actual sidebar refresh logic when tree data provider is added
+      
+    } catch (error) {
+      this.errorHandler.logError(
+        "Failed to refresh sidebar",
+        error,
+        "handleRefreshSidebar"
+      );
+      this.errorHandler.showUserError(
+        "Failed to refresh sidebar. Check the output for details."
       );
     }
   }

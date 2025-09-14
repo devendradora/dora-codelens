@@ -57,10 +57,22 @@ class AuthorContribution:
             "total_commits": self.total_commits,
             "lines_added": self.lines_added,
             "lines_removed": self.lines_removed,
+            "files_changed": len(self.modules_touched),  # Approximate files changed
             "modules_touched": self.modules_touched,
             "first_commit": self.first_commit.isoformat(),
             "last_commit": self.last_commit.isoformat(),
-            "contribution_percentage": self.contribution_percentage
+            "contribution_percentage": self.contribution_percentage,
+            "commit_frequency": 0.0,  # Placeholder - could be calculated
+            "average_commit_size": 0.0,  # Placeholder - could be calculated
+            # Legacy field names for backward compatibility
+            "authorName": self.author_name,
+            "authorEmail": self.author_email,
+            "totalCommits": self.total_commits,
+            "linesAdded": self.lines_added,
+            "linesRemoved": self.lines_removed,
+            "filesChanged": len(self.modules_touched),
+            "firstCommitDate": self.first_commit.isoformat(),
+            "lastCommitDate": self.last_commit.isoformat()
         }
 
 
@@ -106,7 +118,11 @@ class CommitTimelineEntry:
             "commit_count": self.commit_count,
             "lines_added": self.lines_added,
             "lines_removed": self.lines_removed,
-            "authors": list(self.authors)
+            "authors": list(self.authors),
+            "net_changes": self.lines_added - self.lines_removed,
+            "files_changed": 0,  # Placeholder - could be calculated
+            # Legacy field names
+            "commits": self.commit_count
         }
 
 
@@ -123,13 +139,19 @@ class RepositoryInfo:
         """Convert to dictionary for JSON serialization."""
         return {
             "name": self.name,
+            "repository_name": self.name,  # Add legacy field
             "branch": self.branch,
             "total_commits": self.total_commits,
+            "contributors": self.contributors,
             "date_range": {
                 "start": self.date_range.start.isoformat(),
                 "end": self.date_range.end.isoformat()
             },
-            "contributors": self.contributors
+            "first_commit_date": self.date_range.start.isoformat(),
+            "last_commit_date": self.date_range.end.isoformat(),
+            "total_files": 0,  # Placeholder - could be calculated
+            "repository_size": 0,  # Placeholder - could be calculated
+            "active_branches": 1  # Placeholder - could be calculated
         }
 
 
@@ -140,6 +162,8 @@ class GitAnalysisResult:
     author_contributions: List[AuthorContribution]
     commit_timeline: List[CommitTimelineEntry]
     commits: List[CommitInfo]
+    current_user_name: Optional[str] = None
+    current_user_email: Optional[str] = None
     success: bool = True
     errors: List[str] = None
     
@@ -154,8 +178,18 @@ class GitAnalysisResult:
             "repository_info": self.repository_info.to_dict(),
             "author_contributions": [contrib.to_dict() for contrib in self.author_contributions],
             "commit_timeline": [entry.to_dict() for entry in self.commit_timeline],
+            "module_statistics": [],  # Placeholder for module statistics
             "total_commits": len(self.commits),
-            "errors": self.errors
+            "current_user_name": self.current_user_name,
+            "current_user_email": self.current_user_email,
+            "errors": self.errors,
+            "metadata": {
+                "analysis_timestamp": datetime.now().isoformat(),
+                "analyzer_version": "1.0.0",
+                "commit_count": len(self.commits),
+                "author_count": len(self.author_contributions),
+                "timeline_entries": len(self.commit_timeline)
+            }
         }
 
 
@@ -208,6 +242,9 @@ class GitAnalyzer:
             # Get repository information
             repo_info = self._get_repository_info()
             
+            # Get current git user information
+            current_user_name, current_user_email = self._get_current_git_user()
+            
             # Parse Git log to extract commit information
             commits = self._parse_git_log(date_range)
             
@@ -225,6 +262,8 @@ class GitAnalyzer:
                 author_contributions=author_contributions,
                 commit_timeline=commit_timeline,
                 commits=commits,
+                current_user_name=current_user_name,
+                current_user_email=current_user_email,
                 success=len(self.errors) == 0,
                 errors=self.errors.copy()
             )
@@ -250,6 +289,8 @@ class GitAnalyzer:
                 author_contributions=[],
                 commit_timeline=[],
                 commits=[],
+                current_user_name=None,
+                current_user_email=None,
                 success=False,
                 errors=self.errors.copy()
             )
@@ -339,6 +380,40 @@ class GitAnalyzer:
                 date_range=DateRange(datetime.now(), datetime.now()),
                 contributors=0
             )
+    
+    def _get_current_git_user(self) -> Tuple[Optional[str], Optional[str]]:
+        """Get current git user name and email from git config.
+        
+        Returns:
+            Tuple of (user_name, user_email) or (None, None) if not found
+        """
+        try:
+            # Get user name
+            name_result = subprocess.run(
+                ["git", "config", "user.name"],
+                cwd=self.repo_path,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            user_name = name_result.stdout.strip() if name_result.returncode == 0 else None
+            
+            # Get user email
+            email_result = subprocess.run(
+                ["git", "config", "user.email"],
+                cwd=self.repo_path,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            user_email = email_result.stdout.strip() if email_result.returncode == 0 else None
+            
+            logger.info(f"Current git user: {user_name} <{user_email}>")
+            return user_name, user_email
+            
+        except Exception as e:
+            logger.error(f"Failed to get current git user: {e}")
+            return None, None
     
     def _parse_git_log(self, date_range: Optional[DateRange] = None) -> List[CommitInfo]:
         """Parse Git log to extract commit information.

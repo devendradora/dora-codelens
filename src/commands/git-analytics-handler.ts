@@ -5,6 +5,8 @@ import { ErrorHandler } from '../core/error-handler';
 import { DuplicateCallGuard } from '../core/duplicate-call-guard';
 import { AnalysisStateManager } from '../core/analysis-state-manager';
 import { WebviewManager } from '../webviews/webview-manager';
+import { GitAnalyticsDataValidator } from '../services/git-analytics-data-validator';
+import { GitAnalyticsData, ValidationResult } from '../types/git-analytics-types';
 
 /**
  * Analysis options for git analytics
@@ -32,6 +34,7 @@ export class GitAnalyticsHandler {
   private stateManager: AnalysisStateManager;
   private webviewManager: WebviewManager;
   private currentProcess: ChildProcess | null = null;
+  private dataValidator: GitAnalyticsDataValidator;
 
   constructor(
     errorHandler: ErrorHandler,
@@ -43,6 +46,11 @@ export class GitAnalyticsHandler {
     this.duplicateCallGuard = duplicateCallGuard;
     this.stateManager = stateManager;
     this.webviewManager = webviewManager;
+    this.dataValidator = new GitAnalyticsDataValidator({
+      enableLegacySupport: true,
+      strictValidation: false,
+      provideFallbacks: true
+    });
   }
 
   /**
@@ -84,36 +92,47 @@ export class GitAnalyticsHandler {
             });
 
             // Execute Python analysis
-            const result = await this.executePythonAnalysis(workspacePath, options, progress);
+            const rawResult = await this.executePythonAnalysis(workspacePath, options, progress);
             
-            // Validate result
-            const validatedResult = this.errorHandler.validateAnalysisResult(result);
-            if (!validatedResult) {
-              throw new Error('Git analysis returned invalid result');
+            // Validate and map the result using comprehensive validator
+            const validationResult = this.dataValidator.validateAndMap(rawResult);
+            
+            // Log validation results
+            if (validationResult.warnings.length > 0) {
+              this.errorHandler.logError('Git analysis validation warnings', validationResult.warnings, GitAnalyticsHandler.COMMAND_ID);
+            }
+            
+            if (!validationResult.isValid) {
+              this.errorHandler.logError('Git analysis validation failed', validationResult.errors, GitAnalyticsHandler.COMMAND_ID);
+              throw new Error(`Git analysis validation failed: ${validationResult.errors.join(', ')}`);
             }
 
-            // Update state with result
-            this.stateManager.setLastResult(validatedResult);
+            // Update state with validated result
+            this.stateManager.setLastResult(validationResult.data);
             
             this.errorHandler.logError('Git analytics completed successfully', null, GitAnalyticsHandler.COMMAND_ID);
             
             // Show results in dedicated webview
             try {
-              this.webviewManager.showGitAnalytics(validatedResult);
+              this.webviewManager.showGitAnalytics(validationResult.data);
             } catch (webviewError) {
               this.errorHandler.logError('Failed to show webview, analysis completed but display failed', webviewError, GitAnalyticsHandler.COMMAND_ID);
               vscode.window.showWarningMessage('Analysis completed but failed to display results. Check the output for details.');
             }
             
-            // Show success message
-            const totalCommits = validatedResult.repository_info?.total_commits || 0;
-            const contributors = validatedResult.repository_info?.contributors || 0;
+            // Show success message with validated data
+            const totalCommits = validationResult.data.repository_info.total_commits;
+            const contributors = validationResult.data.repository_info.contributors;
+            const warningCount = validationResult.warnings.length;
             
-            vscode.window.showInformationMessage(
-              `Git analysis completed! Found ${totalCommits} commits from ${contributors} contributors.`
-            );
+            let message = `Git analysis completed! Found ${totalCommits} commits from ${contributors} contributors.`;
+            if (warningCount > 0) {
+              message += ` (${warningCount} warnings - check output for details)`;
+            }
+            
+            vscode.window.showInformationMessage(message);
 
-            return validatedResult;
+            return validationResult.data;
           });
 
         } catch (error) {

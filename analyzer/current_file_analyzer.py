@@ -294,7 +294,8 @@ class CurrentFileAnalyzer:
         functions = []
         classes = []
         
-        for node in ast.walk(tree):
+        # Only collect top-level functions and classes (not methods inside classes)
+        for node in tree.body:
             if isinstance(node, ast.FunctionDef):
                 func_info = self._extract_function_info(node, str(file_path))
                 functions.append(func_info)
@@ -305,10 +306,14 @@ class CurrentFileAnalyzer:
                 class_info = self._extract_class_info(node, str(file_path))
                 classes.append(class_info)
         
-        # Calculate overall complexity
-        total_complexity = sum(func.complexity.cyclomatic for func in functions)
-        if functions:
-            avg_complexity = total_complexity / len(functions)
+        # Calculate overall complexity based on all functions and methods
+        all_functions = functions.copy()
+        for cls in classes:
+            all_functions.extend(cls.methods)
+        
+        total_complexity = sum(func.complexity.cyclomatic for func in all_functions)
+        if all_functions:
+            avg_complexity = total_complexity / len(all_functions)
         else:
             avg_complexity = 0
         

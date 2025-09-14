@@ -203,10 +203,6 @@ export class FullCodeAnalysisWebview {
                 <span class="nav-icon">🕸️</span>
                 <span class="nav-label">Mind Map</span>
               </button>
-              <button class="nav-link" data-tab="code-graph-json-section">
-                <span class="nav-icon">📄</span>
-                <span class="nav-label">Mind Map JSON</span>
-              </button>
             </div>
           </div>
 
@@ -235,6 +231,7 @@ export class FullCodeAnalysisWebview {
                     <button id="fit-view-btn" style="padding: 6px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 14px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Fit to Screen">�</button>
                     <button id="expand-all-btn" style="padding: 6px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 14px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Expand All Folders">📂+</button>
                     <button id="collapse-all-btn" style="padding: 6px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 14px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Collapse All Folders">📁-</button>
+                    <button id="export-json-btn" style="padding: 6px; background: #007acc; color: white; border: 2px solid #005a9e; border-radius: 3px; cursor: pointer; font-size: 14px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold;" title="Export Mind Map JSON">📄</button>
                   </div>
                   <!-- Layout Selector -->
                   <div style="display: flex; align-items: center; gap: 8px;">
@@ -300,26 +297,24 @@ export class FullCodeAnalysisWebview {
                   
                   <!-- Legend -->
                   <div>
-                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: yellow; border:1px solid #000; border-radius: 2px;"></span> Folder</div>
-                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: skyblue; border:1px solid #000; border-radius: 2px;"></span> File</div>
-                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: orange; clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);"></span> Class</div>
-                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: green; border-radius: 50%;"></span> Function</div>
+                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 20px; height: 12px; margin-right: 8px; vertical-align: middle; background: yellow; border:1px solid #000; border-radius: 0px;"></span> Folder</div>
+                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 20px; height: 12px; margin-right: 8px; vertical-align: middle; background: #9b59b6; border:1px solid #000; border-radius: 0px;"></span> File</div>
+                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 20px; height: 12px; margin-right: 8px; vertical-align: middle; background: #00bcd4; clip-path: polygon(15% 0%, 85% 0%, 100% 50%, 85% 100%, 15% 100%, 0% 50%);"></span> Class</div>
+                    <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: #2ecc71; border-radius: 50%;"></span> Function</div>
                     <div style="margin-bottom: 6px;"><span style="display: inline-block; width: 24px; height: 2px; margin-right: 8px; vertical-align: middle; background: #888;"></span> Contains</div>
-                    <div><span style="display: inline-block; width: 24px; height: 2px; margin-right: 8px; vertical-align: middle; background: red;"></span> Calls</div>
+                    <div style="margin-bottom: 12px;"><span style="display: inline-block; width: 24px; height: 2px; margin-right: 8px; vertical-align: middle; background: #ff69b4;"></span> Calls</div>
+                    
+                    <!-- Complexity Legend -->
+                    <div style="font-weight: bold; margin-bottom: 8px; font-size: 12px;">Complexity:</div>
+                    <div style="margin-bottom: 4px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: #27ae60; border-radius: 50%;"></span> Low (≤5)</div>
+                    <div style="margin-bottom: 4px;"><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: #f39c12; border-radius: 50%;"></span> Medium (6-10)</div>
+                    <div><span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; background: #e74c3c; border-radius: 50%;"></span> High (>10)</div>
                   </div>
                 </div>
               </div>
             </section>
 
-            <!-- Mind Map JSON Section -->
-            <section id="code-graph-json-section" class="content-section">
-              <div class="section-header">
-                <h2>📄 Mind Map JSON Data</h2>
-              </div>
-              <div class="section-content">
-                ${tabContents.codeGraphJson}
-              </div>
-            </section>
+
           </div>
         </div>
 
@@ -481,16 +476,16 @@ export class FullCodeAnalysisWebview {
               const cy = cytoscape({
                 container: container,
                 style: [
-                  { selector: 'node[type="folder"]', style: { shape:'rectangle','background-color':'yellow', label:'data(name)','text-valign':'center','text-halign':'center','font-weight':'bold','border-width':2,'border-color':'#000','width':180,'height':100 } },
-                  { selector: 'node[type="file"]', style: { shape:'rectangle','background-color':'skyblue', label:'data(name)','text-valign':'center','text-halign':'center','border-width':1,'border-color':'#000','width':150,'height':80 } },
-                  { selector: 'node[type="class"]', style: { shape:'hexagon','background-color':'orange', label:'data(name)','text-valign':'center','text-halign':'center','width':140,'height':80 } },
-                  { selector: 'node[type="function"]', style: { shape:'ellipse', 'color':'#fff', label:'data(name)','text-valign':'center','text-halign':'center','width':100,'height':60,'font-size':12 } },
-                  { selector: 'node[type="summary"]', style: { shape:'round-rectangle','background-color':'lightgray', label:'data(name)','text-valign':'center','text-halign':'center','border-width':1,'border-color':'#666','width':250,'height':50,'font-size':14 } },
-                  { selector: 'node[complexity="low"]', style: { 'background-color':'green' } },
-                  { selector: 'node[complexity="medium"]', style: { 'background-color':'orange' } },
-                  { selector: 'node[complexity="high"]', style: { 'background-color':'red' } },
+                  { selector: 'node[type="folder"]', style: { shape:'rectangle','background-color':'yellow', label:'data(name)','text-valign':'center','text-halign':'center','font-weight':'bold','border-width':2,'border-color':'#000','width':200,'height':120,'font-size':14,'text-wrap':'wrap','text-max-width':'180px' } },
+                  { selector: 'node[type="file"]', style: { shape:'rectangle','background-color':'#9b59b6', label:'data(name)','text-valign':'center','text-halign':'center','border-width':2,'border-color':'#fff','width':180,'height':100,'font-size':12,'font-weight':'600','color':'#fff','text-outline-width':1,'text-outline-color':'#000','text-wrap':'wrap','text-max-width':'160px' } },
+                  { selector: 'node[type="class"]', style: { shape:'hexagon','background-color':'#00bcd4', label:'data(name)','text-valign':'center','text-halign':'center','width':200,'height':120,'font-size':12,'font-weight':'600','color':'#fff','text-outline-width':1,'text-outline-color':'#000','text-wrap':'wrap','text-max-width':'180px' } },
+                  { selector: 'node[type="function"]', style: { shape:'ellipse', 'color':'#fff', label:'data(name)','text-valign':'center','text-halign':'center','width':120,'height':80,'font-size':12,'font-weight':'600','text-outline-width':1,'text-outline-color':'#000','text-wrap':'wrap','text-max-width':'100px' } },
+                  { selector: 'node[type="summary"]', style: { shape:'round-rectangle','background-color':'lightgray', label:'data(name)','text-valign':'center','text-halign':'center','border-width':1,'border-color':'#666','width':280,'height':60,'font-size':14,'text-wrap':'wrap','text-max-width':'260px' } },
+                  { selector: 'node[complexity="low"]', style: { 'background-color':'#27ae60' } },
+                  { selector: 'node[complexity="medium"]', style: { 'background-color':'#f39c12' } },
+                  { selector: 'node[complexity="high"]', style: { 'background-color':'#e74c3c' } },
                   { selector: 'edge[type="contains"]', style: { width:2, 'line-color':'#888','curve-style':'bezier' } },
-                  { selector: 'edge[type="calls"]', style: { width:2,'line-color':'red','target-arrow-shape':'triangle','target-arrow-color':'red','curve-style':'bezier' } },
+                  { selector: 'edge[type="calls"]', style: { width:2,'line-color':'#ff69b4','target-arrow-shape':'triangle','target-arrow-color':'#ff69b4','curve-style':'bezier' } },
                   { selector: 'edge[label]', style: { label:'data(label)','text-rotation':'autorotate','text-margin-y':-10,'font-size':10 } }
                 ],
                 layout: { name:'preset' },
@@ -925,7 +920,34 @@ export class FullCodeAnalysisWebview {
               collapseAllFolders(cy, window.expanded);
             });
 
-
+            // Export Mind Map JSON
+            console.log('Looking for export-json-btn element:', document.getElementById('export-json-btn'));
+            safeAddEventListener('export-json-btn', 'click', function() {
+              try {
+                const jsonData = analysisData?.code_graph_json || [];
+                const jsonString = JSON.stringify(jsonData, null, 2);
+                
+                // Create a blob and download link
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                // Create a temporary download link
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'mindmap-data.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                // Clean up the URL object
+                URL.revokeObjectURL(url);
+                
+                console.log('Mind map JSON exported successfully');
+              } catch (error) {
+                console.error('Error exporting mind map JSON:', error);
+                alert('Failed to export mind map JSON. Please try again.');
+              }
+            });
 
             // Layout Selection (if exists)
             safeAddEventListener('layout-select', 'change', function() {
@@ -1347,7 +1369,6 @@ export class FullCodeAnalysisWebview {
   private generateTabContents(analysisData: any): any {
     return {
       techStack: this.generateTechStackContent(analysisData),
-      codeGraphJson: this.generateCodeGraphJsonContent(analysisData),
     };
   }
 
@@ -1949,17 +1970,7 @@ export class FullCodeAnalysisWebview {
   /**
    * Generate code graph JSON content
    */
-  private generateCodeGraphJsonContent(analysisData: any): string {
-    if (!analysisData?.code_graph_json) {
-      return '<div class="empty-state"><div class="empty-icon">📄</div><h3>No JSON Data</h3><p>No mind map JSON data available.</p></div>';
-    }
 
-    return `<pre style="background: var(--vscode-textCodeBlock-background); padding: 16px; border-radius: 4px; overflow: auto; max-height: 400px; font-size: 12px;">${JSON.stringify(
-      analysisData.code_graph_json,
-      null,
-      2
-    )}</pre>`;
-  }
 
   /**
    * Prepare graph data from analysis data with performance optimization

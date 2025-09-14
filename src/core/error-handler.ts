@@ -50,6 +50,68 @@ export class ErrorHandler {
   }
 
   /**
+   * Validates git analytics specific data structure
+   */
+  public validateGitAnalyticsResult(result: any): any | null {
+    if (!this.validateAnalysisResult(result)) {
+      return null;
+    }
+
+    // Check for required git analytics fields
+    const requiredFields = ['repository_info', 'author_contributions', 'commit_timeline'];
+    const missingFields = requiredFields.filter(field => 
+      !result[field] && !result[this.toCamelCase(field)]
+    );
+
+    if (missingFields.length > 0) {
+      this.logError('Git analytics result missing required fields', { missingFields }, 'validateGitAnalyticsResult');
+      // Don't return null, let the validator handle missing fields with fallbacks
+    }
+
+    // Validate repository info structure
+    const repoInfo = result.repository_info || result.repositoryInfo;
+    if (repoInfo && typeof repoInfo === 'object') {
+      if (!repoInfo.name && !repoInfo.repository_name) {
+        this.logError('Repository info missing name field', null, 'validateGitAnalyticsResult');
+      }
+    }
+
+    // Validate author contributions structure
+    const authorContribs = result.author_contributions || result.authorContributions;
+    if (authorContribs && Array.isArray(authorContribs)) {
+      const invalidContribs = authorContribs.filter((contrib: any) => 
+        !contrib || typeof contrib !== 'object' || 
+        (!contrib.author_name && !contrib.authorName)
+      );
+      
+      if (invalidContribs.length > 0) {
+        this.logError('Invalid author contributions found', { count: invalidContribs.length }, 'validateGitAnalyticsResult');
+      }
+    }
+
+    // Validate commit timeline structure
+    const timeline = result.commit_timeline || result.commitTimeline;
+    if (timeline && Array.isArray(timeline)) {
+      const invalidEntries = timeline.filter((entry: any) => 
+        !entry || typeof entry !== 'object' || !entry.date
+      );
+      
+      if (invalidEntries.length > 0) {
+        this.logError('Invalid timeline entries found', { count: invalidEntries.length }, 'validateGitAnalyticsResult');
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Convert snake_case to camelCase
+   */
+  private toCamelCase(str: string): string {
+    return str.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
+  }
+
+  /**
    * Handles null result scenarios gracefully
    */
   public handleNullResult(context: string): void {

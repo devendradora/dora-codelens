@@ -116,12 +116,21 @@ class GitAnalyticsCharts {
                 this.charts.get(canvasId).destroy();
             }
 
-            const timeline = gitData.commitTimeline || [];
+            // Support both new and legacy field names
+            const timeline = gitData.commit_timeline || gitData.commitTimeline || [];
+            
+            if (timeline.length === 0) {
+                console.warn('No timeline data available for chart');
+                return null;
+            }
+            
             const labels = timeline.map(entry => {
                 const date = new Date(entry.date);
                 return date.toLocaleDateString();
             });
-            const commitData = timeline.map(entry => entry.commits);
+            
+            // Support both field name variations
+            const commitData = timeline.map(entry => entry.commit_count || entry.commits || 0);
 
             const chart = new Chart(ctx, {
                 type: 'line',

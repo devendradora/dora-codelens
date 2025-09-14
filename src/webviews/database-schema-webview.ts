@@ -1,13 +1,13 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
-import { ErrorHandler } from '../core/error-handler';
+import * as vscode from "vscode";
+import * as path from "path";
+import { ErrorHandler } from "../core/error-handler";
 
 /**
  * Database Schema Webview Provider
  * Provides dedicated webview for displaying database schema visualization
  */
 export class DatabaseSchemaWebview {
-  private static readonly VIEW_TYPE = 'doracodelens.databaseSchema';
+  private static readonly VIEW_TYPE = "doracodelens.databaseSchema";
   private panel: vscode.WebviewPanel | null = null;
   private errorHandler: ErrorHandler;
   private extensionPath: string;
@@ -35,9 +35,17 @@ export class DatabaseSchemaWebview {
         this.updateContent(schemaData);
       }
 
-      this.errorHandler.logError('Database schema webview shown', null, 'DatabaseSchemaWebview');
+      this.errorHandler.logError(
+        "Database schema webview shown",
+        null,
+        "DatabaseSchemaWebview"
+      );
     } catch (error) {
-      this.errorHandler.logError('Failed to show database schema webview', error, 'DatabaseSchemaWebview');
+      this.errorHandler.logError(
+        "Failed to show database schema webview",
+        error,
+        "DatabaseSchemaWebview"
+      );
       throw error;
     }
   }
@@ -48,22 +56,26 @@ export class DatabaseSchemaWebview {
   private createPanel(): void {
     this.panel = vscode.window.createWebviewPanel(
       DatabaseSchemaWebview.VIEW_TYPE,
-      'Database Schema',
+      "Database Schema",
       vscode.ViewColumn.One,
       {
         enableScripts: true,
         retainContextWhenHidden: true,
         localResourceRoots: [
-          vscode.Uri.file(path.join(this.extensionPath, 'resources')),
-          vscode.Uri.file(path.join(this.extensionPath, 'node_modules'))
-        ]
+          vscode.Uri.file(path.join(this.extensionPath, "resources")),
+          vscode.Uri.file(path.join(this.extensionPath, "node_modules")),
+        ],
       }
     );
 
     // Handle panel disposal
     this.panel.onDidDispose(() => {
       this.panel = null;
-      this.errorHandler.logError('Database schema webview disposed', null, 'DatabaseSchemaWebview');
+      this.errorHandler.logError(
+        "Database schema webview disposed",
+        null,
+        "DatabaseSchemaWebview"
+      );
     });
 
     // Handle messages from webview
@@ -83,8 +95,12 @@ export class DatabaseSchemaWebview {
       const html = this.generateHTML(schemaData);
       this.panel.webview.html = html;
     } catch (error) {
-      this.errorHandler.logError('Failed to update database schema content', error, 'DatabaseSchemaWebview');
-      this.showError('Failed to display schema visualization');
+      this.errorHandler.logError(
+        "Failed to update database schema content",
+        error,
+        "DatabaseSchemaWebview"
+      );
+      this.showError("Failed to display schema visualization");
     }
   }
 
@@ -93,15 +109,31 @@ export class DatabaseSchemaWebview {
    */
   private generateHTML(schemaData: any): string {
     const webview = this.panel!.webview;
-    
+
     // Get resource URIs
-    const cssUri = webview.asWebviewUri(vscode.Uri.file(path.join(this.extensionPath, 'resources', 'webview.css')));
-    const cytoscapeUri = webview.asWebviewUri(vscode.Uri.file(path.join(this.extensionPath, 'node_modules', 'cytoscape', 'dist', 'cytoscape.min.js')));
-    const enhancedGraphControlsUri = webview.asWebviewUri(vscode.Uri.file(path.join(this.extensionPath, 'resources', 'enhanced-graph-controls.js')));
+    const cssUri = webview.asWebviewUri(
+      vscode.Uri.file(path.join(this.extensionPath, "resources", "webview.css"))
+    );
+    const cytoscapeUri = webview.asWebviewUri(
+      vscode.Uri.file(
+        path.join(
+          this.extensionPath,
+          "node_modules",
+          "cytoscape",
+          "dist",
+          "cytoscape.min.js"
+        )
+      )
+    );
+    const enhancedGraphControlsUri = webview.asWebviewUri(
+      vscode.Uri.file(
+        path.join(this.extensionPath, "resources", "enhanced-graph-controls.js")
+      )
+    );
 
     // Generate tab contents
     const tabContents = this.generateTabContents(schemaData);
-    
+
     // Prepare graph data using the same approach as full code analysis
     const graphData = this.prepareGraphData(schemaData);
 
@@ -678,10 +710,10 @@ export class DatabaseSchemaWebview {
     // Handle both direct data and wrapped data structures
     const data = schemaData?.data || schemaData;
     const tables = data?.tables || [];
-    
+
     // Transform database schema data into graph format
     const elements: any[] = [];
-    
+
     // Add table nodes
     tables.forEach((table: any) => {
       elements.push({
@@ -689,15 +721,15 @@ export class DatabaseSchemaWebview {
           id: table.name,
           name: table.name,
           label: table.name,
-          type: 'table',
+          type: "table",
           table: table,
           columnCount: table.columns ? table.columns.length : 0,
           primaryKeys: table.primary_keys || table.primaryKeys || [],
-          foreignKeys: table.foreign_keys || table.foreignKeys || []
-        }
+          foreignKeys: table.foreign_keys || table.foreignKeys || [],
+        },
       });
     });
-    
+
     // Add relationship edges
     if (data?.relationships) {
       data.relationships.forEach((relationship: any, index: number) => {
@@ -706,87 +738,90 @@ export class DatabaseSchemaWebview {
             id: `rel_${index}`,
             source: relationship.fromTable || relationship.from_table,
             target: relationship.toTable || relationship.to_table,
-            type: 'relationship',
+            type: "relationship",
             relationship: relationship,
-            label: relationship.relationshipType || relationship.relationship_type || 'foreign_key'
-          }
+            label:
+              relationship.relationshipType ||
+              relationship.relationship_type ||
+              "foreign_key",
+          },
         });
       });
     }
-    
+
     // Define Cytoscape style for database schema
     const style = [
       // Table nodes
       {
         selector: 'node[type="table"]',
         style: {
-          'shape': 'round-rectangle',
-          'background-color': '#3498db',
-          'border-color': '#2980b9',
-          'border-width': 2,
-          'label': 'data(name)',
-          'text-valign': 'center',
-          'text-halign': 'center',
-          'color': '#ffffff',
-          'font-size': '12px',
-          'font-weight': 'bold',
-          'width': 120,
-          'height': 80,
-          'text-wrap': 'wrap',
-          'text-max-width': '100px'
-        }
+          shape: "round-rectangle",
+          "background-color": "#3498db",
+          "border-color": "#2980b9",
+          "border-width": 2,
+          label: "data(name)",
+          "text-valign": "center",
+          "text-halign": "center",
+          color: "#ffffff",
+          "font-size": "12px",
+          "font-weight": "bold",
+          width: 120,
+          height: 80,
+          "text-wrap": "wrap",
+          "text-max-width": "100px",
+        },
       },
       // Selected table
       {
         selector: 'node[type="table"]:selected',
         style: {
-          'background-color': '#9b59b6',
-          'border-color': '#8e44ad',
-          'border-width': 3
-        }
+          "background-color": "#9b59b6",
+          "border-color": "#8e44ad",
+          "border-width": 3,
+        },
       },
       // Highlighted table
       {
         selector: 'node[type="table"].highlighted',
         style: {
-          'background-color': '#1abc9c',
-          'border-color': '#16a085',
-          'border-width': 3
-        }
+          "background-color": "#1abc9c",
+          "border-color": "#16a085",
+          "border-width": 3,
+        },
       },
       // Relationship edges
       {
         selector: 'edge[type="relationship"]',
         style: {
-          'width': 2,
-          'line-color': '#2ecc71',
-          'target-arrow-color': '#2ecc71',
-          'target-arrow-shape': 'triangle',
-          'curve-style': 'bezier',
-          'label': 'data(label)',
-          'font-size': '10px',
-          'text-rotation': 'autorotate'
-        }
+          width: 2,
+          "line-color": "#2ecc71",
+          "target-arrow-color": "#2ecc71",
+          "target-arrow-shape": "triangle",
+          "curve-style": "bezier",
+          label: "data(label)",
+          "font-size": "10px",
+          "text-rotation": "autorotate",
+        },
       },
       // Highlighted edges
       {
         selector: 'edge[type="relationship"].highlighted',
         style: {
-          'width': 4,
-          'line-color': '#1abc9c',
-          'target-arrow-color': '#1abc9c'
-        }
-      }
+          width: 4,
+          "line-color": "#1abc9c",
+          "target-arrow-color": "#1abc9c",
+        },
+      },
     ];
-    
+
     return {
       elements: elements,
       style: style,
-      layout: { name: 'cose', animate: true, fit: true },
+      layout: { name: "cose", animate: true, fit: true },
       state: {
         schemaData: data,
-        tables: tables
-      }
+        tables: tables,
+      },
     };
   }
 
@@ -797,7 +832,7 @@ export class DatabaseSchemaWebview {
     return {
       schemaOverview: this.generateSchemaOverviewContent(schemaData),
       schemaGraph: this.generateSchemaGraphContent(schemaData),
-      tableDetails: this.generateTableDetailsContent(schemaData)
+      tableDetails: this.generateTableDetailsContent(schemaData),
     };
   }
 
@@ -808,7 +843,7 @@ export class DatabaseSchemaWebview {
     // Handle both direct data and wrapped data structures
     const data = schemaData?.data || schemaData;
     const metadata = data?.metadata;
-    
+
     if (!data || !metadata) {
       return `
         <div class="empty-state">
@@ -819,7 +854,7 @@ export class DatabaseSchemaWebview {
         </div>
       `;
     }
-    
+
     return `
       <div class="overview-stats">
         <div class="stat-card">
@@ -839,14 +874,24 @@ export class DatabaseSchemaWebview {
         <div class="stat-card">
           <div class="stat-icon">📋</div>
           <div class="stat-content">
-            <div class="stat-value">${data.tables ? data.tables.reduce((sum: number, table: any) => sum + (table.columns ? table.columns.length : 0), 0) : 0}</div>
+            <div class="stat-value">${
+              data.tables
+                ? data.tables.reduce(
+                    (sum: number, table: any) =>
+                      sum + (table.columns ? table.columns.length : 0),
+                    0
+                  )
+                : 0
+            }</div>
             <div class="stat-label">Columns</div>
           </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon">🔍</div>
           <div class="stat-content">
-            <div class="stat-value">${data.indexes ? data.indexes.length : 0}</div>
+            <div class="stat-value">${
+              data.indexes ? data.indexes.length : 0
+            }</div>
             <div class="stat-label">Indexes</div>
           </div>
         </div>
@@ -858,40 +903,65 @@ export class DatabaseSchemaWebview {
           <div class="detail-grid">
             <div class="detail-item">
               <span class="detail-label">Project Path:</span>
-              <span class="detail-value">${metadata.project_path || 'Unknown'}</span>
+              <span class="detail-value">${
+                metadata.project_path || "Unknown"
+              }</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">Frameworks:</span>
-              <span class="detail-value">${metadata.frameworks_detected ? metadata.frameworks_detected.join(', ') : 'None detected'}</span>
+              <span class="detail-value">${
+                metadata.frameworks_detected
+                  ? metadata.frameworks_detected.join(", ")
+                  : "None detected"
+              }</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">Analysis Date:</span>
-              <span class="detail-value">${metadata.analysis_timestamp ? new Date(metadata.analysis_timestamp).toLocaleString() : 'Unknown'}</span>
+              <span class="detail-value">${
+                metadata.analysis_timestamp
+                  ? new Date(metadata.analysis_timestamp).toLocaleString()
+                  : "Unknown"
+              }</span>
             </div>
           </div>
         </div>
         
-        ${data.tables && data.tables.length > 0 ? `
+        ${
+          data.tables && data.tables.length > 0
+            ? `
         <div class="detail-section">
           <h3>Table Summary</h3>
           <div class="table-summary-grid">
-            ${data.tables.slice(0, 5).map((table: any) => `
+            ${data.tables
+              .slice(0, 5)
+              .map(
+                (table: any) => `
               <div class="summary-table-item">
                 <div class="summary-table-name">${table.name}</div>
                 <div class="summary-table-info">
                   ${table.columns ? table.columns.length : 0} columns
                 </div>
               </div>
-            `).join('')}
-            ${data.tables.length > 5 ? `
+            `
+              )
+              .join("")}
+            ${
+              data.tables.length > 5
+                ? `
               <div class="summary-table-item more">
-                <div class="summary-table-name">+${data.tables.length - 5} more tables</div>
+                <div class="summary-table-name">+${
+                  data.tables.length - 5
+                } more tables</div>
                 <div class="summary-table-info">Click Table Details tab to see all</div>
               </div>
-            ` : ''}
+            `
+                : ""
+            }
           </div>
         </div>
-        ` : ''}
+        `
+            : ""
+        }
       </div>
     `;
   }
@@ -967,7 +1037,7 @@ export class DatabaseSchemaWebview {
     // Handle both direct data and wrapped data structures
     const data = schemaData?.data || schemaData;
     const tables = data?.tables;
-    
+
     if (!data || !tables || tables.length === 0) {
       return `
         <div class="empty-state">
@@ -982,13 +1052,20 @@ export class DatabaseSchemaWebview {
     return `
       <div class="table-details-container">
         <div class="table-list">
-          ${tables.map((table: any) => {
-            const columnCount = table.columns ? table.columns.length : 0;
-            const pkCount = table.primary_keys ? table.primary_keys.length : 0;
-            const fkCount = table.foreign_keys ? table.foreign_keys.length : 0;
-            
-            return `
-              <div class="table-item" data-table="${table.name}" onclick="selectTable('${table.name}')">
+          ${tables
+            .map((table: any) => {
+              const columnCount = table.columns ? table.columns.length : 0;
+              const pkCount = table.primary_keys
+                ? table.primary_keys.length
+                : 0;
+              const fkCount = table.foreign_keys
+                ? table.foreign_keys.length
+                : 0;
+
+              return `
+              <div class="table-item" data-table="${
+                table.name
+              }" onclick="selectTable('${table.name}')">
                 <div class="table-header">
                   <div class="table-name">${table.name}</div>
                   <div class="table-stats">
@@ -998,34 +1075,54 @@ export class DatabaseSchemaWebview {
                   </div>
                 </div>
                 
-                ${table.columns && table.columns.length > 0 ? `
+                ${
+                  table.columns && table.columns.length > 0
+                    ? `
                 <div class="table-columns">
                   <div class="columns-header">Columns:</div>
                   <div class="columns-list">
-                    ${table.columns.slice(0, 5).map((column: any) => {
-                      const isPK = column.is_primary_key;
-                      const isFK = column.is_foreign_key;
-                      const badge = isPK ? ' <span class="column-badge pk">PK</span>' : (isFK ? ' <span class="column-badge fk">FK</span>' : '');
-                      
-                      return `
+                    ${table.columns
+                      .slice(0, 5)
+                      .map((column: any) => {
+                        const isPK = column.is_primary_key;
+                        const isFK = column.is_foreign_key;
+                        const badge = isPK
+                          ? ' <span class="column-badge pk">PK</span>'
+                          : isFK
+                          ? ' <span class="column-badge fk">FK</span>'
+                          : "";
+
+                        return `
                         <div class="column-item">
                           <span class="column-name">${column.name}</span>
-                          <span class="column-type">${column.data_type || column.type || 'Unknown'}</span>
+                          <span class="column-type">${
+                            column.data_type || column.type || "Unknown"
+                          }</span>
                           ${badge}
                         </div>
                       `;
-                    }).join('')}
-                    ${table.columns.length > 5 ? `
+                      })
+                      .join("")}
+                    ${
+                      table.columns.length > 5
+                        ? `
                       <div class="column-item more">
-                        <span class="column-name">+${table.columns.length - 5} more columns</span>
+                        <span class="column-name">+${
+                          table.columns.length - 5
+                        } more columns</span>
                       </div>
-                    ` : ''}
+                    `
+                        : ""
+                    }
                   </div>
                 </div>
-                ` : ''}
+                `
+                    : ""
+                }
               </div>
             `;
-          }).join('')}
+            })
+            .join("")}
         </div>
       </div>
     `;
@@ -1684,9 +1781,16 @@ export class DatabaseSchemaWebview {
       }
 
       .table-list {
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
         gap: 16px;
+      }
+
+      /* Responsive design for smaller screens */
+      @media (max-width: 768px) {
+        .table-list {
+          grid-template-columns: 1fr;
+        }
       }
 
       .table-item {
@@ -1855,19 +1959,23 @@ export class DatabaseSchemaWebview {
    */
   private handleWebviewMessage(message: any): void {
     switch (message.command) {
-      case 'requestAnalysis':
-        if (message.type === 'databaseSchema') {
-          vscode.commands.executeCommand('doracodelens.analyzeDatabaseSchema');
+      case "requestAnalysis":
+        if (message.type === "databaseSchema") {
+          vscode.commands.executeCommand("doracodelens.analyzeDatabaseSchema");
         }
         break;
-      case 'exportSchema':
+      case "exportSchema":
         this.exportSchema(message.data);
         break;
-      case 'tableSelected':
+      case "tableSelected":
         this.handleTableSelection(message.tableName);
         break;
       default:
-        this.errorHandler.logError('Unknown webview message', message, 'DatabaseSchemaWebview');
+        this.errorHandler.logError(
+          "Unknown webview message",
+          message,
+          "DatabaseSchemaWebview"
+        );
     }
   }
 
@@ -1876,7 +1984,11 @@ export class DatabaseSchemaWebview {
    */
   private handleTableSelection(tableName: string): void {
     // Could implement additional logic for table selection
-    this.errorHandler.logError('Table selected', { tableName }, 'DatabaseSchemaWebview');
+    this.errorHandler.logError(
+      "Table selected",
+      { tableName },
+      "DatabaseSchemaWebview"
+    );
   }
 
   /**
@@ -1885,10 +1997,16 @@ export class DatabaseSchemaWebview {
   private async exportSchema(data: any): Promise<void> {
     try {
       // This would typically be handled by the webview JavaScript
-      vscode.window.showInformationMessage('Schema export functionality is available in the webview.');
+      vscode.window.showInformationMessage(
+        "Schema export functionality is available in the webview."
+      );
     } catch (error) {
-      this.errorHandler.logError('Failed to export schema', error, 'DatabaseSchemaWebview');
-      vscode.window.showErrorMessage('Failed to export schema');
+      this.errorHandler.logError(
+        "Failed to export schema",
+        error,
+        "DatabaseSchemaWebview"
+      );
+      vscode.window.showErrorMessage("Failed to export schema");
     }
   }
 
