@@ -50,6 +50,7 @@ export class DatabaseSchemaHandler {
     return this.duplicateCallGuard.executeWithProtection(
       DatabaseSchemaHandler.COMMAND_ID,
       async () => {
+        const startTime = Date.now();
         this.errorHandler.logError('Starting database schema analysis', options, DatabaseSchemaHandler.COMMAND_ID);
         
         // Update state
@@ -102,6 +103,20 @@ export class DatabaseSchemaHandler {
             const totalTables = validatedResult.metadata?.total_tables || 0;
             const totalRelationships = validatedResult.metadata?.total_relationships || 0;
             
+            // Notify sidebar of completed analysis
+            const duration = Date.now() - startTime;
+            try {
+              const commandManager = await import('../core/command-manager');
+              const manager = commandManager.CommandManager.getInstance();
+              manager.notifyAnalysisCompleted('database', 'success', duration);
+            } catch (notificationError) {
+              this.errorHandler.logError(
+                "Failed to notify sidebar of analysis completion",
+                notificationError,
+                DatabaseSchemaHandler.COMMAND_ID
+              );
+            }
+            
             vscode.window.showInformationMessage(
               `Database schema analysis completed! Found ${totalTables} tables with ${totalRelationships} relationships.`
             );
@@ -112,6 +127,20 @@ export class DatabaseSchemaHandler {
         } catch (error) {
           this.stateManager.incrementErrorCount();
           this.errorHandler.logError('Database schema analysis failed', error, DatabaseSchemaHandler.COMMAND_ID);
+          
+          // Notify sidebar of failed analysis
+          const duration = Date.now() - startTime;
+          try {
+            const commandManager = await import('../core/command-manager');
+            const manager = commandManager.CommandManager.getInstance();
+            manager.notifyAnalysisCompleted('database', 'error', duration);
+          } catch (notificationError) {
+            this.errorHandler.logError(
+              "Failed to notify sidebar of analysis failure",
+              notificationError,
+              DatabaseSchemaHandler.COMMAND_ID
+            );
+          }
           
           // Show user-friendly error
           this.errorHandler.showUserError(

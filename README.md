@@ -72,24 +72,24 @@ All of this runs right inside the editor — no context switching, no clutter.
 
 3. **Explore Analysis Options**
 
+   The context menu provides direct access to all DoraCodeLens features:
+
    ```
-   DoraCodeLens ►
-   ├── Full Code Analysis
-   │   ├── Tech Stack          # View detected frameworks & libraries
-   │   ├── Mind Map            # Interactive module dependency graph
-   │   └── JSON View           # Raw analysis data
-   ├── Current File Analysis   # Quick analysis of current file
-   ├── Code Lens (On/Off)      # Toggle inline complexity annotations
-   ├── Git Analytics ►
-   │   ├── Author Statistics   # Team contribution analysis
-   │   ├── Module Contributions # Module-wise Git activity
-   │   └── Commit Timeline     # Development timeline
-   ├── Database Schema ►
-   │   ├── Graph View          # Visual schema representation
-   │   └── Raw SQL             # Extracted SQL statements
-   └── JSON Utilities ►
-       ├── JSON Format         # Beautify JSON in editor
-       └── JSON Tree View      # Expandable JSON explorer
+   Right-click on Python file:
+   ├── Full Code Analysis          # Complete project analysis
+   ├── Current File Analysis       # Quick analysis of current file
+   ├── Enable Code Lens Inline     # Enable inline complexity annotations (when disabled)
+   ├── Disable Code Lens Inline    # Disable inline complexity annotations (when enabled)
+   ├── Database Schema Analysis    # Visual database schema analysis
+   ├── Git Analytics              # Repository insights and team statistics
+   ├── JSON Format                # Beautify JSON in editor (when JSON context detected)
+   ├── JSON Tree View             # Expandable JSON explorer (when JSON context detected)
+   ├── JSON Fix (Python Dict)     # Convert Python dict to JSON (when JSON context detected)
+   ├── JSON Minify                # Compress JSON content (when JSON context detected)
+   ├── Setup Python Path         # Configure Python interpreter
+   ├── Auto-Detect Python Path   # Automatically find Python
+   ├── Settings                   # Open extension settings
+   └── Clear Cache                # Clear analysis cache
    ```
 
 4. **Navigate the Tabbed Interface**

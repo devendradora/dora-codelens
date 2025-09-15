@@ -55,7 +55,7 @@ DoraCodeLens automatically activates when you:
 - Use `DoraCodeLens: Full Code Analysis` for quick access
 
 **Activity Bar**:
-- Look for the DoraCodeLens icon in the Activity Bar
+- Look for the DoraCodeLens icon (updated branding) in the Activity Bar
 - Access the Project Analysis sidebar view
 
 **Editor Title Bar**:
@@ -63,25 +63,24 @@ DoraCodeLens automatically activates when you:
 
 ## Context Menu Overview
 
-DoraCodeLens provides a comprehensive context menu when you right-click on Python files. The menu is organized in logical groups for easy access:
+DoraCodeLens provides a streamlined context menu when you right-click on Python files. The menu items are organized in logical groups for easy access:
 
 ```
-DoraCodeLens ►
-├── Full Code Analysis ►        # Group @1 - Complete project analysis
-│   ├── Tech Stack              # View detected libraries and frameworks
-│   ├── Graph View              # Interactive module dependency graph
-│   └── JSON View               # Raw analysis data in JSON format
+Right-click on Python file:
+├── Full Code Analysis          # Group @1 - Complete project analysis
 ├── Current File Analysis       # Group @2 - Analyze just the current file
-├── Code Lens (On/Off)          # Group @3 - Toggle inline complexity annotations
-├── Database Schema Analysis    # Group database@1 - Database structure analysis
-├── Git Analytics              # Group git@1 - Git repository insights
-├── JSON Format                # Group json@1 - Format JSON in current editor
-├── JSON Tree View             # Group json@2 - Expandable JSON tree explorer
-├── JSON Fix (Python Dict)     # Group json@3 - Convert Python dict to JSON
-├── JSON Minify                # Group json@4 - Compress JSON content
-├── Setup Python Path         # Group setup@1 - Configure Python interpreter
-├── Auto-Detect Python Path   # Group setup@2 - Automatically find Python
-└── Settings                   # Group setup@3 - Open extension settings
+├── Enable Code Lens Inline     # Group @3 - Enable inline complexity annotations (when disabled)
+├── Disable Code Lens Inline    # Group @3 - Disable inline complexity annotations (when enabled)
+├── Database Schema Analysis    # Group @4 - Database structure analysis
+├── Git Analytics              # Group @5 - Git repository insights
+├── JSON Format                # Group @6 - Format JSON in current editor (when JSON context)
+├── JSON Tree View             # Group @7 - Expandable JSON tree explorer (when JSON context)
+├── JSON Fix (Python Dict)     # Group @8 - Convert Python dict to JSON (when JSON context)
+├── JSON Minify                # Group @9 - Compress JSON content (when JSON context)
+├── Setup Python Path         # Group @10 - Configure Python interpreter
+├── Auto-Detect Python Path   # Group @11 - Automatically find Python
+├── Settings                   # Group @12 - Open extension settings
+└── Clear Cache                # Group @13 - Clear analysis cache
 ```
 
 ### Context-Sensitive Menu Items
@@ -89,17 +88,16 @@ DoraCodeLens ►
 The context menu adapts based on your current context:
 
 **Python Files**: Full DoraCodeLens menu with all analysis options
-**JSON Files/Content**: JSON utilities are highlighted and prioritized
-**Git Repositories**: Git Analytics options are available
-**Database Projects**: Database Schema Analysis is prominently displayed
+**JSON Files/Content**: JSON utilities are available when `doracodelens.jsonContext` is active
+**Git Repositories**: Git Analytics options are available for all files
+**Code Lens State**: Toggle shows "Enable" when disabled, "Disable" when enabled
 
 ### Menu Organization
 
-- **Analysis Group (@1-@3)**: Core analysis features in order of frequency
-- **Database Group**: Database-specific analysis tools
-- **Git Group**: Version control and team collaboration insights
-- **JSON Group**: JSON processing and utilities
-- **Setup Group**: Configuration and troubleshooting tools
+- **Core Analysis (@1-@3)**: Essential analysis features (Full, Current File, Code Lens toggle)
+- **Specialized Analysis (@4-@5)**: Database and Git analytics
+- **JSON Utilities (@6-@9)**: JSON processing tools (context-sensitive)
+- **Configuration (@10-@13)**: Setup and maintenance tools
 
 ## Full Code Analysis
 

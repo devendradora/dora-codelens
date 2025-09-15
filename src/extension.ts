@@ -183,6 +183,65 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     jsonContextManager = JsonContextManager.getInstance(errorHandler);
     errorHandler.logError('JSON context manager initialized', null, 'activate');
 
+    // Initialize background analysis manager
+    const { BackgroundAnalysisManager } = await import('./services/background-analysis-manager');
+    const backgroundAnalysisManager = BackgroundAnalysisManager.getInstance(errorHandler);
+    errorHandler.logError('Background analysis manager initialized', null, 'activate');
+
+    // Initialize sidebar content provider
+    const { SidebarContentProvider } = await import('./services/sidebar-content-provider');
+    const sidebarContentProvider = SidebarContentProvider.getInstance(
+      errorHandler,
+      stateManager,
+      backgroundAnalysisManager
+    );
+    
+    // Register sidebar tree data provider
+    const sidebarTreeView = vscode.window.createTreeView('doracodelens-sidebar', {
+      treeDataProvider: sidebarContentProvider,
+      showCollapseAll: true
+    });
+    
+    context.subscriptions.push(sidebarTreeView);
+    errorHandler.logError('Sidebar content provider initialized and registered', null, 'activate');
+
+    // Connect sidebar with code lens provider
+    const sidebarCodeLensHandler = commandManager.getHandlers().codeLens;
+    if (sidebarCodeLensHandler) {
+      // Removed setCodeLensProvider call - no longer needed in sidebar
+      // Code lens provider operates independently
+      errorHandler.logError('Connected sidebar with code lens provider', null, 'activate');
+    }
+
+    // Connect command manager with sidebar content provider for state change notifications
+    commandManager.setSidebarContentProvider(sidebarContentProvider);
+    errorHandler.logError('Connected command manager with sidebar content provider', null, 'activate');
+
+    // Register document open listener for automatic analysis
+    const onDidOpenTextDocument = vscode.workspace.onDidOpenTextDocument(async (document) => {
+      if (document.languageId === 'python') {
+        try {
+          // Trigger background analysis for Python files
+          await backgroundAnalysisManager.analyzeFileInBackground(document);
+          
+          // Update code lens if enabled
+          const codeLensHandler = commandManager?.getHandlers().codeLens;
+          if (codeLensHandler && codeLensHandler.getManager().getProvider().isCodeLensEnabled()) {
+            vscode.commands.executeCommand('doracodelens.updateCodeLensData', null);
+          }
+        } catch (error) {
+          errorHandler?.logError(
+            'Error in automatic file analysis on document open',
+            error,
+            'activate'
+          );
+        }
+      }
+    });
+    
+    context.subscriptions.push(onDidOpenTextDocument);
+    errorHandler.logError('Document open listener registered for automatic analysis', null, 'activate');
+
     // Add state change listener for debugging
     stateManager.addStateChangeListener((state) => {
       errorHandler!.logError(
@@ -293,6 +352,16 @@ export async function deactivate(): Promise<void> {
     if (jsonContextManager) {
       jsonContextManager.dispose();
       errorHandler.logError('JSON context manager disposed', null, 'deactivate');
+    }
+
+    // Clean up background analysis manager
+    try {
+      const { BackgroundAnalysisManager } = await import('./services/background-analysis-manager');
+      const backgroundAnalysisManager = BackgroundAnalysisManager.getInstance();
+      backgroundAnalysisManager.dispose();
+      errorHandler.logError('Background analysis manager disposed', null, 'deactivate');
+    } catch (error) {
+      errorHandler.logError('Error disposing background analysis manager', error, 'deactivate');
     }
 
     // Clean up command manager

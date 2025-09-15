@@ -35,6 +35,7 @@ export class CommandManager {
   // Services
   private pythonService: PythonService;
   private htmlViewService: HTMLViewService;
+  private sidebarContentProvider: any = null; // Will be set later
 
   private constructor(
     context: vscode.ExtensionContext,
@@ -272,6 +273,18 @@ export class CommandManager {
         () => this.handleRefreshSidebar()
       );
 
+      // Register clear cache command
+      const clearCacheCommand = vscode.commands.registerCommand(
+        "doracodelens.clearCache",
+        () => this.handleClearCache()
+      );
+
+      // Register clear recent analysis command
+      const clearRecentAnalysisCommand = vscode.commands.registerCommand(
+        "doracodelens.clearRecentAnalysis",
+        () => this.handleClearRecentAnalysis()
+      );
+
       // Store disposables
       this.disposables.push(
         fullCodeAnalysisCommand,
@@ -299,7 +312,9 @@ export class CommandManager {
         codeLensStateChangedCommand,
         updateCodeLensDataCommand,
         showMessageCommand,
-        refreshSidebarCommand
+        refreshSidebarCommand,
+        clearCacheCommand,
+        clearRecentAnalysisCommand
       );
 
       // Add to context subscriptions
@@ -494,8 +509,6 @@ export class CommandManager {
     }
   }
 
-
-
   /**
    * Handles enable code lens command
    */
@@ -684,6 +697,8 @@ export class CommandManager {
   public handleCodeLensStateChanged(enabled: boolean): void {
     try {
       this.codeLensHandler.handleCodeLensStateChanged(enabled);
+
+      // Removed sidebar notification - code lens toggle buttons no longer in sidebar
     } catch (error) {
       this.errorHandler.logError(
         "Code lens state changed handler failed",
@@ -999,8 +1014,104 @@ export class CommandManager {
       gitAnalytics: this.gitAnalyticsHandler,
       databaseSchema: this.databaseSchemaHandler,
       jsonUtilities: this.jsonUtilitiesHandler,
-      codeLens: this.codeLensHandler
+      codeLens: this.codeLensHandler,
     };
+  }
+
+  /**
+   * Set the sidebar content provider for state change notifications
+   */
+  public setSidebarContentProvider(provider: any): void {
+    this.sidebarContentProvider = provider;
+  }
+
+  /**
+   * Notify sidebar of completed analysis
+   */
+  public notifyAnalysisCompleted(
+    type: "full" | "current-file" | "git" | "database",
+    status: "success" | "error",
+    duration: number,
+    filePath?: string,
+    analysisData?: any
+  ): void {
+    if (
+      this.sidebarContentProvider &&
+      typeof this.sidebarContentProvider.addRecentAnalysis === "function"
+    ) {
+      this.sidebarContentProvider.addRecentAnalysis({
+        timestamp: Date.now(),
+        type,
+        status,
+        duration,
+        filePath,
+      });
+
+      // Update current file complexities if this is a successful current file analysis
+      if (type === "current-file" && status === "success" && analysisData) {
+        this.updateSidebarComplexities(analysisData, filePath);
+      }
+    }
+  }
+
+  /**
+   * Update sidebar with current file complexities
+   */
+  private updateSidebarComplexities(analysisData: any, filePath?: string): void {
+    try {
+      const complexities: any[] = [];
+      
+      // Extract function complexities
+      if (analysisData.functions) {
+        for (const func of analysisData.functions) {
+          complexities.push({
+            name: func.name,
+            type: 'function',
+            complexity: func.complexity || 0,
+            line: func.line_number || func.line || 1,
+            file: filePath || ''
+          });
+        }
+      }
+
+      // Extract class complexities
+      if (analysisData.classes) {
+        for (const cls of analysisData.classes) {
+          complexities.push({
+            name: cls.name,
+            type: 'class',
+            complexity: cls.complexity || 0,
+            line: cls.line_number || cls.line || 1,
+            file: filePath || ''
+          });
+
+          // Add method complexities
+          if (cls.methods) {
+            for (const method of cls.methods) {
+              complexities.push({
+                name: `${cls.name}.${method.name}`,
+                type: 'function',
+                complexity: method.complexity || 0,
+                line: method.line_number || method.line || 1,
+                file: filePath || ''
+              });
+            }
+          }
+        }
+      }
+
+      // Update sidebar
+      if (this.sidebarContentProvider && typeof this.sidebarContentProvider.updateCurrentFileComplexities === "function") {
+        this.sidebarContentProvider.updateCurrentFileComplexities(complexities);
+      }
+
+    } catch (error) {
+      this.errorHandler.logError(
+        "Failed to update sidebar complexities",
+        error,
+        "updateSidebarComplexities"
+      );
+    }
   }
 
   /**
@@ -1071,8 +1182,6 @@ export class CommandManager {
       return false;
     }
   }
-
-
 
   /**
    * Get service instances for external access
@@ -1157,9 +1266,8 @@ export class CommandManager {
       // Since there's no actual tree data provider implemented yet,
       // we'll just show a message for now
       vscode.window.showInformationMessage("Sidebar refreshed successfully!");
-      
+
       // TODO: Implement actual sidebar refresh logic when tree data provider is added
-      
     } catch (error) {
       this.errorHandler.logError(
         "Failed to refresh sidebar",
@@ -1168,6 +1276,76 @@ export class CommandManager {
       );
       this.errorHandler.showUserError(
         "Failed to refresh sidebar. Check the output for details."
+      );
+    }
+  }
+
+  /**
+   * Handles clear cache command
+   */
+  public async handleClearCache(): Promise<void> {
+    try {
+      // Get background analysis manager and clear cache
+      const { BackgroundAnalysisManager } = await import(
+        "../services/background-analysis-manager"
+      );
+      const backgroundAnalysisManager = BackgroundAnalysisManager.getInstance(
+        this.errorHandler
+      );
+
+      backgroundAnalysisManager.clearCache();
+
+      // Show confirmation to user
+      vscode.window.showInformationMessage(
+        "Analysis cache cleared successfully."
+      );
+
+      this.errorHandler.logError(
+        "Analysis cache cleared",
+        null,
+        "handleClearCache"
+      );
+    } catch (error) {
+      this.errorHandler.logError(
+        "Failed to clear cache",
+        error,
+        "handleClearCache"
+      );
+      this.errorHandler.showUserError(
+        "Failed to clear cache. Check the output for details."
+      );
+    }
+  }
+
+  /**
+   * Handles clear recent analysis command
+   */
+  public async handleClearRecentAnalysis(): Promise<void> {
+    try {
+      this.errorHandler.logError(
+        "Clearing recent analysis",
+        null,
+        "handleClearRecentAnalysis"
+      );
+
+      if (this.sidebarContentProvider) {
+        this.sidebarContentProvider.clearRecentAnalysis();
+        vscode.window.showInformationMessage("Recent analysis history cleared.");
+      }
+
+      this.errorHandler.logError(
+        "Recent analysis cleared",
+        null,
+        "handleClearRecentAnalysis"
+      );
+    } catch (error) {
+      this.errorHandler.logError(
+        "Failed to clear recent analysis",
+        error,
+        "handleClearRecentAnalysis"
+      );
+      this.errorHandler.showUserError(
+        "Failed to clear recent analysis. Check the output for details."
       );
     }
   }

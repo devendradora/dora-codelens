@@ -60,6 +60,7 @@ export class GitAnalyticsHandler {
     return this.duplicateCallGuard.executeWithProtection(
       GitAnalyticsHandler.COMMAND_ID,
       async () => {
+        const startTime = Date.now();
         this.errorHandler.logError('Starting git analytics', options, GitAnalyticsHandler.COMMAND_ID);
         
         // Update state
@@ -130,6 +131,20 @@ export class GitAnalyticsHandler {
               message += ` (${warningCount} warnings - check output for details)`;
             }
             
+            // Notify sidebar of completed analysis
+            const duration = Date.now() - startTime;
+            try {
+              const commandManager = await import('../core/command-manager');
+              const manager = commandManager.CommandManager.getInstance();
+              manager.notifyAnalysisCompleted('git', 'success', duration);
+            } catch (notificationError) {
+              this.errorHandler.logError(
+                "Failed to notify sidebar of analysis completion",
+                notificationError,
+                GitAnalyticsHandler.COMMAND_ID
+              );
+            }
+            
             vscode.window.showInformationMessage(message);
 
             return validationResult.data;
@@ -138,6 +153,20 @@ export class GitAnalyticsHandler {
         } catch (error) {
           this.stateManager.incrementErrorCount();
           this.errorHandler.logError('Git analytics failed', error, GitAnalyticsHandler.COMMAND_ID);
+          
+          // Notify sidebar of failed analysis
+          const duration = Date.now() - startTime;
+          try {
+            const commandManager = await import('../core/command-manager');
+            const manager = commandManager.CommandManager.getInstance();
+            manager.notifyAnalysisCompleted('git', 'error', duration);
+          } catch (notificationError) {
+            this.errorHandler.logError(
+              "Failed to notify sidebar of analysis failure",
+              notificationError,
+              GitAnalyticsHandler.COMMAND_ID
+            );
+          }
           
           // Show user-friendly error
           this.errorHandler.showUserError(

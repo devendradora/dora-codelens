@@ -3,16 +3,15 @@
 ## Context Menu Quick Access
 
 ```
-Right-click on Python file → DoraCodeLens →
+Right-click on Python file:
 ```
 
-| Feature | Path | What it does |
-|---------|------|--------------|
-| **Tech Stack** | Full Code Analysis → Tech Stack | Shows detected frameworks & libraries |
-| **Module Graph** | Full Code Analysis → Graph View | Interactive module dependency visualization |
-| **Raw Data** | Full Code Analysis → JSON View | Complete analysis data in JSON format |
+| Feature | Menu Item | What it does |
+|---------|-----------|--------------|
+| **Full Analysis** | Full Code Analysis | Complete project analysis with tabbed interface |
 | **File Analysis** | Current File Analysis | Analyze just the current file |
-| **Code Lens Toggle** | Code Lens (On/Off) | Toggle inline complexity annotations |
+| **Enable Code Lens** | Enable Code Lens Inline | Enable inline complexity annotations |
+| **Disable Code Lens** | Disable Code Lens Inline | Disable inline complexity annotations |
 | **DB Analysis** | Database Schema Analysis | Complete database structure analysis |
 | **Git Analytics** | Git Analytics | Repository insights and team statistics |
 | **Format JSON** | JSON Format | Beautify JSON in current editor |
@@ -22,6 +21,7 @@ Right-click on Python file → DoraCodeLens →
 | **Python Setup** | Setup Python Path | Configure Python interpreter |
 | **Auto-Detect** | Auto-Detect Python Path | Automatically find Python |
 | **Settings** | Settings | Open extension configuration |
+| **Clear Cache** | Clear Cache | Clear analysis cache |
 
 ## Command Palette Quick Access
 

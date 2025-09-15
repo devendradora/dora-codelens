@@ -674,23 +674,24 @@ The extension registers comprehensive commands for all DoraCodeLens features as 
 
 #### Context Menu Structure
 
-The enhanced context menu provides organized access to all features with logical grouping as defined in package.json:
+The streamlined context menu provides direct access to all features with logical grouping as defined in package.json:
 
 ```
 Right-click on Python file:
-├── DoraCodeLens ►
-│   ├── Full Code Analysis          # Group analyze@1
-│   ├── Current File Analysis       # Group analyze@2  
-│   ├── Code Lens (On/Off)          # Group analyze@3 (conditional visibility)
-│   ├── Database Schema Analysis    # Group database@1
-│   ├── Git Analytics              # Group git@1
-│   ├── JSON Format                # Group json@1 (when doracodelens.jsonContext)
-│   ├── JSON Tree View             # Group json@2 (when doracodelens.jsonContext)
-│   ├── JSON Fix (Python Dict)     # Group json@3 (when doracodelens.jsonContext)
-│   ├── JSON Minify                # Group json@4 (when doracodelens.jsonContext)
-│   ├── Setup Python Path         # Group setup@1
-│   ├── Auto-Detect Python Path   # Group setup@2
-│   └── Settings                   # Group setup@3
+├── Full Code Analysis              # Group doracodelens@1
+├── Current File Analysis           # Group doracodelens@2  
+├── Enable Code Lens Inline         # Group doracodelens@3 (when !doracodelens.codeLensEnabled)
+├── Disable Code Lens Inline        # Group doracodelens@3 (when doracodelens.codeLensEnabled)
+├── Database Schema Analysis        # Group doracodelens@4
+├── Git Analytics                  # Group doracodelens@5
+├── JSON Format                    # Group doracodelens@6 (when doracodelens.jsonContext)
+├── JSON Tree View                 # Group doracodelens@7 (when doracodelens.jsonContext)
+├── JSON Fix (Python Dict)         # Group doracodelens@8 (when doracodelens.jsonContext)
+├── JSON Minify                    # Group doracodelens@9 (when doracodelens.jsonContext)
+├── Setup Python Path             # Group doracodelens@10
+├── Auto-Detect Python Path       # Group doracodelens@11
+├── Settings                       # Group doracodelens@12
+└── Clear Cache                    # Group doracodelens@13
 ```
 
 #### Context Key Management
@@ -711,13 +712,12 @@ The extension uses VS Code context keys for conditional menu visibility:
 
 #### Menu Groups and Ordering
 
-Menu items are organized into logical groups with specific ordering:
+Menu items are organized into logical groups with specific ordering using the `doracodelens` group:
 
-- **analyze@1-3**: Core analysis features (Full, Current File, Code Lens)
-- **database@1**: Database-specific analysis tools
-- **git@1**: Git repository analytics
-- **json@1-4**: JSON processing utilities (context-sensitive)
-- **setup@1-3**: Configuration and troubleshooting tools
+- **@1-@3**: Core analysis features (Full Code Analysis, Current File Analysis, Code Lens toggle)
+- **@4-@5**: Specialized analysis tools (Database Schema, Git Analytics)
+- **@6-@9**: JSON processing utilities (context-sensitive when `doracodelens.jsonContext` is active)
+- **@10-@13**: Configuration and maintenance tools (Python setup, Settings, Cache management)
 ```
 
 **AnalyzerRunner** (`analyzer-runner.ts`)
@@ -902,7 +902,7 @@ DoraCodeLens provides a dedicated activity bar view:
       {
         "id": "doracodelens-explorer",
         "title": "DoraCodeLens", 
-        "icon": "resources/light/doracodelens.svg"
+        "icon": "resources/dora-code-lens-kiro.png"
       }
     ]
   },
@@ -911,7 +911,7 @@ DoraCodeLens provides a dedicated activity bar view:
       {
         "id": "doracodelens-sidebar",
         "name": "Project Analysis",
-        "icon": "resources/light/doracodelens.svg",
+        "icon": "resources/dora-code-lens-kiro.png",
         "contextualTitle": "Project Analysis"
       }
     ]

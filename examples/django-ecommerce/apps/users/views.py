@@ -10,6 +10,10 @@ from .serializers import (
     UserProfileSerializer
 )
 
+def dora():
+   return  {
+    "key": "va"
+    }
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

@@ -1,485 +1,535 @@
-import * as vscode from 'vscode';
-import { ErrorHandler } from '../core/error-handler';
-import { JsonContextDetector } from '../utils/json-context-detector';
-import { JsonError, JsonWarning, JsonValidationResult } from '../types/json-types';
-import { JsonValidator } from './json-validator';
+import * as vscode from "vscode";
+import { ErrorHandler } from "../core/error-handler";
+import { JsonContextDetector } from "../utils/json-context-detector";
+import {
+  JsonError,
+  JsonWarning,
+  JsonValidationResult,
+} from "../types/json-types";
+import { JsonValidator } from "./json-validator";
 
 export interface JsonFormattingOptions {
-    indent: number;
-    sortKeys: boolean;
-    removeComments: boolean;
-    removeTrailingCommas: boolean;
-    insertFinalNewline: boolean;
-    maxLineLength: number;
-    preserveArrayFormatting: boolean;
+  indent: number;
+  sortKeys: boolean;
+  removeComments: boolean;
+  removeTrailingCommas: boolean;
+  insertFinalNewline: boolean;
+  maxLineLength: number;
+  preserveArrayFormatting: boolean;
 }
 
 export class JsonUtilitiesService {
-    private static instance: JsonUtilitiesService;
-    private errorHandler: ErrorHandler;
-    private outputChannel: vscode.OutputChannel;
-    private defaultOptions: JsonFormattingOptions;
+  private static instance: JsonUtilitiesService;
+  private errorHandler: ErrorHandler;
+  private outputChannel: vscode.OutputChannel;
+  private defaultOptions: JsonFormattingOptions;
 
-    private constructor(errorHandler: ErrorHandler) {
-        this.errorHandler = errorHandler;
-        this.outputChannel = vscode.window.createOutputChannel('DoraCodeLens JSON Utilities');
-        this.defaultOptions = {
-            indent: 2,
-            sortKeys: false,
-            removeComments: false,
-            removeTrailingCommas: false,
-            insertFinalNewline: true,
-            maxLineLength: 120,
-            preserveArrayFormatting: true
-        };
+  private constructor(errorHandler: ErrorHandler) {
+    this.errorHandler = errorHandler;
+    this.outputChannel = vscode.window.createOutputChannel(
+      "DoraCodeLens JSON Utilities"
+    );
+    this.defaultOptions = {
+      indent: 2,
+      sortKeys: false,
+      removeComments: false,
+      removeTrailingCommas: false,
+      insertFinalNewline: true,
+      maxLineLength: 120,
+      preserveArrayFormatting: true,
+    };
+  }
+
+  public static getInstance(errorHandler?: ErrorHandler): JsonUtilitiesService {
+    if (!JsonUtilitiesService.instance) {
+      if (!errorHandler) {
+        throw new Error("ErrorHandler required for first initialization");
+      }
+      JsonUtilitiesService.instance = new JsonUtilitiesService(errorHandler);
     }
+    return JsonUtilitiesService.instance;
+  }
 
-    public static getInstance(errorHandler?: ErrorHandler): JsonUtilitiesService {
-        if (!JsonUtilitiesService.instance) {
-            if (!errorHandler) {
-                throw new Error('ErrorHandler required for first initialization');
-            }
-            JsonUtilitiesService.instance = new JsonUtilitiesService(errorHandler);
-        }
-        return JsonUtilitiesService.instance;
+  public isJsonContext(
+    document?: vscode.TextDocument,
+    position?: vscode.Position
+  ): boolean {
+    return JsonContextDetector.isJsonContext(document, position);
+  }
+
+  /**
+   * Format JSON content
+   */
+  public async formatJson(
+    content: string,
+    options?: Partial<JsonFormattingOptions>
+  ): Promise<string> {
+    try {
+      // First check if it looks like a Python dict
+      if (this.isPythonDictLike(content)) {
+        // If it looks like Python, try to convert it first
+        const fixedJson = await this.fixPythonDictToJson(content);
+        const parsedJson = JSON.parse(fixedJson);
+        return JSON.stringify(parsedJson, null, this.defaultOptions.indent);
+      }
+      // Try to parse as regular JSON
+      const parsedJson = JSON.parse(content);
+      return JSON.stringify(parsedJson, null, this.defaultOptions.indent);
+    } catch (error) {
+      // If regular JSON parse fails, try to fix Python dict syntax as fallback
+      const fixedJson = await this.fixPythonDictToJson(content);
+      const parsedJson = JSON.parse(fixedJson);
+      return JSON.stringify(parsedJson, null, this.defaultOptions.indent);
     }
+  }
 
-    public isJsonContext(document?: vscode.TextDocument, position?: vscode.Position): boolean {
-        return JsonContextDetector.isJsonContext(document, position);
-    }
+  /**
+   * Convert Python dict to JSON
+   */
+  private async fixPythonDictToJson(content: string): Promise<string> {
+    try {
+      // First pass: Convert Python special values
+      let result = content.trim();
+      result = result
+        .replace(/\bTrue\b/g, "true")
+        .replace(/\bFalse\b/g, "false")
+        .replace(/\bNone\b/g, "null");
 
-    /**
-     * Format JSON content
-     */
-    public async formatJson(content: string, options?: Partial<JsonFormattingOptions>): Promise<string> {
-        try {
-            // First check if it looks like a Python dict
-            if (this.isPythonDictLike(content)) {
-                // If it looks like Python, try to convert it first
-                const fixedJson = await this.fixPythonDictToJson(content);
-                const parsedJson = JSON.parse(fixedJson);
-                return JSON.stringify(parsedJson, null, this.defaultOptions.indent);
+      // Second pass: Handle quotes and structural elements
+      let output = "";
+      let inString = false;
+      let currentQuote = "";
+      let escaped = false;
+
+      for (let i = 0; i < result.length; i++) {
+        const char = result[i];
+
+        if (escaped) {
+          output += char;
+          escaped = false;
+          continue;
+        }
+
+        if (char === "\\") {
+          output += char;
+          escaped = true;
+          continue;
+        }
+
+        if (char === "'" || char === '"') {
+          if (!inString) {
+            inString = true;
+            currentQuote = char;
+            output += '"'; // Always use double quotes
+          } else if (char === currentQuote) {
+            inString = false;
+            output += '"';
+          } else {
+            output += char;
+          }
+          continue;
+        }
+
+        if (!inString) {
+          // Handle colons outside strings
+          if (char === ":") {
+            output += char + " ";
+            continue;
+          }
+          // Handle commas
+          if (char === ",") {
+            const nextNonSpace = result.slice(i + 1).match(/\s*([^\s])/);
+            if (
+              nextNonSpace &&
+              (nextNonSpace[1] === "}" || nextNonSpace[1] === "]")
+            ) {
+              continue; // Skip trailing comma
             }
-            // Try to parse as regular JSON
-            const parsedJson = JSON.parse(content);
-            return JSON.stringify(parsedJson, null, this.defaultOptions.indent);
-        } catch (error) {
-            // If regular JSON parse fails, try to fix Python dict syntax as fallback
-            const fixedJson = await this.fixPythonDictToJson(content);
-            const parsedJson = JSON.parse(fixedJson);
-            return JSON.stringify(parsedJson, null, this.defaultOptions.indent);
+            output += char + " ";
+            continue;
+          }
         }
-    }
 
-    /**
-     * Convert Python dict to JSON
-     */
-    private async fixPythonDictToJson(content: string): Promise<string> {
-        try {
-            // First pass: Convert Python special values
-            let result = content.trim();
-            result = result
-                .replace(/\bTrue\b/g, 'true')
-                .replace(/\bFalse\b/g, 'false')
-                .replace(/\bNone\b/g, 'null');
+        output += char;
+      }
 
-            // Second pass: Handle quotes and structural elements
-            let output = '';
-            let inString = false;
-            let currentQuote = '';
-            let escaped = false;
+      // Third pass: Clean up whitespace and validate
+      output = output
+        .replace(/\s+/g, " ")
+        .replace(/{\s+/g, "{")
+        .replace(/\s+}/g, "}")
+        .replace(/\[\s+/g, "[")
+        .replace(/\s+\]/g, "]")
+        .trim();
 
-            for (let i = 0; i < result.length; i++) {
-                const char = result[i];
-                
-                if (escaped) {
-                    output += char;
-                    escaped = false;
-                    continue;
-                }
-
-                if (char === '\\') {
-                    output += char;
-                    escaped = true;
-                    continue;
-                }
-
-                if (char === "'" || char === '"') {
-                    if (!inString) {
-                        inString = true;
-                        currentQuote = char;
-                        output += '"'; // Always use double quotes
-                    } else if (char === currentQuote) {
-                        inString = false;
-                        output += '"';
-                    } else {
-                        output += char;
-                    }
-                    continue;
-                }
-
-                if (!inString) {
-                    // Handle colons outside strings
-                    if (char === ':') {
-                        output += char + ' ';
-                        continue;
-                    }
-                    // Handle commas
-                    if (char === ',') {
-                        const nextNonSpace = result.slice(i + 1).match(/\s*([^\s])/);
-                        if (nextNonSpace && (nextNonSpace[1] === '}' || nextNonSpace[1] === ']')) {
-                            continue; // Skip trailing comma
-                        }
-                        output += char + ' ';
-                        continue;
-                    }
-                }
-
-                output += char;
+      // Validate the result
+      JSON.parse(output);
+      return output;
+    } catch (error) {
+      // Add context to the error message
+      if (error instanceof Error) {
+        if (error.message.includes("position")) {
+          const match = error.message.match(/position (\d+)/);
+          if (match) {
+            const pos = parseInt(match[1]);
+            const lines = content.split("\n");
+            let currentPos = 0;
+            for (let i = 0; i < lines.length; i++) {
+              if (currentPos + lines[i].length >= pos) {
+                throw new Error(
+                  `Failed to convert Python dictionary: ${
+                    error.message
+                  } (line ${i + 1} column ${pos - currentPos + 1})`
+                );
+              }
+              currentPos += lines[i].length + 1;
             }
-
-            // Third pass: Clean up whitespace and validate
-            output = output
-                .replace(/\s+/g, ' ')
-                .replace(/{\s+/g, '{')
-                .replace(/\s+}/g, '}')
-                .replace(/\[\s+/g, '[')
-                .replace(/\s+\]/g, ']')
-                .trim();
-
-            // Validate the result
-            JSON.parse(output);
-            return output;
-            
-        } catch (error) {
-            // Add context to the error message
-            if (error instanceof Error) {
-                if (error.message.includes('position')) {
-                    const match = error.message.match(/position (\d+)/);
-                    if (match) {
-                        const pos = parseInt(match[1]);
-                        const lines = content.split('\n');
-                        let currentPos = 0;
-                        for (let i = 0; i < lines.length; i++) {
-                            if (currentPos + lines[i].length >= pos) {
-                                throw new Error(
-                                    `Failed to convert Python dictionary: ${error.message} (line ${i + 1} column ${pos - currentPos + 1})`
-                                );
-                            }
-                            currentPos += lines[i].length + 1;
-                        }
-                    }
-                }
-                throw new Error(`Failed to convert Python dictionary: ${error.message}`);
-            }
-            throw error;
+          }
         }
-    }
-
-    /**
-     * Check if content looks like a Python dictionary
-     */
-    private isPythonDictLike(content: string): boolean {
-        const trimmed = content.trim();
-        return trimmed.startsWith('{') && 
-               (trimmed.includes("'") || 
-                trimmed.includes('True') || 
-                trimmed.includes('False') || 
-                trimmed.includes('None'));
-    }
-
-    /**
-     * Format JSON content in the active editor
-     */
-    public async formatJsonInEditor(): Promise<void> {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            vscode.window.showErrorMessage('No active editor found');
-            return;
-        }
-
-        try {
-            const document = editor.document;
-            const selection = editor.selection;
-            
-            // Get content to format (selection or entire document)
-            const content = selection.isEmpty ? 
-                document.getText() : 
-                document.getText(selection);
-
-            if (!content.trim()) {
-                vscode.window.showWarningMessage('No content to format');
-                return;
-            }
-
-            // Format the JSON
-            const formatted = await this.formatJson(content);
-
-            // Replace content in editor
-            const range = selection.isEmpty ? 
-                new vscode.Range(0, 0, document.lineCount, 0) : 
-                selection;
-
-            await editor.edit(editBuilder => {
-                editBuilder.replace(range, formatted);
-            });
-
-            vscode.window.showInformationMessage('JSON formatted successfully');
-            this.outputChannel.appendLine(`JSON formatted successfully (${content.length} -> ${formatted.length} characters)`);
-
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            this.errorHandler.logError('JSON formatting failed', error, 'formatJsonInEditor');
-            vscode.window.showErrorMessage(`Failed to format JSON: ${errorMessage}`);
-        }
-    }
-
-    /**
-     * Minify JSON content in the active editor
-     */
-    public async minifyJsonInEditor(): Promise<void> {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            vscode.window.showErrorMessage('No active editor found');
-            return;
-        }
-
-        try {
-            const document = editor.document;
-            const selection = editor.selection;
-            
-            // Get content to minify (selection or entire document)
-            const content = selection.isEmpty ? 
-                document.getText() : 
-                document.getText(selection);
-
-            if (!content.trim()) {
-                vscode.window.showWarningMessage('No content to minify');
-                return;
-            }
-
-            // Minify the JSON
-            const minified = await this.minifyJson(content);
-
-            // Replace content in editor
-            const range = selection.isEmpty ? 
-                new vscode.Range(0, 0, document.lineCount, 0) : 
-                selection;
-
-            await editor.edit(editBuilder => {
-                editBuilder.replace(range, minified);
-            });
-
-            vscode.window.showInformationMessage('JSON minified successfully');
-            this.outputChannel.appendLine(`JSON minified successfully (${content.length} -> ${minified.length} characters)`);
-
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            this.errorHandler.logError('JSON minification failed', error, 'minifyJsonInEditor');
-            vscode.window.showErrorMessage(`Failed to minify JSON: ${errorMessage}`);
-        }
-    }
-
-    /**
-     * Minify JSON content
-     */
-    public async minifyJson(content: string): Promise<string> {
-        try {
-            // First check if it looks like a Python dict
-            if (this.isPythonDictLike(content)) {
-                content = await this.fixPythonDictToJson(content);
-            }
-
-            // Parse and minify
-            const parsed = JSON.parse(content);
-            const minified = JSON.stringify(parsed);
-            
-            return minified;
-        } catch (error) {
-            throw new Error(`Failed to minify JSON: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-    }
-
-    /**
-     * Show professional JSON tree view in a new webview panel
-     */
-    public async showJsonTreeView(): Promise<void> {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            vscode.window.showErrorMessage('No active editor found');
-            return;
-        }
-
-        try {
-            const document = editor.document;
-            const selection = editor.selection;
-            
-            // Get content to display (selection or entire document)
-            const content = selection.isEmpty ? 
-                document.getText() : 
-                document.getText(selection);
-
-            if (!content.trim()) {
-                vscode.window.showWarningMessage('No content to display');
-                return;
-            }
-
-            // Process content if needed
-            let workingContent = content;
-            let validationResult: JsonValidationResult;
-            
-            try {
-                if (this.isPythonDictLike(content)) {
-                    workingContent = await this.fixPythonDictToJson(content);
-                }
-                
-                // Validate JSON
-                validationResult = JsonValidator.validateJson(workingContent);
-                
-                if (!validationResult.isValid) {
-                    throw new Error(validationResult.errors[0]?.message || 'Invalid JSON');
-                }
-            } catch (validationError) {
-                // Show error view with detailed feedback
-                const panel = this.createJsonTreePanel();
-                panel.webview.html = this.generateErrorViewHtml(content, validationError);
-                return;
-            }
-
-            // Parse JSON
-            const jsonObject = JSON.parse(workingContent);
-            
-            // Create webview panel
-            const panel = this.createJsonTreePanel();
-
-            // Set up message handling for interactive features
-            panel.webview.onDidReceiveMessage(
-                message => {
-                    switch (message.command) {
-                        case 'toggleNode':
-                            this.handleNodeToggle(panel, message.nodeId, message.isExpanded);
-                            break;
-                        case 'searchTree':
-                            this.handleTreeSearch(panel, message.query, message.options);
-                            break;
-                        case 'expandAll':
-                            this.handleExpandAll(panel);
-                            break;
-                        case 'collapseAll':
-                            this.handleCollapseAll(panel);
-                            break;
-                        case 'copyPath':
-                            this.handleCopyPath(message.path);
-                            break;
-                        case 'copyValue':
-                            this.handleCopyValue(message.value);
-                            break;
-                        case 'toggleView':
-                            this.handleToggleView(panel, workingContent);
-                            break;
-                        case 'exportJson':
-                            this.handleExportJson(workingContent);
-                            break;
-                        case 'ready':
-                            // Send initial data when webview is ready
-                            panel.webview.postMessage({
-                                command: 'setData',
-                                data: jsonObject,
-                                rawJson: workingContent
-                            });
-                            break;
-                    }
-                },
-                undefined
-            );
-
-            // Generate and set HTML content
-            panel.webview.html = this.generateProfessionalTreeViewHtml();
-
-            this.outputChannel.appendLine('Professional JSON tree view opened successfully');
-
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            this.errorHandler.logError('JSON tree view failed', error, 'showJsonTreeView');
-            vscode.window.showErrorMessage(`Failed to show JSON tree view: ${errorMessage}`);
-        }
-    }
-
-    /**
-     * Fix JSON-like content by converting Python dict syntax to valid JSON
-     */
-    public async fixJsonInEditor(): Promise<void> {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            vscode.window.showErrorMessage('No active editor found');
-            return;
-        }
-
-        try {
-            const document = editor.document;
-            const selection = editor.selection;
-            
-            // Get content to fix (selection or entire document)
-            const content = selection.isEmpty ? 
-                document.getText() : 
-                document.getText(selection);
-
-            if (!content.trim()) {
-                vscode.window.showWarningMessage('No content to fix');
-                return;
-            }
-
-            // Process and fix the content
-            const fixed = await this.fixPythonDictToJson(content);
-
-            // Replace content in editor
-            const range = selection.isEmpty ? 
-                new vscode.Range(0, 0, document.lineCount, 0) : 
-                selection;
-
-            await editor.edit(editBuilder => {
-                editBuilder.replace(range, fixed);
-            });
-
-            vscode.window.showInformationMessage('JSON fixed successfully');
-            this.outputChannel.appendLine(`JSON fixed successfully (${content.length} -> ${fixed.length} characters)`);
-
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            this.errorHandler.logError('JSON fix failed', error, 'fixJsonInEditor');
-            vscode.window.showErrorMessage(`Failed to fix JSON: ${errorMessage}`);
-        }
-    }
-
-    /**
-     * Create JSON tree panel with proper configuration
-     */
-    private createJsonTreePanel(): vscode.WebviewPanel {
-        return vscode.window.createWebviewPanel(
-            'professionalJsonTreeView',
-            'Professional JSON Tree Viewer',
-            vscode.ViewColumn.Beside,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true,
-                localResourceRoots: [
-                    vscode.Uri.joinPath(vscode.extensions.getExtension('DevendraDora.doracodelens')?.extensionUri || vscode.Uri.file(''), 'resources')
-                ]
-            }
+        throw new Error(
+          `Failed to convert Python dictionary: ${error.message}`
         );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Check if content looks like a Python dictionary
+   */
+  private isPythonDictLike(content: string): boolean {
+    const trimmed = content.trim();
+    return (
+      trimmed.startsWith("{") &&
+      (trimmed.includes("'") ||
+        trimmed.includes("True") ||
+        trimmed.includes("False") ||
+        trimmed.includes("None"))
+    );
+  }
+
+  /**
+   * Format JSON content in the active editor
+   */
+  public async formatJsonInEditor(): Promise<void> {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage("No active editor found");
+      return;
     }
 
-    /**
-     * Generate professional tree view HTML
-     */
-    private generateProfessionalTreeViewHtml(): string {
-        return `
+    try {
+      const document = editor.document;
+      const selection = editor.selection;
+
+      // Get content to format (selection or entire document)
+      const content = selection.isEmpty
+        ? document.getText()
+        : document.getText(selection);
+
+      if (!content.trim()) {
+        vscode.window.showWarningMessage("No content to format");
+        return;
+      }
+
+      // Format the JSON
+      const formatted = await this.formatJson(content);
+
+      // Replace content in editor
+      const range = selection.isEmpty
+        ? new vscode.Range(0, 0, document.lineCount, 0)
+        : selection;
+
+      await editor.edit((editBuilder) => {
+        editBuilder.replace(range, formatted);
+      });
+
+      vscode.window.showInformationMessage("JSON formatted successfully");
+      this.outputChannel.appendLine(
+        `JSON formatted successfully (${content.length} -> ${formatted.length} characters)`
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      this.errorHandler.logError(
+        "JSON formatting failed",
+        error,
+        "formatJsonInEditor"
+      );
+      vscode.window.showErrorMessage(`Failed to format JSON: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Minify JSON content in the active editor
+   */
+  public async minifyJsonInEditor(): Promise<void> {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage("No active editor found");
+      return;
+    }
+
+    try {
+      const document = editor.document;
+      const selection = editor.selection;
+
+      // Get content to minify (selection or entire document)
+      const content = selection.isEmpty
+        ? document.getText()
+        : document.getText(selection);
+
+      if (!content.trim()) {
+        vscode.window.showWarningMessage("No content to minify");
+        return;
+      }
+
+      // Minify the JSON
+      const minified = await this.minifyJson(content);
+
+      // Replace content in editor
+      const range = selection.isEmpty
+        ? new vscode.Range(0, 0, document.lineCount, 0)
+        : selection;
+
+      await editor.edit((editBuilder) => {
+        editBuilder.replace(range, minified);
+      });
+
+      vscode.window.showInformationMessage("JSON minified successfully");
+      this.outputChannel.appendLine(
+        `JSON minified successfully (${content.length} -> ${minified.length} characters)`
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      this.errorHandler.logError(
+        "JSON minification failed",
+        error,
+        "minifyJsonInEditor"
+      );
+      vscode.window.showErrorMessage(`Failed to minify JSON: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Minify JSON content
+   */
+  public async minifyJson(content: string): Promise<string> {
+    try {
+      // First check if it looks like a Python dict
+      if (this.isPythonDictLike(content)) {
+        content = await this.fixPythonDictToJson(content);
+      }
+
+      // Parse and minify
+      const parsed = JSON.parse(content);
+      const minified = JSON.stringify(parsed);
+
+      return minified;
+    } catch (error) {
+      throw new Error(
+        `Failed to minify JSON: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  }
+
+  /**
+   * Show JSON tree view in a new webview panel
+   */
+  public async showJsonTreeView(): Promise<void> {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage("No active editor found");
+      return;
+    }
+
+    try {
+      const document = editor.document;
+      const selection = editor.selection;
+
+      // Get content to display (selection or entire document)
+      const content = selection.isEmpty
+        ? document.getText()
+        : document.getText(selection);
+
+      if (!content.trim()) {
+        vscode.window.showWarningMessage("No content to display");
+        return;
+      }
+
+      // Process content if needed
+      let workingContent = content;
+      let validationResult: JsonValidationResult;
+
+      try {
+        if (this.isPythonDictLike(content)) {
+          workingContent = await this.fixPythonDictToJson(content);
+        }
+
+        // Validate JSON
+        validationResult = JsonValidator.validateJson(workingContent);
+
+        if (!validationResult.isValid) {
+          throw new Error(
+            validationResult.errors[0]?.message || "Invalid JSON"
+          );
+        }
+      } catch (validationError) {
+        // Show error view with detailed feedback
+        const panel = this.createJsonTreePanel();
+        panel.webview.html = this.generateErrorViewHtml(
+          content,
+          validationError
+        );
+        return;
+      }
+
+      // Parse JSON
+      const jsonObject = JSON.parse(workingContent);
+
+      // Create webview panel
+      const panel = this.createJsonTreePanel();
+
+      // Set up message handling for interactive features
+      panel.webview.onDidReceiveMessage((message) => {
+        switch (message.command) {
+          case "toggleNode":
+            this.handleNodeToggle(panel, message.nodeId, message.isExpanded);
+            break;
+          case "searchTree":
+            this.handleTreeSearch(panel, message.query, message.options);
+            break;
+          case "expandAll":
+            this.handleExpandAll(panel);
+            break;
+          case "collapseAll":
+            this.handleCollapseAll(panel);
+            break;
+          case "copyPath":
+            this.handleCopyPath(message.path);
+            break;
+          case "copyValue":
+            this.handleCopyValue(message.value);
+            break;
+          case "toggleView":
+            this.handleToggleView(panel, workingContent);
+            break;
+          case "exportJson":
+            this.handleExportJson(workingContent);
+            break;
+          case "ready":
+            // Send initial data when webview is ready
+            panel.webview.postMessage({
+              command: "setData",
+              data: jsonObject,
+              rawJson: workingContent,
+            });
+            break;
+        }
+      }, undefined);
+
+      // Generate and set HTML content
+      panel.webview.html = this.generateProfessionalTreeViewHtml();
+
+      this.outputChannel.appendLine("JSON tree view opened successfully");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      this.errorHandler.logError(
+        "JSON tree view failed",
+        error,
+        "showJsonTreeView"
+      );
+      vscode.window.showErrorMessage(
+        `Failed to show JSON tree view: ${errorMessage}`
+      );
+    }
+  }
+
+  /**
+   * Fix JSON-like content by converting Python dict syntax to valid JSON
+   */
+  public async fixJsonInEditor(): Promise<void> {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage("No active editor found");
+      return;
+    }
+
+    try {
+      const document = editor.document;
+      const selection = editor.selection;
+
+      // Get content to fix (selection or entire document)
+      const content = selection.isEmpty
+        ? document.getText()
+        : document.getText(selection);
+
+      if (!content.trim()) {
+        vscode.window.showWarningMessage("No content to fix");
+        return;
+      }
+
+      // Process and fix the content
+      const fixed = await this.fixPythonDictToJson(content);
+
+      // Replace content in editor
+      const range = selection.isEmpty
+        ? new vscode.Range(0, 0, document.lineCount, 0)
+        : selection;
+
+      await editor.edit((editBuilder) => {
+        editBuilder.replace(range, fixed);
+      });
+
+      vscode.window.showInformationMessage("JSON fixed successfully");
+      this.outputChannel.appendLine(
+        `JSON fixed successfully (${content.length} -> ${fixed.length} characters)`
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      this.errorHandler.logError("JSON fix failed", error, "fixJsonInEditor");
+      vscode.window.showErrorMessage(`Failed to fix JSON: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Create JSON tree panel with proper configuration
+   */
+  private createJsonTreePanel(): vscode.WebviewPanel {
+    return vscode.window.createWebviewPanel(
+      "jsonTreeView",
+      "JSON Tree Viewer",
+      vscode.ViewColumn.One,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+        localResourceRoots: [
+          vscode.Uri.joinPath(
+            vscode.extensions.getExtension("DevendraDora.doracodelens")
+              ?.extensionUri || vscode.Uri.file(""),
+            "resources"
+          ),
+        ],
+      }
+    );
+  }
+
+  /**
+   * Generate professional tree view HTML
+   */
+  private generateProfessionalTreeViewHtml(): string {
+    return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Professional JSON Tree Viewer</title>
+    <title>JSON Tree Viewer</title>
     <style>
         ${this.getJsonTreeViewerStyles()}
     </style>
@@ -583,12 +633,12 @@ export class JsonUtilitiesService {
     </script>
 </body>
 </html>`;
-    } 
-   /**
-     * Get professional JSON tree viewer styles
-     */
-    private getJsonTreeViewerStyles(): string {
-        return `
+  }
+  /**
+   * Get JSON tree viewer styles
+   */
+  private getJsonTreeViewerStyles(): string {
+    return `
             :root {
                 --json-bg: var(--vscode-editor-background, #1e1e1e);
                 --json-fg: var(--vscode-editor-foreground, #d4d4d4);
@@ -1042,13 +1092,13 @@ export class JsonUtilitiesService {
                 background-color: var(--json-hover);
             }
         `;
-    }
+  }
 
-    /**
-     * Get JavaScript for JSON tree viewer
-     */
-    private getJsonTreeViewerScript(): string {
-        return `
+  /**
+   * Get JavaScript for JSON tree viewer
+   */
+  private getJsonTreeViewerScript(): string {
+    return `
             const vscode = acquireVsCodeApi();
             
             // Global state
@@ -1822,78 +1872,93 @@ export class JsonUtilitiesService {
             \`;
             document.head.appendChild(style);
         `;
-    }
+  }
 
-    /**
-     * Handle node toggle action
-     */
-    private handleNodeToggle(panel: vscode.WebviewPanel, nodeId: string, isExpanded: boolean): void {
-        this.outputChannel.appendLine(`JSON tree: Toggle node ${nodeId} - ${isExpanded ? 'expanded' : 'collapsed'}`);
-    }
+  /**
+   * Handle node toggle action
+   */
+  private handleNodeToggle(
+    panel: vscode.WebviewPanel,
+    nodeId: string,
+    isExpanded: boolean
+  ): void {
+    this.outputChannel.appendLine(
+      `JSON tree: Toggle node ${nodeId} - ${
+        isExpanded ? "expanded" : "collapsed"
+      }`
+    );
+  }
 
-    /**
-     * Handle tree search
-     */
-    private handleTreeSearch(panel: vscode.WebviewPanel, query: string, options: any): void {
-        // Search is handled client-side for better performance
-        // This method can be used for logging or additional server-side processing
-        this.outputChannel.appendLine(`JSON tree search: "${query}" with options: ${JSON.stringify(options)}`);
-    }
+  /**
+   * Handle tree search
+   */
+  private handleTreeSearch(
+    panel: vscode.WebviewPanel,
+    query: string,
+    options: any
+  ): void {
+    // Search is handled client-side for better performance
+    // This method can be used for logging or additional server-side processing
+    this.outputChannel.appendLine(
+      `JSON tree search: "${query}" with options: ${JSON.stringify(options)}`
+    );
+  }
 
-    /**
-     * Handle expand all action
-     */
-    private handleExpandAll(panel: vscode.WebviewPanel): void {
-        this.outputChannel.appendLine('JSON tree: Expand all nodes');
-    }
+  /**
+   * Handle expand all action
+   */
+  private handleExpandAll(panel: vscode.WebviewPanel): void {
+    this.outputChannel.appendLine("JSON tree: Expand all nodes");
+  }
 
-    /**
-     * Handle collapse all action
-     */
-    private handleCollapseAll(panel: vscode.WebviewPanel): void {
-        this.outputChannel.appendLine('JSON tree: Collapse all nodes');
-    }
+  /**
+   * Handle collapse all action
+   */
+  private handleCollapseAll(panel: vscode.WebviewPanel): void {
+    this.outputChannel.appendLine("JSON tree: Collapse all nodes");
+  }
 
-    /**
-     * Handle copy path action
-     */
-    private handleCopyPath(path: string): void {
-        vscode.env.clipboard.writeText(path);
-        vscode.window.showInformationMessage(`Path copied: ${path}`);
-    }
+  /**
+   * Handle copy path action
+   */
+  private handleCopyPath(path: string): void {
+    vscode.env.clipboard.writeText(path);
+    vscode.window.showInformationMessage(`Path copied: ${path}`);
+  }
 
-    /**
-     * Handle copy value action
-     */
-    private handleCopyValue(value: string): void {
-        vscode.env.clipboard.writeText(value);
-        vscode.window.showInformationMessage('Value copied to clipboard');
-    }
+  /**
+   * Handle copy value action
+   */
+  private handleCopyValue(value: string): void {
+    vscode.env.clipboard.writeText(value);
+    vscode.window.showInformationMessage("Value copied to clipboard");
+  }
 
-    /**
-     * Handle toggle view action
-     */
-    private handleToggleView(panel: vscode.WebviewPanel, rawJson: string): void {
-        // View toggle is handled client-side
-        this.outputChannel.appendLine('JSON tree: Toggle view mode');
-    }
+  /**
+   * Handle toggle view action
+   */
+  private handleToggleView(panel: vscode.WebviewPanel, rawJson: string): void {
+    // View toggle is handled client-side
+    this.outputChannel.appendLine("JSON tree: Toggle view mode");
+  }
 
-    /**
-     * Handle export JSON action
-     */
-    private handleExportJson(jsonContent: string): void {
-        vscode.env.clipboard.writeText(jsonContent);
-        vscode.window.showInformationMessage('JSON copied to clipboard');
-    }
+  /**
+   * Handle export JSON action
+   */
+  private handleExportJson(jsonContent: string): void {
+    vscode.env.clipboard.writeText(jsonContent);
+    vscode.window.showInformationMessage("JSON copied to clipboard");
+  }
 
-    /**
-     * Generate error view HTML for invalid JSON
-     */
-    private generateErrorViewHtml(content: string, error: any): string {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        const errorDetails = this.parseJsonError(errorMessage);
-        
-        return `
+  /**
+   * Generate error view HTML for invalid JSON
+   */
+  private generateErrorViewHtml(content: string, error: any): string {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    const errorDetails = this.parseJsonError(errorMessage);
+
+    return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1914,7 +1979,11 @@ export class JsonUtilitiesService {
         <div class="error-details">
             <h3>Error Details</h3>
             <div class="error-message">${this.escapeHtml(errorMessage)}</div>
-            ${errorDetails.line ? `<div class="error-location">Line: ${errorDetails.line}, Column: ${errorDetails.column}</div>` : ''}
+            ${
+              errorDetails.line
+                ? `<div class="error-location">Line: ${errorDetails.line}, Column: ${errorDetails.column}</div>`
+                : ""
+            }
         </div>
         
         <div class="error-suggestions">
@@ -1956,13 +2025,13 @@ export class JsonUtilitiesService {
     </script>
 </body>
 </html>`;
-    }
+  }
 
-    /**
-     * Get error view styles
-     */
-    private getErrorViewStyles(): string {
-        return `
+  /**
+   * Get error view styles
+   */
+  private getErrorViewStyles(): string {
+    return `
             body {
                 margin: 0;
                 padding: 20px;
@@ -2085,46 +2154,55 @@ export class JsonUtilitiesService {
                 word-wrap: break-word;
             }
         `;
-    }
+  }
 
-    /**
-     * Parse JSON error to extract line and column information
-     */
-    private parseJsonError(errorMessage: string): { line?: number; column?: number } {
-        const lineMatch = errorMessage.match(/line (\d+)/i);
-        const columnMatch = errorMessage.match(/column (\d+)/i);
-        const positionMatch = errorMessage.match(/position (\d+)/i);
-        
-        return {
-            line: lineMatch ? parseInt(lineMatch[1]) : undefined,
-            column: columnMatch ? parseInt(columnMatch[1]) : (positionMatch ? parseInt(positionMatch[1]) : undefined)
-        };
-    }
+  /**
+   * Parse JSON error to extract line and column information
+   */
+  private parseJsonError(errorMessage: string): {
+    line?: number;
+    column?: number;
+  } {
+    const lineMatch = errorMessage.match(/line (\d+)/i);
+    const columnMatch = errorMessage.match(/column (\d+)/i);
+    const positionMatch = errorMessage.match(/position (\d+)/i);
 
-    /**
-     * Escape HTML characters
-     */
-    private escapeHtml(text: string): string {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
+    return {
+      line: lineMatch ? parseInt(lineMatch[1]) : undefined,
+      column: columnMatch
+        ? parseInt(columnMatch[1])
+        : positionMatch
+        ? parseInt(positionMatch[1])
+        : undefined,
+    };
+  }
 
-    /**
-     * Format bytes to human readable string
-     */
-    private formatBytes(bytes: number): string {
-        if (bytes === 0) {return '0 Bytes';}
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
+  /**
+   * Escape HTML characters
+   */
+  private escapeHtml(text: string): string {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
 
-    /**
-     * Cleanup and dispose of resources
-     */
-    public dispose(): void {
-        this.outputChannel.dispose();
+  /**
+   * Format bytes to human readable string
+   */
+  private formatBytes(bytes: number): string {
+    if (bytes === 0) {
+      return "0 Bytes";
     }
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  }
+
+  /**
+   * Cleanup and dispose of resources
+   */
+  public dispose(): void {
+    this.outputChannel.dispose();
+  }
 }

@@ -4,6 +4,10 @@ All notable changes to the "DoraCodeLens" extension will be documented in this f
 
 ## [Unreleased]
 
+### Changed
+- Updated sidebar and activity bar icon to use new DoraCodeLens branding (`resources/dora-code-lens-kiro.png`)
+- Enhanced visual consistency across VS Code interface with updated icon
+
 ### Added
 - Initial VS Code extension project structure
 - Basic command registration and activation events

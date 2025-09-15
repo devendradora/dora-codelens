@@ -1,10 +1,10 @@
 {
   "enabled": true,
   "name": "Documentation Sync",
-  "description": "Monitors all source files (TypeScript, Python, JavaScript, JSON configs) and triggers documentation updates in README.md and docs/ folder when changes are detected",
+  "description": "Monitors all source files (TypeScript, Python, JavaScript, JSON configs) and triggers documentation updates in README.md and docs/ folder when changes are detected.\n\nAlso update CHANGELOG.md",
   "version": "1",
   "when": {
-    "type": "fileEdited",
+    "type": "userTriggered",
     "patterns": [
       "src/**/*.ts",
       "analyzer/**/*.py",

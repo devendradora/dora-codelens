@@ -10,17 +10,17 @@
     "pretest": "npm run compile"
   },
   "displayName": "DoraCodeLens",
-  "description": "Advanced VS Code extension for comprehensive Python project analysis with Git analytics, enhanced visualizations, JSON utilities, and database schema analysis",
+  "description": "A VS Code super-power for Python devs. It builds mind maps of modules, classes, functions with complexity scores, sketches DB diagrams and JSON tools - making code exploration visual & lightning-fast.",
   "version": "0.1.2",
   "publisher": "DevendraDora",
   "icon": "resources/dora-code-lens-kiro.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/devendradora/code-mind-map.git"
+    "url": "https://github.com/devendradora/dora-codelens.git"
   },
-  "homepage": "https://github.com/devendradora/code-mind-map#readme",
+  "homepage": "https://github.com/devendradora/dora-codelens#readme",
   "bugs": {
-    "url": "https://github.com/devendradora/code-mind-map/issues"
+    "url": "https://github.com/devendradora/dora-codelens/issues"
   },
   "engines": {
     "vscode": "^1.74.0"
@@ -31,6 +31,7 @@
   ],
   "keywords": [
     "python",
+    "mindmap",
     "visualization",
     "graph",
     "complexity",
@@ -152,100 +153,157 @@
         {
           "id": "doracodelens-explorer",
           "title": "DoraCodeLens",
-          "icon": "resources/light/doracodelens.svg"
+          "icon": "resources/dora-code-lens-kiro.png"
         }
       ]
     },
-    "submenus": [
-      {
-        "id": "doracodelens.contextMenu",
-        "label": "DoraCodeLens"
-      }
-    ],
+
     "views": {
       "doracodelens-explorer": [
         {
           "id": "doracodelens-sidebar",
           "name": "Project Analysis",
-          "icon": "resources/light/doracodelens.svg",
+          "icon": "resources/dora-code-lens-kiro.png",
           "contextualTitle": "Project Analysis"
         }
       ]
     },
+    "submenus": [
+      {
+        "id": "doracodelens.menu",
+        "label": "Dora Code Lens"
+      }
+    ],
     "menus": {
       "editor/context": [
         {
-          "submenu": "doracodelens.contextMenu",
-          "group": "navigation"
+          "submenu": "doracodelens.menu",
+          "when": "resourceExtname == .py || resourceExtname == .json",
+          "group": "navigation@1"
+        }
+      ],
+      "doracodelens.menu": [
+        {
+          "command": "doracodelens.analyzeCurrentFile",
+          "group": "1_analysis@1",
+          "when": "resourceExtname == .py"
+        },
+        {
+          "command": "doracodelens.analyzeFullCode",
+          "group": "1_analysis@2",
+          "when": "resourceExtname == .py"
+        },
+        {
+          "command": "doracodelens.enableCodeLens",
+          "group": "1_analysis@3",
+          "when": "resourceExtname == .py && !config.doracodelens.enableCodeLens"
+        },
+        {
+          "command": "doracodelens.disableCodeLens",
+          "group": "1_analysis@3",
+          "when": "resourceExtname == .py && config.doracodelens.enableCodeLens"
+        },
+        {
+          "command": "doracodelens.analyzeDatabaseSchema",
+          "group": "2_database@1",
+          "when": "resourceExtname == .py"
+        },
+        {
+          "command": "doracodelens.analyzeGitAnalytics",
+          "group": "3_git@1",
+          "when": "resourceExtname == .py"
+        },
+        {
+          "command": "doracodelens.jsonFormat",
+          "group": "4_json@1",
+          "when": "resourceExtname == .json || (resourceExtname == .py && editorHasSelection)"
+        },
+        {
+          "command": "doracodelens.jsonTreeView",
+          "group": "4_json@2",
+          "when": "resourceExtname == .json || (resourceExtname == .py && editorHasSelection)"
+        },
+        {
+          "command": "doracodelens.jsonFix",
+          "group": "4_json@3",
+          "when": "resourceExtname == .json || (resourceExtname == .py && editorHasSelection)"
+        },
+        {
+          "command": "doracodelens.jsonMinify",
+          "group": "4_json@4",
+          "when": "resourceExtname == .json || (resourceExtname == .py && editorHasSelection)"
+        },
+        {
+          "command": "doracodelens.openSettings",
+          "group": "4_config@1",
+          "when": "resourceExtname == .py"
+        },
+        {
+          "command": "doracodelens.setupPythonPath",
+          "group": "4_config@2",
+          "when": "resourceExtname == .py"
+        },
+        {
+          "command": "doracodelens.detectPythonPath",
+          "group": "4_config@3",
+          "when": "resourceExtname == .py"
+        },
+        {
+          "command": "doracodelens.refreshSidebar",
+          "group": "5_refresh@1",
+          "when": "resourceExtname == .py"
+        },
+        {
+          "command": "doracodelens.clearCache",
+          "group": "5_refresh@2",
+          "when": "resourceExtname == .py"
         }
       ],
       "explorer/context": [
         {
-          "submenu": "doracodelens.contextMenu",
-          "group": "navigation"
-        }
-      ],
-      "doracodelens.contextMenu": [
-        {
-          "command": "doracodelens.analyzeFullCode",
-          "group": "analyze@1",
+          "command": "doracodelens.analyzeCurrentFile",
+          "group": "1_doracodelens_analysis@1",
           "when": "resourceLangId == python"
         },
         {
-          "command": "doracodelens.analyzeCurrentFile",
-          "group": "analyze@2",
+          "command": "doracodelens.analyzeFullCode",
+          "group": "1_doracodelens_analysis@2",
           "when": "resourceLangId == python"
         },
         {
           "command": "doracodelens.enableCodeLens",
-          "group": "analyze@3",
+          "group": "1_doracodelens_analysis@3",
           "when": "resourceLangId == python && !doracodelens.codeLensEnabled"
         },
         {
           "command": "doracodelens.disableCodeLens",
-          "group": "analyze@3",
+          "group": "1_doracodelens_analysis@3",
           "when": "resourceLangId == python && doracodelens.codeLensEnabled"
         },
         {
           "command": "doracodelens.analyzeDatabaseSchema",
-          "group": "database@1",
+          "group": "2_doracodelens_database@1",
           "when": "resourceLangId == python"
         },
         {
           "command": "doracodelens.analyzeGitAnalytics",
-          "group": "git@1"
-        },
-        {
-          "command": "doracodelens.jsonFormat",
-          "group": "json@1",
-          "when": "doracodelens.jsonContext"
-        },
-        {
-          "command": "doracodelens.jsonTreeView",
-          "group": "json@2",
-          "when": "doracodelens.jsonContext"
-        },
-        {
-          "command": "doracodelens.jsonFix",
-          "group": "json@3",
-          "when": "doracodelens.jsonContext"
-        },
-        {
-          "command": "doracodelens.jsonMinify",
-          "group": "json@4",
-          "when": "doracodelens.jsonContext"
+          "group": "3_doracodelens_git@1"
         },
         {
           "command": "doracodelens.setupPythonPath",
-          "group": "setup@1"
+          "group": "5_doracodelens_others@1"
         },
         {
           "command": "doracodelens.detectPythonPath",
-          "group": "setup@2"
+          "group": "5_doracodelens_others@2"
         },
         {
           "command": "doracodelens.openSettings",
-          "group": "setup@3"
+          "group": "5_doracodelens_others@3"
+        },
+        {
+          "command": "doracodelens.clearCache",
+          "group": "5_doracodelens_others@4"
         }
       ],
       "editor/title": [
@@ -359,6 +417,12 @@
         "icon": "$(clear-all)"
       },
       {
+        "command": "doracodelens.clearRecentAnalysis",
+        "title": "Clear Recent Analysis",
+        "category": "DoraCodeLens",
+        "icon": "$(clear-all)"
+      },
+      {
         "command": "doracodelens.cancelAnalysis",
         "title": "Cancel Analysis",
         "category": "DoraCodeLens",
@@ -405,13 +469,13 @@
       },
       {
         "command": "doracodelens.enableCodeLens",
-        "title": "Code Lens (On)",
+        "title": "Enable Code Lens Inline",
         "category": "DoraCodeLens",
         "icon": "$(eye)"
       },
       {
         "command": "doracodelens.disableCodeLens",
-        "title": "Code Lens (Off)",
+        "title": "Disable Code Lens Inline",
         "category": "DoraCodeLens",
         "icon": "$(eye-closed)"
       },

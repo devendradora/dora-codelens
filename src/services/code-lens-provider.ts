@@ -6,6 +6,7 @@ import {
 } from "./code-lens-suggestion-engine";
 import { CodePatternAnalyzer } from "./code-pattern-analyzer";
 import { SuggestionDisplayManager } from "./suggestion-display-manager";
+import { BackgroundAnalysisManager, AnalysisResult } from "./background-analysis-manager";
 
 /**
  * Interface for enhanced code lens data
@@ -82,12 +83,14 @@ export class DoraCodeLensProvider implements vscode.CodeLensProvider {
   private patternAnalyzer: CodePatternAnalyzer;
   private displayManager: SuggestionDisplayManager | null = null;
   private guidanceManager: any = null; // Will be set by the guidance system
+  private backgroundAnalysisManager: BackgroundAnalysisManager;
 
   private constructor(errorHandler: ErrorHandler) {
     this.errorHandler = errorHandler;
     this.config = this.getDefaultConfig();
     this.suggestionEngine = CodeLensSuggestionEngine.getInstance(errorHandler);
     this.patternAnalyzer = CodePatternAnalyzer.getInstance(errorHandler);
+    this.backgroundAnalysisManager = BackgroundAnalysisManager.getInstance(errorHandler);
   }
 
   public static getInstance(errorHandler?: ErrorHandler): DoraCodeLensProvider {
@@ -252,8 +255,25 @@ export class DoraCodeLensProvider implements vscode.CodeLensProvider {
         }
       }
 
-      // Find analysis data for this document
-      const fileAnalysis = this.findFileAnalysis(documentPath);
+      // Try to get background analysis first
+      let fileAnalysis = this.findFileAnalysis(documentPath);
+      
+      if (!fileAnalysis) {
+        // Try to get from background analysis manager
+        try {
+          const backgroundResult = await this.backgroundAnalysisManager.analyzeFileInBackground(document);
+          if (backgroundResult.status === 'success') {
+            fileAnalysis = this.convertBackgroundResultToAnalysisFormat(backgroundResult);
+          }
+        } catch (error) {
+          this.errorHandler.logError(
+            `Background analysis failed for ${documentPath}`,
+            error,
+            "DoraCodeLensProvider"
+          );
+        }
+      }
+      
       if (!fileAnalysis) {
         // When no analysis data is available, show placeholder complexity indicators
         // This provides a GitLens-like experience where code lens is always visible
@@ -849,6 +869,71 @@ export class DoraCodeLensProvider implements vscode.CodeLensProvider {
   }
 
   /**
+   * Convert background analysis result to the format expected by existing code
+   */
+  private convertBackgroundResultToAnalysisFormat(result: AnalysisResult): any {
+    return {
+      functions: result.functions,
+      classes: result.classes,
+      complexity: result.complexity,
+      file_path: result.filePath,
+      path: result.filePath
+    };
+  }
+
+  /**
+   * Create placeholder complexity indicators when no analysis data is available
+   */
+  private createPlaceholderComplexityIndicators(document: vscode.TextDocument): vscode.CodeLens[] {
+    const codeLenses: vscode.CodeLens[] = [];
+    const text = document.getText();
+    const lines = text.split('\n');
+    
+    // Find function and class definitions using simple regex
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+      
+      // Match function definitions
+      const functionMatch = trimmedLine.match(/^def\s+(\w+)\s*\(/);
+      if (functionMatch) {
+        const functionName = functionMatch[1];
+        const range = new vscode.Range(i, 0, i, 0);
+        
+        // Create placeholder code lens with analyzing indicator
+        const placeholderCodeLens = new vscode.CodeLens(range, {
+          title: "🔄 Analyzing complexity...",
+          command: "doracodelens.analyzeCurrentFile",
+          arguments: [],
+          tooltip: `Click to analyze ${functionName} complexity`
+        });
+        
+        codeLenses.push(placeholderCodeLens);
+        continue;
+      }
+      
+      // Match class definitions
+      const classMatch = trimmedLine.match(/^class\s+(\w+).*:/);
+      if (classMatch) {
+        const className = classMatch[1];
+        const range = new vscode.Range(i, 0, i, 0);
+        
+        // Create placeholder code lens with analyzing indicator
+        const placeholderCodeLens = new vscode.CodeLens(range, {
+          title: "🔄 Analyzing class...",
+          command: "doracodelens.analyzeCurrentFile",
+          arguments: [],
+          tooltip: `Click to analyze ${className} complexity`
+        });
+        
+        codeLenses.push(placeholderCodeLens);
+      }
+    }
+    
+    return codeLenses;
+  }
+
+  /**
    * Check if code lens is enabled
    */
   public isCodeLensEnabled(): boolean {
@@ -1194,20 +1279,12 @@ export class DoraCodeLensProvider implements vscode.CodeLensProvider {
     );
     prompts.push(analyzeCurrentFilePrompt);
 
-    // Full project analysis prompt
-    const analyzeFullProjectPrompt = new vscode.CodeLens(
-      new vscode.Range(1, 0, 1, 0),
-      {
-        title: "$(project) Analyze Full Project",
-        command: "doracodelens.analyzeFullCode",
-        tooltip: "Run comprehensive analysis for the entire project",
-      }
-    );
-    prompts.push(analyzeFullProjectPrompt);
+    // Note: Removed "analyze full project" code lens from file tops as per requirements
+    // Users can access full project analysis through the context menu or command palette
 
     // Python setup prompt
     const pythonSetupPrompt = new vscode.CodeLens(
-      new vscode.Range(2, 0, 2, 0),
+      new vscode.Range(1, 0, 1, 0),
       {
         title: "$(tools) Setup Python Path",
         command: "doracodelens.setupPythonPath",
@@ -1217,7 +1294,7 @@ export class DoraCodeLensProvider implements vscode.CodeLensProvider {
     prompts.push(pythonSetupPrompt);
 
     // Settings prompt
-    const settingsPrompt = new vscode.CodeLens(new vscode.Range(3, 0, 3, 0), {
+    const settingsPrompt = new vscode.CodeLens(new vscode.Range(2, 0, 2, 0), {
       title: "$(gear) Configure Settings",
       command: "doracodelens.openSettings",
       tooltip: "Configure DoraCodeLens analysis and code lens settings",
@@ -1227,58 +1304,7 @@ export class DoraCodeLensProvider implements vscode.CodeLensProvider {
     return prompts;
   }
 
-  /**
-   * Create placeholder complexity indicators for functions/classes when no analysis data is available
-   * This provides a GitLens-like experience where code lens is always visible
-   * Analysis is triggered automatically by the AnalysisManager when files are opened
-   */
-  private createPlaceholderComplexityIndicators(document: vscode.TextDocument): vscode.CodeLens[] {
-    const codeLenses: vscode.CodeLens[] = [];
-    const text = document.getText();
-    const lines = text.split('\n');
 
-    // Find all function and class definitions
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const trimmedLine = line.trim();
-
-      // Check for function definitions
-      if (trimmedLine.startsWith('def ') && trimmedLine.includes('(')) {
-        const functionMatch = trimmedLine.match(/def\s+(\w+)\s*\(/);
-        if (functionMatch) {
-          const functionName = functionMatch[1];
-          const range = new vscode.Range(i, 0, i, 0);
-          
-          const placeholderCodeLens = new vscode.CodeLens(range, {
-            title: "$(loading~spin) Analyzing complexity...",
-            command: "doracodelens.showFunctionDetails",
-            arguments: [{ name: functionName, complexity: 0 }, document.uri],
-            tooltip: `Function: ${functionName}\nAnalysis in progress...`
-          });
-          codeLenses.push(placeholderCodeLens);
-        }
-      }
-
-      // Check for class definitions
-      if (trimmedLine.startsWith('class ') && trimmedLine.includes(':')) {
-        const classMatch = trimmedLine.match(/class\s+(\w+)/);
-        if (classMatch) {
-          const className = classMatch[1];
-          const range = new vscode.Range(i, 0, i, 0);
-          
-          const placeholderCodeLens = new vscode.CodeLens(range, {
-            title: "$(loading~spin) Analyzing class...",
-            command: "doracodelens.showClassDetails",
-            arguments: [{ name: className, complexity: 0 }, document.uri],
-            tooltip: `Class: ${className}\nAnalysis in progress...`
-          });
-          codeLenses.push(placeholderCodeLens);
-        }
-      }
-    }
-
-    return codeLenses;
-  }
 
   private analysisRunningFiles: Set<string> = new Set();
 
@@ -1529,6 +1555,14 @@ export class CodeLensManager {
       "doracodelens.codeLensEnabled",
       false
     );
+    
+    // Always set the context key to ensure menu visibility works correctly
+    vscode.commands.executeCommand(
+      "setContext",
+      "doracodelens.codeLensEnabled",
+      enabled
+    );
+    
     if (enabled) {
       this.enableCodeLens();
     }

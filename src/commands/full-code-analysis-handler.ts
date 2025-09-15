@@ -58,6 +58,7 @@ export class FullCodeAnalysisHandler {
     return this.duplicateCallGuard.executeWithProtection(
       FullCodeAnalysisHandler.COMMAND_ID,
       async () => {
+        const startTime = Date.now();
         this.errorHandler.logError(
           "Starting full code analysis",
           options,
@@ -172,6 +173,20 @@ export class FullCodeAnalysisHandler {
                 FullCodeAnalysisHandler.COMMAND_ID
               );
 
+              // Notify sidebar of completed analysis
+              const duration = Date.now() - startTime;
+              try {
+                const commandManager = await import('../core/command-manager');
+                const manager = commandManager.CommandManager.getInstance();
+                manager.notifyAnalysisCompleted('full', 'success', duration);
+              } catch (notificationError) {
+                this.errorHandler.logError(
+                  "Failed to notify sidebar of analysis completion",
+                  notificationError,
+                  FullCodeAnalysisHandler.COMMAND_ID
+                );
+              }
+
               // Show results in dedicated webview
               try {
                 this.webviewManager.showFullCodeAnalysis(validatedResult);
@@ -220,6 +235,20 @@ export class FullCodeAnalysisHandler {
             error,
             FullCodeAnalysisHandler.COMMAND_ID
           );
+
+          // Notify sidebar of failed analysis
+          const duration = Date.now() - startTime;
+          try {
+            const commandManager = await import('../core/command-manager');
+            const manager = commandManager.CommandManager.getInstance();
+            manager.notifyAnalysisCompleted('full', 'error', duration);
+          } catch (notificationError) {
+            this.errorHandler.logError(
+              "Failed to notify sidebar of analysis failure",
+              notificationError,
+              FullCodeAnalysisHandler.COMMAND_ID
+            );
+          }
 
           // Show user-friendly error
           this.errorHandler.showUserError(

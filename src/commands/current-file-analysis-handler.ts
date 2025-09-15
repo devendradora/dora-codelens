@@ -81,6 +81,7 @@ export class CurrentFileAnalysisHandler {
     return this.duplicateCallGuard.executeWithProtection(
       CurrentFileAnalysisHandler.COMMAND_ID,
       async () => {
+        const startTime = Date.now();
         this.errorHandler.logError('Starting current file analysis', options, CurrentFileAnalysisHandler.COMMAND_ID);
         
         // Update state
@@ -121,12 +122,40 @@ export class CurrentFileAnalysisHandler {
             
             this.errorHandler.logError('Current file analysis completed successfully', null, CurrentFileAnalysisHandler.COMMAND_ID);
             
+            // Notify sidebar of completed analysis
+            const duration = Date.now() - startTime;
+            try {
+              const commandManager = await import('../core/command-manager');
+              const manager = commandManager.CommandManager.getInstance();
+              manager.notifyAnalysisCompleted('current-file', 'success', duration, currentFile, validatedResult);
+            } catch (notificationError) {
+              this.errorHandler.logError(
+                "Failed to notify sidebar of analysis completion",
+                notificationError,
+                CurrentFileAnalysisHandler.COMMAND_ID
+              );
+            }
+            
             // Show results in dedicated webview
             try {
               this.webviewManager.showCurrentFileAnalysis(validatedResult, currentFile);
             } catch (webviewError) {
               this.errorHandler.logError('Failed to show webview, analysis completed but display failed', webviewError, CurrentFileAnalysisHandler.COMMAND_ID);
               vscode.window.showWarningMessage('Analysis completed but failed to display results. Check the output for details.');
+            }
+            
+            // Update code lens with analysis data
+            try {
+              vscode.commands.executeCommand(
+                "doracodelens.updateCodeLensData",
+                validatedResult
+              );
+            } catch (codeLensError) {
+              this.errorHandler.logError(
+                "Failed to update code lens data",
+                codeLensError,
+                CurrentFileAnalysisHandler.COMMAND_ID
+              );
             }
             
             // Show success message
@@ -143,6 +172,20 @@ export class CurrentFileAnalysisHandler {
         } catch (error) {
           this.stateManager.incrementErrorCount();
           this.errorHandler.logError('Current file analysis failed', error, CurrentFileAnalysisHandler.COMMAND_ID);
+          
+          // Notify sidebar of failed analysis
+          const duration = Date.now() - startTime;
+          try {
+            const commandManager = await import('../core/command-manager');
+            const manager = commandManager.CommandManager.getInstance();
+            manager.notifyAnalysisCompleted('current-file', 'error', duration);
+          } catch (notificationError) {
+            this.errorHandler.logError(
+              "Failed to notify sidebar of analysis failure",
+              notificationError,
+              CurrentFileAnalysisHandler.COMMAND_ID
+            );
+          }
           
           // Show user-friendly error
           this.errorHandler.showUserError(

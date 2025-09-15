@@ -89,7 +89,7 @@ export class DatabaseSchemaWebview {
    * Update webview content
    */
   private updateContent(schemaData: any): void {
-    if (!this.panel) return;
+    if (!this.panel) {return;}
 
     try {
       const html = this.generateHTML(schemaData);
@@ -801,6 +801,10 @@ export class DatabaseSchemaWebview {
           label: "data(label)",
           "font-size": "10px",
           "text-rotation": "autorotate",
+          color: "#ffffff",
+          "text-background-color": "rgba(0, 0, 0, 0.7)",
+          "text-background-opacity": 1,
+          "text-background-padding": "2px",
         },
       },
       // Highlighted edges
@@ -2014,7 +2018,7 @@ export class DatabaseSchemaWebview {
    * Show error in webview
    */
   private showError(message: string): void {
-    if (!this.panel) return;
+    if (!this.panel) {return;}
 
     const html = `
       <!DOCTYPE html>
