@@ -118,27 +118,63 @@ export class CurrentFileAnalysisWebview {
     const cssUri = webview.asWebviewUri(
       vscode.Uri.file(path.join(this.extensionPath, "resources", "webview.css"))
     );
-    const chartJsUri = webview.asWebviewUri(
-      vscode.Uri.file(
-        path.join(
-          this.extensionPath,
-          "node_modules",
-          "chart.js",
-          "dist",
-          "chart.umd.min.js"
-        )
-      )
+    // Try multiple possible paths for Chart.js in production vs development
+    let chartJsUri;
+    const possibleChartJsPaths = [
+      path.join(
+        this.extensionPath,
+        "node_modules",
+        "chart.js",
+        "dist",
+        "chart.umd.min.js"
+      ),
+      path.join(
+        this.extensionPath,
+        "node_modules",
+        "chart.js",
+        "dist",
+        "chart.min.js"
+      ),
+      path.join(this.extensionPath, "resources", "chart.min.js"), // fallback location
+    ];
+
+    // Use the first path that exists, or default to the first one
+    chartJsUri = webview.asWebviewUri(vscode.Uri.file(possibleChartJsPaths[0]));
+    // Try multiple possible paths for Cytoscape in production vs development
+    let cytoscapeUri;
+    const possibleCytoscapePaths = [
+      path.join(
+        this.extensionPath,
+        "node_modules",
+        "cytoscape",
+        "dist",
+        "cytoscape.min.js"
+      ),
+      path.join(
+        this.extensionPath,
+        "node_modules",
+        "cytoscape",
+        "dist",
+        "cytoscape.js"
+      ),
+      path.join(this.extensionPath, "resources", "cytoscape.min.js"), // fallback location
+    ];
+
+    // Use the first path that exists, or default to the first one
+    cytoscapeUri = webview.asWebviewUri(
+      vscode.Uri.file(possibleCytoscapePaths[0])
     );
-    const cytoscapeUri = webview.asWebviewUri(
-      vscode.Uri.file(
-        path.join(
-          this.extensionPath,
-          "node_modules",
-          "cytoscape",
-          "dist",
-          "cytoscape.min.js"
-        )
-      )
+
+    // Debug logging for resource URIs
+    this.errorHandler.logError(
+      "Webview resource URIs generated",
+      {
+        cssUri: cssUri.toString(),
+        chartJsUri: chartJsUri.toString(),
+        cytoscapeUri: cytoscapeUri.toString(),
+        extensionPath: this.extensionPath,
+      },
+      "CurrentFileAnalysisWebview"
     );
 
     // Generate tab contents
@@ -154,10 +190,14 @@ export class CurrentFileAnalysisWebview {
         <link rel="stylesheet" href="${cssUri}">
         <meta http-equiv="Content-Security-Policy" content="
           default-src 'none';
-          img-src ${webview.cspSource} https: data:;
-          script-src ${webview.cspSource} 'unsafe-inline' 'unsafe-eval';
-          style-src ${webview.cspSource} 'unsafe-inline';
-          font-src ${webview.cspSource} https:;
+          img-src ${webview.cspSource} https: data: blob:;
+          script-src ${
+            webview.cspSource
+          } 'unsafe-inline' 'unsafe-eval' blob: data:;
+          style-src ${webview.cspSource} 'unsafe-inline' blob: data:;
+          font-src ${webview.cspSource} https: data:;
+          connect-src ${webview.cspSource} https: data: blob:;
+          worker-src ${webview.cspSource} blob: data:;
         ">
         <style>
           ${this.generateStyles()}
@@ -252,8 +292,48 @@ export class CurrentFileAnalysisWebview {
         </div>
 
         <!-- Scripts -->
-        <script src="${chartJsUri}"></script>
-        <script src="${cytoscapeUri}"></script>
+        <script src="${chartJsUri}" onerror="console.error('Failed to load Chart.js')"></script>
+        <script src="${cytoscapeUri}" onerror="console.error('Failed to load Cytoscape.js'); window.cytoscapeLoadFailed = true;"></script>
+        <script>
+          // Fallback Cytoscape loading
+          window.cytoscapeLoadAttempts = 0;
+          window.cytoscapeLoadFailed = false;
+          
+          // Enhanced debugging for production issues
+          console.log('[Debug] Script loading started');
+          console.log('[Debug] User agent:', navigator.userAgent);
+          console.log('[Debug] VS Code webview context:', typeof acquireVsCodeApi !== 'undefined');
+          
+          // Check script loading status
+          function checkScriptLoading() {
+            console.log('[Debug] Script loading status:', {
+              chartJs: typeof Chart !== 'undefined',
+              cytoscape: typeof cytoscape !== 'undefined',
+              cytoscapeLoadFailed: window.cytoscapeLoadFailed
+            });
+          }
+          
+          // Check immediately and after delays
+          checkScriptLoading();
+          setTimeout(checkScriptLoading, 1000);
+          setTimeout(checkScriptLoading, 3000);
+          
+          // Check if Cytoscape loaded after a delay
+          setTimeout(() => {
+            if (typeof cytoscape === 'undefined' && !window.cytoscapeLoadFailed) {
+              console.warn('[Fallback] Cytoscape not detected after 2s, marking as failed');
+              window.cytoscapeLoadFailed = true;
+            }
+          }, 2000);
+          
+          // Additional fallback check
+          setTimeout(() => {
+            if (typeof cytoscape === 'undefined') {
+              console.error('[Fallback] Cytoscape definitely failed to load after 5s');
+              window.cytoscapeLoadFailed = true;
+            }
+          }, 5000);
+        </script>
         <script>
           const vscode = acquireVsCodeApi();
           const analysisData = ${JSON.stringify(analysisData)};
@@ -262,11 +342,60 @@ export class CurrentFileAnalysisWebview {
           // Initialize when DOM is ready
           document.addEventListener('DOMContentLoaded', function() {
             console.log('[DOM] DOM content loaded, initializing...');
+            console.log('[DOM] Analysis data available:', {
+              hasAnalysisData: !!analysisData,
+              analysisDataKeys: analysisData ? Object.keys(analysisData) : null,
+              filePath: filePath
+            });
             initializeTabs();
             
             // Initialize charts immediately since they're now in the file overview tab
             console.log('[DOM] Initializing charts immediately');
             initializeCharts();
+            
+            // Set up a watchdog timer to detect stuck mind map initialization
+            setTimeout(() => {
+              const loadingElement = document.getElementById('graph-loading');
+              const container = document.getElementById('enhanced-graph');
+              
+              if (loadingElement && loadingElement.style.display !== 'none' && 
+                  container && container.style.display !== 'block' && 
+                  !window.mindMapInitialized) {
+                console.warn('[Watchdog] Mind map appears to be stuck, adding retry button');
+                
+                // Add a retry button to the loading state
+                const retryButton = document.createElement('button');
+                retryButton.textContent = '🔄 Retry Mind Map';
+                retryButton.style.cssText = 'margin-top: 16px; padding: 8px 16px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; cursor: pointer;';
+                retryButton.onclick = () => {
+                  console.log('[Watchdog] Manual retry triggered');
+                  window.cytoscapeLoadAttempts = 0;
+                  window.mindMapInitialized = false;
+                  window.cytoscapeLoadFailed = false;
+                  
+                  // Reset loading state
+                  const loadingElement = document.getElementById('graph-loading');
+                  const container = document.getElementById('enhanced-graph');
+                  if (loadingElement) loadingElement.style.display = 'block';
+                  if (container) {
+                    container.style.display = 'none';
+                    container.innerHTML = '';
+                  }
+                  
+                  // Remove retry button
+                  const existingRetryBtn = document.getElementById('retry-button');
+                  if (existingRetryBtn) existingRetryBtn.remove();
+                  
+                  initializeMindMap();
+                };
+                
+                const loadingMessage = document.getElementById('loading-message');
+                if (loadingMessage && !document.getElementById('retry-button')) {
+                  retryButton.id = 'retry-button';
+                  loadingMessage.parentNode.appendChild(retryButton);
+                }
+              }
+            }, 10000); // Check after 10 seconds
           });
           
           function initializeTabs() {
@@ -502,15 +631,144 @@ export class CurrentFileAnalysisWebview {
             });
           }
           
+          function showMindMapFallback() {
+            console.log('[MindMap] Showing fallback text-based view');
+            
+            const container = document.getElementById('enhanced-graph');
+            const loadingElement = document.getElementById('graph-loading');
+            
+            if (!container || !loadingElement) {
+              console.error('[MindMap] Container elements not found for fallback');
+              return;
+            }
+            
+            // Hide loading
+            loadingElement.style.display = 'none';
+            
+            // Generate fallback content
+            const fallbackContent = generateFallbackMindMap(analysisData);
+            
+            container.innerHTML = fallbackContent;
+            container.style.display = 'block';
+            container.style.padding = '20px';
+            container.style.background = 'var(--vscode-editor-background)';
+            container.style.border = '1px solid var(--vscode-panel-border)';
+            container.style.borderRadius = '8px';
+            container.style.maxHeight = '600px';
+            container.style.overflowY = 'auto';
+            
+            console.log('[MindMap] Fallback view displayed');
+          }
+          
+          function generateFallbackMindMap(data) {
+            let html = '<div style="font-family: var(--vscode-font-family); color: var(--vscode-foreground);">';
+            html += '<div style="background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); padding: 8px 12px; border-radius: 4px; margin-bottom: 16px; font-size: 12px;">⚠️ Interactive graph unavailable - showing text-based structure</div>';
+            
+            const fileName = filePath ? filePath.split('/').pop() : 'Current File';
+            html += '<div style="margin-bottom: 20px;">';
+            html += '<div style="font-size: 18px; font-weight: bold; color: var(--vscode-textLink-foreground); margin-bottom: 8px;">📄 ' + fileName + '</div>';
+            
+            // Add classes and methods
+            if (data.complexity_metrics && data.complexity_metrics.class_complexities) {
+              data.complexity_metrics.class_complexities.forEach(cls => {
+                const methods = cls.methods || [];
+                let avgComplexity = 0;
+                if (methods.length > 0) {
+                  const totalComplexity = methods.reduce((sum, method) => {
+                    return sum + (method.complexity?.cyclomatic || 0);
+                  }, 0);
+                  avgComplexity = totalComplexity / methods.length;
+                }
+                
+                html += '<div style="margin-left: 20px; margin-bottom: 12px;">';
+                html += '<div style="font-size: 16px; font-weight: 600; color: var(--vscode-symbolIcon-classForeground); margin-bottom: 4px;">🏛️ ' + (cls.name || 'Unknown Class') + ' <span style="font-size: 12px; color: var(--vscode-descriptionForeground);">(avg complexity: ' + avgComplexity.toFixed(1) + ')</span></div>';
+                
+                methods.forEach(method => {
+                  const complexity = method.complexity?.cyclomatic || 0;
+                  const complexityColor = complexity <= 5 ? 'var(--vscode-testing-iconPassed)' : 
+                                        complexity <= 10 ? 'var(--vscode-testing-iconQueued)' : 'var(--vscode-testing-iconFailed)';
+                  
+                  html += '<div style="margin-left: 40px; margin-bottom: 2px; font-size: 14px;">';
+                  html += '<span style="color: var(--vscode-symbolIcon-methodForeground);">🔧</span> ';
+                  html += '<span style="color: var(--vscode-foreground);">' + (method.name || 'Unknown Method') + '</span>';
+                  html += '<span style="margin-left: 8px; font-size: 11px; color: ' + complexityColor + ';">complexity: ' + complexity + '</span>';
+                  html += '</div>';
+                });
+                
+                html += '</div>';
+              });
+            }
+            
+            // Add standalone functions
+            if (data.complexity_metrics && data.complexity_metrics.function_complexities) {
+              const methodNames = new Set();
+              if (data.complexity_metrics.class_complexities) {
+                data.complexity_metrics.class_complexities.forEach(cls => {
+                  if (cls.methods) {
+                    cls.methods.forEach(method => {
+                      methodNames.add(method.name);
+                    });
+                  }
+                });
+              }
+              
+              const standaloneFunctions = data.complexity_metrics.function_complexities.filter(func => 
+                !methodNames.has(func.name)
+              );
+              
+              if (standaloneFunctions.length > 0) {
+                html += '<div style="margin-left: 20px; margin-bottom: 12px;">';
+                html += '<div style="font-size: 16px; font-weight: 600; color: var(--vscode-symbolIcon-functionForeground); margin-bottom: 4px;">⚙️ Standalone Functions</div>';
+                
+                standaloneFunctions.forEach(func => {
+                  const complexity = func.complexity?.cyclomatic || func.complexity?.complexity || 0;
+                  const complexityColor = complexity <= 5 ? 'var(--vscode-testing-iconPassed)' : 
+                                        complexity <= 10 ? 'var(--vscode-testing-iconQueued)' : 'var(--vscode-testing-iconFailed)';
+                  
+                  html += '<div style="margin-left: 40px; margin-bottom: 2px; font-size: 14px;">';
+                  html += '<span style="color: var(--vscode-symbolIcon-functionForeground);">🔧</span> ';
+                  html += '<span style="color: var(--vscode-foreground);">' + (func.name || 'Unknown Function') + '</span>';
+                  html += '<span style="margin-left: 8px; font-size: 11px; color: ' + complexityColor + ';">complexity: ' + complexity + '</span>';
+                  html += '</div>';
+                });
+                
+                html += '</div>';
+              }
+            }
+            
+            html += '</div>';
+            html += '</div>';
+            
+            return html;
+          }
+          
           function initializeMindMap() {
             console.log('[MindMap] Initializing mind map...');
             
+            // Initialize retry counter if not exists
+            if (!window.cytoscapeLoadAttempts) {
+              window.cytoscapeLoadAttempts = 0;
+            }
+            
+            window.cytoscapeLoadAttempts++;
+            console.log('[MindMap] Attempt #' + window.cytoscapeLoadAttempts);
+            
             // Check if Cytoscape is available
-            if (typeof cytoscape === 'undefined') {
-              console.log('[MindMap] Cytoscape not loaded yet, retrying...');
-              setTimeout(initializeMindMap, 100);
+            if (typeof cytoscape === 'undefined' || window.cytoscapeLoadFailed) {
+              console.log('[MindMap] Cytoscape not available...');
+              
+              if (window.cytoscapeLoadAttempts > 25 || window.cytoscapeLoadFailed) {
+                console.error('[MindMap] Cytoscape failed to load, showing fallback');
+                showMindMapFallback();
+                return;
+              }
+              
+              console.log('[MindMap] Retrying in 200ms...');
+              setTimeout(initializeMindMap, 200);
               return;
             }
+            
+            console.log('[MindMap] Cytoscape loaded successfully!');
             
             const container = document.getElementById('enhanced-graph');
             const loadingElement = document.getElementById('graph-loading');
@@ -558,15 +816,22 @@ export class CurrentFileAnalysisWebview {
             }, 100);
             
             try {
+              console.log('[MindMap] Generating graph data...');
               const graphData = generateMindMapData(analysisData);
               
               if (loadingCancelled) return;
               
               if (!graphData.nodes.length) {
+                console.log('[MindMap] No graph data available');
                 clearInterval(progressInterval);
                 showMindMapEmptyState();
                 return;
               }
+              
+              console.log('[MindMap] Graph data generated:', {
+                nodes: graphData.nodes.length,
+                edges: graphData.edges.length
+              });
               
               // Update performance info
               const dataSize = (graphData.nodes.length + graphData.edges.length);
@@ -577,7 +842,9 @@ export class CurrentFileAnalysisWebview {
                 document.getElementById('optimization-mode').textContent = dataSize > 100 ? 'Performance' : 'Standard';
               }
               
-              // Create Cytoscape instance
+              console.log('[MindMap] Creating Cytoscape instance...');
+              
+              // Create Cytoscape instance with error handling
               const cy = cytoscape({
                 container: container,
                 elements: graphData,
@@ -713,7 +980,14 @@ export class CurrentFileAnalysisWebview {
             } catch (error) {
               clearInterval(progressInterval);
               console.error('[MindMap] Error initializing mind map:', error);
-              showMindMapErrorState('Failed to initialize mind map: ' + error.message);
+              
+              // If Cytoscape fails, show fallback
+              if (error.message && (error.message.includes('cytoscape') || error.message.includes('Cytoscape'))) {
+                console.log('[MindMap] Cytoscape error detected, showing fallback');
+                showMindMapFallback();
+              } else {
+                showMindMapErrorState('Failed to initialize mind map: ' + error.message);
+              }
             }
           }
           
