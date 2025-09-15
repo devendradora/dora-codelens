@@ -2,6 +2,15 @@
 
 ![DoraCodeLens](https://github.com/devendradora/dora-codelens/blob/main/resources/dora-code-lens-kiro.png?raw=true)
 
+
+
+### Note to the judges
+
+cytoscape for mindmap is not loading on marketplace vs code extension, so please clone https://github.com/devendradora/dora-codelens
+
+Click on Run on vs code or kiro > Start Debugging 
+
+
 Every developer knows the pain of diving into an unfamiliar codebase — endless scrolling, manual tracing, and juggling scattered tools. We wanted to replace that friction with clarity: a single workspace inside VS Code where a Python project comes alive as a visual mind map.
 
 That’s how DoraCodeLens was born.
