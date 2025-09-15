@@ -11,7 +11,7 @@
   },
   "displayName": "DoraCodeLens",
   "description": "A VS Code super-power for Python devs. It builds mind maps of modules, classes, functions with complexity scores, sketches DB diagrams and JSON tools - making code exploration visual & lightning-fast.",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "publisher": "DevendraDora",
   "icon": "resources/dora-code-lens-kiro.png",
   "repository": {
