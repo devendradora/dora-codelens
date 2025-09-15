@@ -134,7 +134,7 @@ export class ErrorHandler {
       if (error instanceof Error) {
         errorDetails = `\nError: ${error.message}\nStack: ${error.stack}`;
       } else {
-        errorDetails = `\nError Details: ${JSON.stringify(error, null, 2)}`;
+        errorDetails = `\nDetails: ${JSON.stringify(error, null, 2)}`;
       }
     }
 

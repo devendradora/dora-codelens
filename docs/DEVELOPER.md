@@ -621,6 +621,10 @@ export class JsonTreeViewProvider {
 
 #### Enhanced Command Registration
 
+The extension uses a centralized CommandManager to prevent duplicate command registration issues. All commands are registered through a single manager that tracks registered commands and prevents conflicts.
+
+**Key Architectural Improvement**: The duplicate command registration issue between CommandManager and SidebarContentProvider has been resolved by removing command registration from the sidebar and centralizing all command management.
+
 The extension registers comprehensive commands for all DoraCodeLens features as defined in package.json:
 
 ```typescript

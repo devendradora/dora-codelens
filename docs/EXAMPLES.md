@@ -83,7 +83,18 @@ This document provides detailed examples and visual guides for using DoraCodeLen
 - File references for each SQL statement
 - Search and filter capabilities
 
-### 8. JSON Utilities - Tree View
+### 8. Inline Code Lens Complexity Indicators
+
+**Screenshot Location**: `docs/images/inline-code-lens.png`
+**Description**: Automatic complexity indicators appearing above Python functions after current file analysis.
+
+**What to show**:
+- 🟢🟡🔴 colored circles above function definitions
+- Complexity scores and parameter counts
+- Auto-enable after current file analysis
+- Both standalone functions and class methods
+
+### 9. JSON Utilities - Tree View
 
 **Screenshot Location**: `docs/images/json-tree-view.png`
 **Description**: Expandable JSON tree structure with search functionality.
@@ -222,6 +233,64 @@ The Database Schema Analysis reveals a sophisticated e-commerce data model:
 - Module-wise contribution breakdown
 - Timeline showing development patterns
 - Identification of code ownership
+
+### Example 1.5: Inline Code Lens in Action
+
+**Scenario**: You want to see complexity indicators directly in your code while working on a Python file.
+
+**Steps**:
+1. Open any Python file with functions
+2. Right-click and select **DoraCodeLens** → **Current File Analysis**
+3. **Inline indicators automatically appear** above functions
+4. Click on indicators for detailed information
+
+**Visual Result**:
+```python
+# 🟢 2 complexity • 1 params
+def get_user(user_id):
+    return User.objects.get(id=user_id)
+
+# 🟡 6 complexity • 3 params  
+def update_user_profile(user_id, data, validate=True):
+    user = get_user(user_id)
+    if validate:
+        if not data.get('email'):
+            raise ValueError("Email required")
+        if len(data.get('name', '')) < 2:
+            raise ValueError("Name too short")
+    
+    for key, value in data.items():
+        setattr(user, key, value)
+    user.save()
+    return user
+
+# 🔴 11 complexity • 4 params
+def generate_user_report(user_id, filters, format_type, include_history):
+    # Complex function with multiple nested conditions
+    # This would show as red indicator needing refactoring
+    user = get_user(user_id)
+    
+    if not filters:
+        filters = {}
+    
+    report_data = {}
+    
+    if filters.get('activity'):
+        # Multiple nested conditions increase complexity
+        if include_history:
+            if format_type == 'detailed':
+                # More nested logic...
+                pass
+    
+    # Additional complex logic...
+    return report_data
+```
+
+**Interactive Features**:
+- **Hover Tooltips**: Show detailed complexity breakdown
+- **Click Actions**: Navigate to function definition or show suggestions
+- **Auto-Update**: Indicators refresh when file content changes
+- **Manual Toggle**: Enable/disable via context menu if needed
 
 **Sample Analysis**:
 ```

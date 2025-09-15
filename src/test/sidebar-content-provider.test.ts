@@ -30,7 +30,8 @@ suite('SidebarContentProvider Tests', () => {
     sidebarContentProvider = SidebarContentProvider.getInstance(
       errorHandler,
       stateManager,
-      backgroundAnalysisManager
+      backgroundAnalysisManager,
+      '/mock/extension/path'
     );
   });
 

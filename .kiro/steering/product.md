@@ -1,28 +1,68 @@
-# DoraCodeLens Product Overview
+---
+inclusion: always
+---
 
-DoraCodeLens is a comprehensive VS Code extension for Python project analysis and visualization. It provides static code analysis, interactive graph visualizations, and development insights through multiple specialized views.
+# DoraCodeLens Product & Development Guidelines
 
-## Core Features
+DoraCodeLens is a VS Code extension for Python project analysis and visualization, providing static code analysis, interactive graph visualizations, and development insights through specialized webviews.
 
-- **Code Analysis**: Static analysis of Python projects using AST parsing and complexity metrics
-- **Interactive Visualizations**: Graph-based project structure visualization using Cytoscape.js
-- **Framework Support**: Specialized analysis for Django, Flask, and FastAPI projects
-- **Git Analytics**: Repository analysis with contributor insights and commit timelines
-- **Database Schema Analysis**: Visual database schema graphs and relationship mapping
-- **JSON Utilities**: JSON formatting, validation, and tree view exploration
+## Core Architecture Principles
 
-## Target Users
+- **Hybrid TypeScript/Python**: Extension UI in TypeScript, analysis engine in Python
+- **Command-Driven**: All features accessible via VS Code command palette
+- **Webview-Based UI**: Analysis results displayed in tabbed webviews with interactive visualizations
+- **Singleton Managers**: Core functionality organized through singleton manager classes
+- **Error Resilience**: Graceful degradation when analysis fails, never crash the extension
 
-Primary users are Python developers working on medium to large codebases who need:
-- Project structure understanding and navigation
-- Code complexity insights and technical debt identification
-- Team collaboration insights through Git analytics
-- Database schema visualization and documentation
+## Key Features & Components
 
-## Key Value Propositions
+### Analysis Types
 
-1. **Comprehensive Analysis**: Single extension providing multiple analysis perspectives
-2. **Visual Understanding**: Interactive graphs make complex codebases more navigable
-3. **Framework Awareness**: Understands common Python web framework patterns
-4. **Team Insights**: Git analytics help understand team dynamics and code ownership
-5. **Developer Productivity**: Integrated tools reduce context switching between analysis tools
+- **Full Code Analysis**: Complete project structure and complexity analysis
+- **Current File Analysis**: Single file focused analysis with inline suggestions
+- **Git Analytics**: Repository insights, contributor analysis, commit timelines
+- **Database Schema**: Visual database relationship mapping
+- **JSON Utilities**: Formatting, validation, tree exploration
+
+### Framework Detection
+
+- Django, Flask, FastAPI automatic detection and specialized analysis
+- Framework-specific patterns and best practices recognition
+
+## Development Conventions
+
+### Code Style
+
+- **TypeScript**: PascalCase classes, camelCase functions/variables, kebab-case files
+- **Python**: snake_case everything except PascalCase classes
+- **Commands**: Prefix all commands with `doracodelens.`
+- **Error Handling**: Always use centralized ErrorHandler, never throw unhandled exceptions
+
+### Architecture Patterns
+
+- **Manager Pattern**: Core functionality in singleton managers (AnalysisManager, CommandManager)
+- **Provider Pattern**: Webview providers for different analysis types
+- **Service Layer**: Business logic in services/, UI logic in webviews/
+- **Command Handlers**: Separate handlers in commands/ for each command type
+
+### File Organization Rules
+
+- Commands go in `src/commands/` with descriptive handler names
+- Webviews go in `src/webviews/` with corresponding provider classes
+- Core infrastructure in `src/core/` (managers, error handling, state)
+- Business logic services in `src/services/`
+- Python analyzer completely separate in `analyzer/` directory
+
+### Performance Guidelines
+
+- Use caching for expensive analysis operations
+- Implement duplicate call guards for user-triggered commands
+- Background analysis should not block UI interactions
+- Webview updates should be debounced for large datasets
+
+### User Experience Principles
+
+- All analysis should provide progress feedback
+- Failed analysis should show helpful error messages
+- Commands should be discoverable through command palette
+- Webviews should handle loading and error states gracefully

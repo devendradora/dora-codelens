@@ -13,6 +13,18 @@ This guide helps you resolve common issues with DoraCodeLens features.
 3. Check that the extension is enabled in Extensions panel
 4. Verify VS Code version is 1.74.0 or higher
 
+**Recent Fix Applied**: The duplicate command registration issue that caused extension activation failures has been resolved. If you were experiencing activation problems, please restart VS Code to benefit from this fix.
+
+### Command Registration Errors (RESOLVED)
+**Previous Symptoms**: Extension failed to activate with "command already exists" errors
+
+**Resolution**: This issue has been fixed in the latest version:
+- Centralized command registration in CommandManager
+- Removed duplicate command registration from SidebarContentProvider
+- Enhanced error handling for command conflicts
+
+**If you still see this error**: Please restart VS Code and ensure you have the latest extension version.
+
 ### Analysis Takes Too Long
 **Symptoms**: Analysis seems stuck or takes more than 2-3 minutes
 

@@ -476,7 +476,7 @@ export class AnalysisErrorHandler {
      */
     private showErrorDetails(error: Error, context: AnalysisErrorContext): void {
         const details = `
-Error Details:
+Details:
 - Operation: ${context.operation}
 - File: ${context.filePath || 'N/A'}
 - Function: ${context.functionName || 'N/A'}

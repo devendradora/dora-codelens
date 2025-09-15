@@ -66,7 +66,8 @@ suite('Command Registration Fix Tests', () => {
         sidebarContentProvider = SidebarContentProvider.getInstance(
             errorHandler,
             stateManager,
-            backgroundAnalysisManager
+            backgroundAnalysisManager,
+            '/mock/extension/path'
         );
 
         // Connect command manager with sidebar content provider

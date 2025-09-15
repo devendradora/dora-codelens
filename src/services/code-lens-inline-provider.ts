@@ -101,7 +101,8 @@ export class CodeLensInlineProvider implements vscode.CodeLensProvider {
         isEnabled: this.isEnabled,
         hasAnalysisData: !!this.analysisData,
         documentPath: document.uri.fsPath,
-        analysisFilePath: this.analysisData?.analysis?.file_path,
+        analysisFilePath: this.analysisData?.analysis?.file_path || this.analysisData?.filePath || "no-analysis-data",
+        analysisDataKeys: this.analysisData ? Object.keys(this.analysisData) : [],
       },
       "CodeLensInlineProvider"
     );
@@ -114,7 +115,16 @@ export class CodeLensInlineProvider implements vscode.CodeLensProvider {
     const analysis = this.analysisData.analysis;
 
     // Check if this document matches the analyzed file
-    if (document.uri.fsPath !== analysis.file_path) {
+    const analysisFilePath = analysis.file_path || this.analysisData.filePath;
+    if (analysisFilePath && analysisFilePath !== "unknown" && document.uri.fsPath !== analysisFilePath) {
+      this.errorHandler.logError(
+        "Document path mismatch - skipping code lens",
+        {
+          documentPath: document.uri.fsPath,
+          analysisFilePath: analysisFilePath,
+        },
+        "CodeLensInlineProvider"
+      );
       return [];
     }
 
@@ -496,6 +506,22 @@ export class CodeLensManager {
     this.errorHandler = errorHandler;
     this.context = context;
     this.codeLensProvider = CodeLensInlineProvider.getInstance(errorHandler);
+
+    // Check if code lens should be enabled by default from settings
+    const config = vscode.workspace.getConfiguration("doracodelens");
+    const isEnabledByDefault = config.get("codeLens.enabled", true);
+
+    // Set initial context for menu visibility
+    vscode.commands.executeCommand(
+      "setContext",
+      "doracodelens.codeLensEnabled",
+      isEnabledByDefault
+    );
+
+    // Enable code lens if it should be enabled by default
+    if (isEnabledByDefault) {
+      this.enableCodeLens();
+    }
   }
 
   public static getInstance(
@@ -532,6 +558,13 @@ export class CodeLensManager {
       // Enable the provider
       this.codeLensProvider.enable();
 
+      // Update context for menu visibility
+      vscode.commands.executeCommand(
+        "setContext",
+        "doracodelens.codeLensEnabled",
+        true
+      );
+
       this.errorHandler.logError(
         "Inline code lens enabled successfully",
         null,
@@ -554,6 +587,13 @@ export class CodeLensManager {
     try {
       // Disable the provider
       this.codeLensProvider.disable();
+
+      // Update context for menu visibility
+      vscode.commands.executeCommand(
+        "setContext",
+        "doracodelens.codeLensEnabled",
+        false
+      );
 
       this.errorHandler.logError(
         "Inline code lens disabled successfully",

@@ -35,9 +35,10 @@ All of this runs right inside the editor — no context switching, no clutter.
 
 ### 🔧 **Developer Productivity Tools**
 
-- **Code Lens Integration**: Inline complexity annotations with toggle controls
+- **Inline Code Lens**: Automatic complexity indicators (🟢🟡🔴) that appear after current file analysis
 - **JSON Utilities**: Format, validate, and explore JSON with tree view
 - **Context Menu Integration**: Organized right-click menu for quick access
+- **Background Analysis**: Automatic file analysis with intelligent caching
 - **Export Capabilities**: Export analysis results in multiple formats (JSON, CSV, HTML, PNG)
 
 ### 📈 **Git Analytics & Team Insights**
@@ -77,7 +78,7 @@ All of this runs right inside the editor — no context switching, no clutter.
    ```
    Right-click on Python file:
    ├── Full Code Analysis          # Complete project analysis
-   ├── Current File Analysis       # Quick analysis of current file
+   ├── Current File Analysis       # Quick analysis + auto-enable inline complexity indicators
    ├── Enable Code Lens Inline     # Enable inline complexity annotations (when disabled)
    ├── Disable Code Lens Inline    # Disable inline complexity annotations (when enabled)
    ├── Database Schema Analysis    # Visual database schema analysis
@@ -109,7 +110,8 @@ DoraCodeLens provides extensive configuration options through VS Code settings:
 
 ### Code Lens Settings
 
-- **Complexity Thresholds**: Customize low/medium/high complexity boundaries
+- **Complexity Thresholds**: Customize low/medium/high complexity boundaries (🟢 ≤5, 🟡 6-10, 🔴 >10)
+- **Auto-Enable**: Inline indicators automatically appear after current file analysis
 - **Display Options**: Toggle complexity indicators and suggestions
 - **Max Suggestions**: Control number of suggestions per function
 
@@ -209,12 +211,13 @@ Each example includes setup instructions and demonstrates different framework pa
 - Try Current File Analysis instead of Full Code Analysis for large projects
 - Review VS Code Output panel for detailed error messages
 
-**Code Lens not appearing**
+**Inline complexity indicators not appearing**
 
-- Ensure Code Lens is enabled (`DoraCodeLens: Code Lens (On)`)
+- Run "Current File Analysis" first - indicators auto-enable after analysis
 - Check that you're in a Python file (`.py` extension)
-- Run analysis first to populate Code Lens data
+- Ensure the file contains functions with complexity data
 - Verify complexity thresholds in settings aren't too restrictive
+- Toggle Code Lens manually if needed (`DoraCodeLens: Enable Code Lens Inline`)
 
 **Git Analytics empty**
 
@@ -259,6 +262,13 @@ Each example includes setup instructions and demonstrates different framework pa
    - Search for "DoraCodeLens debug"
    - Enable "Enable Debug Logging"
    - Reproduce the issue and check output
+
+3. **Recent Fixes Applied**
+
+   - **Command Registration**: Fixed duplicate command registration errors during extension activation
+   - **Inline Code Lens**: Simplified and improved inline complexity indicators
+   - **Background Analysis**: Added intelligent caching and automatic file analysis
+   - **Error Recovery**: Enhanced error handling with automatic recovery mechanisms
 
 
 ### System Requirements

@@ -91,6 +91,7 @@ The context menu adapts based on your current context:
 **JSON Files/Content**: JSON utilities are available when `doracodelens.jsonContext` is active
 **Git Repositories**: Git Analytics options are available for all files
 **Code Lens State**: Toggle shows "Enable" when disabled, "Disable" when enabled
+**Auto-Enable**: Current File Analysis automatically enables inline complexity indicators
 
 ### Menu Organization
 
@@ -408,22 +409,75 @@ Explore JSON data in an expandable tree structure.
       └── 📝 zip: "10001" (string)
 ```
 
+## Inline Code Lens Complexity Indicators
+
+DoraCodeLens provides automatic inline complexity indicators that appear directly in your Python code after running current file analysis.
+
+### How It Works
+
+**Automatic Activation**: Complexity indicators automatically enable when you run "Current File Analysis"
+**Visual Indicators**: Color-coded circles appear above function definitions:
+- 🟢 **Green Circle**: Low complexity (≤ 5) - Easy to maintain
+- 🟡 **Yellow Circle**: Medium complexity (6-10) - Moderate maintenance needed  
+- 🔴 **Red Circle**: High complexity (> 10) - Needs attention
+
+**Smart Integration**: Only shows for current file analysis, never for full project analysis
+
+### Example Display
+
+```python
+# 🟢 3 complexity • 2 params
+def simple_function(name, age):
+    return f"Hello {name}, you are {age} years old"
+
+# 🟡 7 complexity • 4 params  
+def moderate_function(data, filters, sort_key, reverse):
+    # Function with moderate complexity
+    if not data:
+        return []
+    
+    filtered_data = [item for item in data if all(f(item) for f in filters)]
+    return sorted(filtered_data, key=sort_key, reverse=reverse)
+
+# 🔴 12 complexity • 3 params
+def complex_function(config, options, callback):
+    # Function with high complexity - needs refactoring
+    # Multiple nested conditions and loops
+    # ... complex logic here ...
+```
+
+### Manual Control
+
+While indicators auto-enable after current file analysis, you can manually control them:
+
+**Enable**: Right-click → DoraCodeLens → Enable Code Lens Inline
+**Disable**: Right-click → DoraCodeLens → Disable Code Lens Inline
+
+### Interactive Features
+
+**Click on Indicators**: View detailed function information
+**Hover Tooltips**: See complexity breakdown and parameter details
+**Method Support**: Works for both standalone functions and class methods
+
 ## Current File Analysis
 
-Analyze just the file you're currently working on for quick insights.
+Analyze just the file you're currently working on for quick insights with automatic inline complexity indicators.
 
 **What you'll get:**
 - **File-specific Complexity**: Complexity metrics for the current file only
 - **Function Analysis**: Complexity score for each function in the file
+- **Inline Complexity Indicators**: Automatic 🟢🟡🔴 circles above functions after analysis
 - **Import Dependencies**: What this file depends on
 - **Framework Patterns**: Framework-specific patterns in this file
 - **Quick Insights**: Fast analysis without processing the entire project
+- **Background Caching**: Intelligent caching for faster subsequent analyses
 
 **How to use:**
 1. Open any Python file
 2. Right-click in the editor
 3. Select **DoraCodeLens** → **Current File Analysis** → choose your view
 4. Get instant insights about the current file
+5. **Inline indicators automatically appear** above functions showing complexity levels
 
 **Example Output:**
 ```

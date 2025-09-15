@@ -193,7 +193,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const sidebarContentProvider = SidebarContentProvider.getInstance(
       errorHandler,
       stateManager,
-      backgroundAnalysisManager
+      backgroundAnalysisManager,
+      context.extensionPath
     );
     
     // Register sidebar tree data provider
