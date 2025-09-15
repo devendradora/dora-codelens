@@ -6,7 +6,7 @@
 
 # Note to the judges
 
-cytoscape for mindmap is not loading on marketplace vs code extension, so please clone https://github.com/devendradora/dora-codelens
+cytoscape for mindmap is not loading on marketplace vs code extension, so please clone https://github.com/devendradora/dora-codelens to test
 
 Click on Run on vs code or kiro > Start Debugging 
 
