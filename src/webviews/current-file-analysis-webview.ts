@@ -125,7 +125,7 @@ export class CurrentFileAnalysisWebview {
           "node_modules",
           "chart.js",
           "dist",
-          "chart.min.js"
+          "chart.umd.min.js"
         )
       )
     );

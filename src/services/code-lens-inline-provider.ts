@@ -339,8 +339,19 @@ export class CodeLensInlineProvider implements vscode.CodeLensProvider {
       analysisData.analysis &&
       analysisData.analysis.complexity_metrics
     ) {
-      // Current file analysis format
+      // Current file analysis format (wrapped)
       this.analysisData = analysisData as CurrentFileAnalysis;
+    } else if (
+      analysisData &&
+      analysisData.complexity_metrics &&
+      analysisData.file_path
+    ) {
+      // Direct Python analyzer output format - wrap it in the expected structure
+      this.analysisData = {
+        timestamp: analysisData.analysis_timestamp || new Date().toISOString(),
+        filePath: analysisData.file_path,
+        analysis: analysisData // The Python analyzer output is already in the correct format for the analysis property
+      };
     } else if (
       analysisData &&
       (analysisData.files || analysisData.functions || analysisData.classes)
@@ -369,6 +380,18 @@ export class CodeLensInlineProvider implements vscode.CodeLensProvider {
           },
         },
       };
+    } else if (
+      analysisData &&
+      (analysisData.tech_stack || analysisData.code_graph_json || analysisData.schema_version)
+    ) {
+      // Full code analysis data - not suitable for code lens (which is for current file only)
+      this.errorHandler.logError(
+        "Received full code analysis data for code lens provider - ignoring as code lens is for current file analysis only",
+        { dataKeys: Object.keys(analysisData) },
+        "CodeLensInlineProvider"
+      );
+      // Don't update analysisData, keep existing data
+      return;
     } else {
       // Invalid or null data
       this.analysisData = null;

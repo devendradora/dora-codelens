@@ -2,7 +2,7 @@
 
 All notable changes to the "DoraCodeLens" extension will be documented in this file.
 
-## [0.1.3]
+## [0.1.5]
 
 ### Fixed
 - **Command Registration**: Resolved duplicate command registration error during extension activation

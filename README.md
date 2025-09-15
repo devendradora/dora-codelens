@@ -1,7 +1,6 @@
 # DoraCodeLens VS Code Extension
 
-![DoraCodeLens](resources/dora-code-lens-kiro.png)
-
+![DoraCodeLens](https://github.com/devendradora/dora-codelens/blob/main/resources/dora-code-lens-kiro.png?raw=true)
 
 Every developer knows the pain of diving into an unfamiliar codebase — endless scrolling, manual tracing, and juggling scattered tools. We wanted to replace that friction with clarity: a single workspace inside VS Code where a Python project comes alive as a visual mind map.
 
@@ -15,7 +14,6 @@ It analyzes Python projects and delivers:
 📊 Git analytics, including contributor timelines and activity stats.
 ⚡ Productivity tools such as JSON minify/beautify and a tree viewer.
 All of this runs right inside the editor — no context switching, no clutter.
-
 
 ## Features
 
@@ -269,7 +267,6 @@ Each example includes setup instructions and demonstrates different framework pa
    - **Inline Code Lens**: Simplified and improved inline complexity indicators
    - **Background Analysis**: Added intelligent caching and automatic file analysis
    - **Error Recovery**: Enhanced error handling with automatic recovery mechanisms
-
 
 ### System Requirements
 

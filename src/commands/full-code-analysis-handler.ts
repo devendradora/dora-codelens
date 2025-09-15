@@ -95,19 +95,7 @@ export class FullCodeAnalysisHandler {
               );
             }
 
-            // Update code lens with cached data
-            try {
-              vscode.commands.executeCommand(
-                "doracodelens.updateCodeLensData",
-                cachedResult.data
-              );
-            } catch (codeLensError) {
-              this.errorHandler.logError(
-                "Failed to update code lens with cached data",
-                codeLensError,
-                FullCodeAnalysisHandler.COMMAND_ID
-              );
-            }
+            // Note: Code lens is not updated for full code analysis as it's designed for current file analysis only
 
             // Show cache info message
             const ageMinutes = Math.round(
@@ -201,19 +189,7 @@ export class FullCodeAnalysisHandler {
                 );
               }
 
-              // Update code lens with analysis data
-              try {
-                vscode.commands.executeCommand(
-                  "doracodelens.updateCodeLensData",
-                  validatedResult
-                );
-              } catch (codeLensError) {
-                this.errorHandler.logError(
-                  "Failed to update code lens data",
-                  codeLensError,
-                  FullCodeAnalysisHandler.COMMAND_ID
-                );
-              }
+              // Note: Code lens is not updated for full code analysis as it's designed for current file analysis only
 
               // Show success message
               const message = options.forceRefresh
