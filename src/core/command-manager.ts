@@ -7,7 +7,7 @@ import { CurrentFileAnalysisHandler } from "../commands/current-file-analysis-ha
 import { GitAnalyticsHandler } from "../commands/git-analytics-handler";
 import { DatabaseSchemaHandler } from "../commands/database-schema-handler";
 import { JsonUtilitiesHandler } from "../commands/json-utilities-handler";
-import { CodeLensHandler } from "../commands/code-lens-handler";
+import { CodeLensHandler } from "../commands/code-lens-inline-handler";
 import { WebviewManager } from "../webviews/webview-manager";
 import { PythonService } from "../services/python-service";
 import { HTMLViewService } from "../services/html-view-service";
@@ -1047,69 +1047,55 @@ export class CommandManager {
         filePath,
       });
 
-      // Update current file complexities if this is a successful current file analysis
+      // Update code lens data if this is a successful current file analysis
       if (type === "current-file" && status === "success" && analysisData) {
-        this.updateSidebarComplexities(analysisData, filePath);
+        this.updateCodeLensData(analysisData);
       }
     }
   }
 
+  // Removed updateSidebarComplexities - complexities now shown inline via code lens
+
   /**
-   * Update sidebar with current file complexities
+   * Update code lens data with current file analysis
    */
-  private updateSidebarComplexities(analysisData: any, filePath?: string): void {
+  private updateCodeLensData(analysisData: any): void {
     try {
-      const complexities: any[] = [];
+      // Get code lens provider through the handler
+      const codeLensProvider = this.codeLensHandler?.getManager()?.getProvider();
       
-      // Extract function complexities
-      if (analysisData.functions) {
-        for (const func of analysisData.functions) {
-          complexities.push({
-            name: func.name,
-            type: 'function',
-            complexity: func.complexity || 0,
-            line: func.line_number || func.line || 1,
-            file: filePath || ''
-          });
-        }
+      // Auto-enable code lens if it's not already enabled and we have analysis data
+      if (codeLensProvider && !codeLensProvider.isCodeLensEnabled()) {
+        this.errorHandler.logError(
+          "Auto-enabling code lens for inline complexity indicators",
+          null,
+          "updateCodeLensData"
+        );
+        codeLensProvider.enable();
       }
 
-      // Extract class complexities
-      if (analysisData.classes) {
-        for (const cls of analysisData.classes) {
-          complexities.push({
-            name: cls.name,
-            type: 'class',
-            complexity: cls.complexity || 0,
-            line: cls.line_number || cls.line || 1,
-            file: filePath || ''
-          });
-
-          // Add method complexities
-          if (cls.methods) {
-            for (const method of cls.methods) {
-              complexities.push({
-                name: `${cls.name}.${method.name}`,
-                type: 'function',
-                complexity: method.complexity || 0,
-                line: method.line_number || method.line || 1,
-                file: filePath || ''
-              });
-            }
-          }
-        }
+      // Update code lens provider with new analysis data
+      if (codeLensProvider && typeof codeLensProvider.updateAnalysisData === "function") {
+        codeLensProvider.updateAnalysisData(analysisData);
       }
 
-      // Update sidebar
-      if (this.sidebarContentProvider && typeof this.sidebarContentProvider.updateCurrentFileComplexities === "function") {
-        this.sidebarContentProvider.updateCurrentFileComplexities(complexities);
-      }
+      this.errorHandler.logError(
+        "Code lens data updated - inline complexity indicators should now appear",
+        { 
+          hasData: !!analysisData, 
+          functionsCount: analysisData?.analysis?.complexity_metrics?.function_complexities?.length || 0, 
+          classesCount: analysisData?.analysis?.complexity_metrics?.class_complexities?.length || 0,
+          codeLensEnabled: codeLensProvider?.isCodeLensEnabled() || false,
+          filePath: analysisData?.filePath || analysisData?.analysis?.file_path
+        },
+        "updateCodeLensData"
+      );
 
     } catch (error) {
       this.errorHandler.logError(
-        "Failed to update sidebar complexities",
+        "Failed to update code lens data",
         error,
-        "updateSidebarComplexities"
+        "updateCodeLensData"
       );
     }
   }

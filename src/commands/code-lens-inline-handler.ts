@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ErrorHandler } from '../core/error-handler';
-import { CodeLensManager } from '../services/code-lens-provider';
+import { CodeLensManager } from '../services/code-lens-inline-provider';
 import { CodeLensSuggestion } from '../services/code-lens-suggestion-engine';
 import { CodeLensCommandManager } from '../core/code-lens-command-manager';
 
